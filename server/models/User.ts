@@ -10,6 +10,7 @@ export interface User {
   location?: string;
   githubAppInstallationIds?: string[];
   githubAppInstalledAt?: Date;
+  anthropicKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +27,7 @@ const userSchema = new Schema<UserDocument>({
   location: { type: String },
   githubAppInstallationIds: { type: [String], default: [] },
   githubAppInstalledAt: { type: Date },
+  anthropicKey: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

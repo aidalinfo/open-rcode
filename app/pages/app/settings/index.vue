@@ -10,6 +10,67 @@
         </p>
       </div>
 
+      <!-- API Key Anthropic -->
+      <UCard>
+        <template #header>
+          <h2 class="text-xl font-semibold">
+            Clé API Anthropic
+          </h2>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-400">
+            {{ hasAnthropicKey ? 'Votre clé API Anthropic est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API Anthropic pour utiliser le chat IA.' }}
+          </p>
+
+          <div v-if="!hasAnthropicKey" class="space-y-4">
+            <UFormGroup label="Clé API Anthropic" name="anthropicKey">
+              <div class="flex gap-2">
+                <UInput
+                  v-model="anthropicKeyInput"
+                  type="password"
+                  placeholder="sk-ant-..."
+                  size="lg"
+                  class="flex-1"
+                  :disabled="savingApiKey"
+                />
+                <UButton
+                  @click="saveAnthropicKey"
+                  :loading="savingApiKey"
+                  :disabled="!anthropicKeyInput || !anthropicKeyInput.startsWith('sk-ant-')"
+                  size="lg"
+                >
+                  <template #leading>
+                    <UIcon name="i-heroicons-key" />
+                  </template>
+                  Sauvegarder
+                </UButton>
+              </div>
+            </UFormGroup>
+          </div>
+
+          <div v-else class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+              <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                Clé API configurée
+              </span>
+            </div>
+            <UButton
+              @click="resetAnthropicKey"
+              variant="ghost"
+              size="sm"
+              color="red"
+            >
+              <template #leading>
+                <UIcon name="i-heroicons-trash" />
+              </template>
+              Supprimer
+            </UButton>
+          </div>
+        </div>
+      </UCard>
+
       <!-- Connexion GitHub App -->
       <UCard>
         <template #header>
@@ -151,6 +212,9 @@ const loading = ref(false)
 const isInstalling = ref(false)
 const hasGithubApp = ref(false)
 const loadingGithubStatus = ref(true)
+const hasAnthropicKey = ref(false)
+const anthropicKeyInput = ref('')
+const savingApiKey = ref(false)
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -216,6 +280,76 @@ const checkGithubAppStatus = async () => {
   }
 }
 
+const checkAnthropicKey = async () => {
+  try {
+    const data = await $fetch('/api/user/anthropic-key')
+    hasAnthropicKey.value = data.hasApiKey
+  } catch (error) {
+    console.error('Erreur lors de la vérification de la clé API:', error)
+  }
+}
+
+const saveAnthropicKey = async () => {
+  if (!anthropicKeyInput.value || !anthropicKeyInput.value.startsWith('sk-ant-')) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez entrer une clé API Anthropic valide',
+      color: 'error'
+    })
+    return
+  }
+
+  savingApiKey.value = true
+  try {
+    await $fetch('/api/user/anthropic-key', {
+      method: 'PUT',
+      body: { anthropicKey: anthropicKeyInput.value }
+    })
+    
+    toast.add({
+      title: 'Succès',
+      description: 'Clé API sauvegardée avec succès',
+      color: 'success'
+    })
+    
+    hasAnthropicKey.value = true
+    anthropicKeyInput.value = ''
+  } catch (error) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de sauvegarder la clé API',
+      color: 'error'
+    })
+  } finally {
+    savingApiKey.value = false
+  }
+}
+
+const resetAnthropicKey = async () => {
+  if (confirm('Êtes-vous sûr de vouloir supprimer votre clé API Anthropic ?')) {
+    try {
+      await $fetch('/api/user/anthropic-key', {
+        method: 'PUT',
+        body: { anthropicKey: '' }
+      })
+      
+      toast.add({
+        title: 'Succès',
+        description: 'Clé API supprimée avec succès',
+        color: 'success'
+      })
+      
+      hasAnthropicKey.value = false
+    } catch (error) {
+      toast.add({
+        title: 'Erreur',
+        description: 'Impossible de supprimer la clé API',
+        color: 'error'
+      })
+    }
+  }
+}
+
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('fr-FR')
 }
@@ -224,7 +358,8 @@ const formatDate = (date: string) => {
 onMounted(async () => {
   await Promise.all([
     fetchEnvironments(),
-    checkGithubAppStatus()
+    checkGithubAppStatus(),
+    checkAnthropicKey()
   ])
 })
 </script>
