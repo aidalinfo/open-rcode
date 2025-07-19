@@ -3,25 +3,13 @@
     <template #body>
       <UContainer>
         <div class="py-8 space-y-6">
-          <UChatPrompt 
-            v-model="input" 
-            :status="loading ? 'streaming' : 'ready'"
-            placeholder="Posez votre question..."
+          <ChatPrompt
+            v-model:input="input"
+            v-model:selectedEnvironment="selectedEnvironment"
+            :environments="environments"
+            :loading="loading"
             @submit="onSubmit"
-          >
-            <UChatPromptSubmit />
-
-            <template #footer>
-              <USelect
-                v-model="selectedEnvironment"
-                :items="environmentOptions"
-                icon="i-heroicons-cube"
-                placeholder="Sélectionnez un environnement"
-                variant="ghost"
-                :disabled="environments.length === 0"
-              />
-            </template>
-          </UChatPrompt>
+          />
 
           <div v-if="environments.length === 0" class="text-center py-8">
             <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
@@ -45,22 +33,11 @@
 </template>
 
 <script setup lang="ts">
-const toast = useToast()
-
 // États réactifs
 const input = ref('')
 const loading = ref(false)
 const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
-
-// Options pour le sélecteur d'environnements
-const environmentOptions = computed(() => {
-  return environments.value.map((env: any) => ({
-    label: `${env.name} (${env.repositoryFullName})`,
-    value: env.id,
-    icon: getRuntimeIcon(env.runtime)
-  }))
-})
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -72,52 +49,21 @@ const fetchEnvironments = async () => {
   }
 }
 
-const onSubmit = async () => {
-  if (!input.value.trim()) return
-  
-  if (!selectedEnvironment.value) {
-    toast.add({
-      title: 'Erreur',
-      description: 'Veuillez sélectionner un environnement',
-      color: 'error'
-    })
-    return
-  }
-
+const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
   loading.value = true
   
   try {
-    // Ici vous pouvez ajouter la logique pour envoyer le message au chat
-    console.log('Message:', input.value)
-    console.log('Environnement:', selectedEnvironment.value)
+    console.log('Task créée:', data.task)
+    console.log('Message:', data.message)
+    console.log('Environnement:', data.environmentId)
     
-    // Simuler un délai de traitement
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Ici vous pouvez ajouter la logique pour traiter la task
+    // Par exemple, démarrer un processus Docker, créer une PR, etc.
     
-    toast.add({
-      title: 'Message envoyé',
-      description: 'Votre message a été traité avec succès',
-      color: 'success'
-    })
-    
-    input.value = ''
   } catch (error) {
-    toast.add({
-      title: 'Erreur',
-      description: 'Erreur lors de l\'envoi du message',
-      color: 'error'
-    })
+    console.error('Erreur lors du traitement:', error)
   } finally {
     loading.value = false
-  }
-}
-
-const getRuntimeIcon = (runtime: string) => {
-  switch (runtime) {
-    case 'node': return 'i-simple-icons-nodedotjs'
-    case 'php': return 'i-simple-icons-php'
-    case 'python': return 'i-simple-icons-python'
-    default: return 'i-heroicons-code-bracket'
   }
 }
 
