@@ -33,6 +33,8 @@
 </template>
 
 <script setup lang="ts">
+const toast = useToast()
+
 // États réactifs
 const input = ref('')
 const loading = ref(false)
@@ -54,11 +56,32 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
   
   try {
     console.log('Task créée:', data.task)
-    console.log('Message:', data.message)
-    console.log('Environnement:', data.environmentId)
     
-    // Ici vous pouvez ajouter la logique pour traiter la task
-    // Par exemple, démarrer un processus Docker, créer une PR, etc.
+    if (data.task) {
+      // Créer automatiquement le conteneur Docker pour la tâche
+      try {
+        const containerResult = await $fetch(`/api/tasks/${data.task.id}/container`, {
+          method: 'POST',
+          body: {}
+        })
+        
+        console.log('Conteneur créé:', containerResult.container)
+        
+        toast.add({
+          title: 'Conteneur créé',
+          description: `Environnement Docker initialisé avec Claude Code`,
+          color: 'success'
+        })
+        
+      } catch (containerError) {
+        console.error('Erreur lors de la création du conteneur:', containerError)
+        toast.add({
+          title: 'Erreur conteneur',
+          description: 'Impossible de créer l\'environnement Docker',
+          color: 'error'
+        })
+      }
+    }
     
   } catch (error) {
     console.error('Erreur lors du traitement:', error)

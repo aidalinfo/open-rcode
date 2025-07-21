@@ -23,7 +23,8 @@
     "dockerode": "^4.0.7",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
-    "nuxt": "^4.0.0"
+    "nuxt": "^4.0.0",
+    "tar-fs": "^3.1.0"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.5.2",
