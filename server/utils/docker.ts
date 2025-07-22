@@ -168,7 +168,7 @@ export class DockerManager {
         OpenStdin: false,
         StdinOnce: false,
         HostConfig: {
-          AutoRemove: options.autoRemove !== false,
+          AutoRemove: options.autoRemove === true,
           RestartPolicy: {
             Name: options.restartPolicy || 'no'
           }

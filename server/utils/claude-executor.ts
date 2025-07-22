@@ -195,6 +195,34 @@ export class ClaudeExecutor {
         role: 'assistant',
         content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
       });
+    } finally {
+      // Nettoyer le conteneur après l'exécution (succès ou échec)
+      console.log(`Cleaning up container for task ${task._id}`);
+      try {
+        await this.docker.stopContainer(containerId, 5);
+        await this.docker.removeContainer(containerId, true);
+        console.log(`Container ${containerId} cleaned up successfully`);
+        
+        // Supprimer la référence du conteneur de la tâche
+        await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
+        
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🧹 **Nettoyage automatique:** Le conteneur Docker a été supprimé après l'exécution de la tâche.`
+        });
+      } catch (cleanupError: any) {
+        console.error(`Failed to cleanup container ${containerId}:`, cleanupError);
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `⚠️ **Attention:** Échec du nettoyage automatique du conteneur. Le conteneur devra être supprimé manuellement.`
+        });
+      }
     }
   }
 
