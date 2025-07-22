@@ -87,12 +87,14 @@
               v-model="form.aiProvider"
               :items="aiProviderOptions"
               placeholder="Sélectionnez un provider IA"
+              value-attribute="value"
+              option-attribute="label"
               size="lg"
               class="w-full"
             />
             <template #help>
               <p class="text-sm text-gray-500 mt-2">
-                {{ getAiProviderDescription(form.aiProvider?.value || form.aiProvider) }}
+                {{ getAiProviderDescription(form.aiProvider?.value) }}
               </p>
             </template>
           </UFormField>
@@ -227,7 +229,7 @@ const form = ref({
   name: '',
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
-  aiProvider: 'anthropic-api',
+  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -282,6 +284,13 @@ const fetchEnvironment = async () => {
     const data = await $fetch(`/api/environments/${environmentId.value}`)
     currentEnvironment.value = data.environment
     
+    console.log('ENVIRONMENT DATA RECEIVED:')
+    console.log('- Full data:', data)
+    console.log('- environment:', data.environment)
+    console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
+    console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
+    console.log('- environmentVariables:', data.environment.environmentVariables)
+    
     // Remplir le formulaire avec les données existantes
     form.value = {
       selectedRepository: {
@@ -290,14 +299,17 @@ const fetchEnvironment = async () => {
         description: ''
       },
       name: data.environment.name,
-      description: data.environment.description || '',
+      description: data.environment.description,
       runtime: {
         label: getRuntimeLabel(data.environment.runtime),
         value: data.environment.runtime
       },
-      aiProvider: data.environment.aiProvider || 'anthropic-api',
+      aiProvider: {
+        label: getAiProviderLabel(data.environment.aiProvider),
+        value: data.environment.aiProvider
+      },
       environmentVariables: data.environment.environmentVariables || [],
-      configurationScript: data.environment.configurationScript || ''
+      configurationScript: data.environment.configurationScript
     }
   } catch (error) {
     console.error('Erreur lors du chargement de l\'environnement:', error)
