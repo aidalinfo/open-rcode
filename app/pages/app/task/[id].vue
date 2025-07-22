@@ -1,35 +1,49 @@
 <template>
   <UDashboardPanel>
+    <template #header>
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl font-semibold">
+          {{ task ? `Tâche: ${task.name || task.id}` : 'Chargement...' }}
+        </h1>
+        <UBadge v-if="task" :color="getStatusColor(task.status)" :label="getStatusLabel(task.status)" />
+      </div>
+    </template>
+    
     <template #body>
-      <UContainer>
-        <div class="py-8 space-y-6">
-          <div v-if="loading" class="text-center">
+      <div class="flex flex-col h-full">
+        <div v-if="loading" class="flex-1 flex items-center justify-center">
+          <div class="text-center">
             <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
             <p class="mt-2">Chargement de la tâche...</p>
           </div>
+        </div>
 
-          <div v-if="error" class="text-center text-red-500">
+        <div v-else-if="error" class="flex-1 flex items-center justify-center">
+          <div class="text-center text-red-500">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 mx-auto mb-2" />
             <p>{{ error }}</p>
           </div>
-
-          <div v-if="task && !loading" class="space-y-4">
-            <h1 class="text-2xl font-bold">Tâche: {{ task.id }}</h1>
-            
-            <div class="space-y-4">
-              <div v-for="message in messages" :key="message.id" class="message-bubble" :class="`message-${message.role}`">
-                <p v-if="message.role === 'user'" class="font-bold">Vous:</p>
-                <p v-else class="font-bold">Assistant:</p>
-                <pre class="whitespace-pre-wrap font-sans">{{ message.content }}</pre>
-              </div>
-            </div>
-
-            <div v-if="isTaskRunning" class="text-center py-4">
-              <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 mx-auto text-gray-400 animate-spin" />
-              <p class="mt-2 text-sm text-gray-500">Exécution en cours...</p>
-            </div>
-          </div>
         </div>
-      </UContainer>
+
+        <div v-else-if="task" class="flex flex-col h-full">
+          <UChatMessages 
+            :messages="formattedMessages" 
+            :status="chatStatus"
+            class="flex-1"
+          >
+            <template #content="{ message }">
+              <UChatMessage
+                :content="message.content"
+                :side="message.role === 'user' ? 'right' : 'left'"
+                :avatar="getMessageAvatar(message.role)"
+                :variant="message.role === 'user' ? 'solid' : 'soft'"
+                :color="message.role === 'user' ? 'primary' : 'white'"
+                :actions="message.role === 'assistant' ? messageActions : []"
+              />
+            </template>
+          </UChatMessages>
+        </div>
+      </div>
     </template>
   </UDashboardPanel>
 </template>
@@ -48,6 +62,63 @@ const error = ref<string | null>(null)
 const isTaskRunning = ref(true)
 
 let pollInterval: NodeJS.Timeout | null = null
+
+// Chat status mapping
+const chatStatus = computed(() => {
+  if (loading.value) return 'submitted'
+  if (error.value) return 'error'
+  if (isTaskRunning.value) return 'streaming'
+  return 'ready'
+})
+
+// Format messages for UChatMessages component
+const formattedMessages = computed(() => {
+  return messages.value.map((message, index) => ({
+    id: message._id || index,
+    role: message.role,
+    content: message.content,
+    timestamp: message.timestamp || new Date()
+  }))
+})
+
+// Status helpers
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed': return 'green'
+    case 'failed': return 'red'
+    case 'running': return 'yellow'
+    default: return 'gray'
+  }
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'completed': return 'Terminée'
+    case 'failed': return 'Échouée'
+    case 'running': return 'En cours'
+    case 'pending': return 'En attente'
+    default: return 'Inconnue'
+  }
+}
+
+// Avatar configuration
+const getMessageAvatar = (role: string) => {
+  if (role === 'user') {
+    return { icon: 'i-heroicons-user' }
+  }
+  return { icon: 'i-heroicons-cpu-chip' }
+}
+
+// Message actions
+const messageActions = [
+  {
+    icon: 'i-heroicons-clipboard',
+    label: 'Copier',
+    click: (message: any) => {
+      navigator.clipboard.writeText(message.content)
+    }
+  }
+]
 
 const fetchTaskAndMessages = async () => {
   try {
@@ -86,22 +157,3 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-.message-bubble {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-}
-.message-user {
-  background-color: #e2e8f0; /* light gray */
-}
-.dark .message-user {
-  background-color: #4a5568; /* darker gray */
-}
-.message-assistant {
-  background-color: #f0f9ff; /* light blue */
-}
-.dark .message-assistant {
-  background-color: #2c5282; /* darker blue */
-}
-</style>
