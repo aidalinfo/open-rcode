@@ -17,6 +17,10 @@ export class ContainerCleanup {
 
       await this.stopAndRemoveContainer(task.dockerId)
       await this.cleanupWorkspaceFiles(taskId)
+      
+      // Supprimer la référence du conteneur de la tâche
+      task.dockerId = null
+      await task.save()
 
       console.log(`Cleaned up container and files for task ${taskId}`)
     } catch (error) {
