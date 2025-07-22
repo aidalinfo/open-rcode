@@ -87,15 +87,15 @@ const handleSubmit = async () => {
       color: 'success'
     })
 
-    // Vider l'input
-    emit('update:input', '')
-
     // Émettre l'événement avec la task créée
     emit('submit', {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task
     })
+
+    // Vider l'input après avoir émis l'événement
+    localInput.value = ''
   } catch (error) {
     console.error('Erreur lors de la création de la task:', error)
     toast.add({

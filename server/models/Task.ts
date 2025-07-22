@@ -1,9 +1,17 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import mongoose, { Schema, Document } from 'mongoose';
+
+export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface Task {
   userId: string;
   environmentId: string;
   name: string;
+  status: TaskStatus;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+  }>;
   dockerId?: string;
   pr?: string;
   merged: boolean;
@@ -19,6 +27,12 @@ const taskSchema = new Schema<TaskDocument>({
   userId: { type: String, required: true },
   environmentId: { type: String, required: true },
   name: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'running', 'completed', 'failed'], default: 'pending' },
+  messages: [{
+    role: { type: String, enum: ['user', 'assistant'], required: true },
+    content: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+  }],
   dockerId: { type: String },
   pr: { type: String },
   merged: { type: Boolean, default: false },
@@ -26,7 +40,7 @@ const taskSchema = new Schema<TaskDocument>({
   error: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-})
+});
 
 taskSchema.pre('save', function() {
   this.updatedAt = new Date()

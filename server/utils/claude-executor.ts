@@ -45,6 +45,13 @@ export class ClaudeExecutor {
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       
+      # Charger l'environnement Node et npm global
+      source /root/.nvm/nvm.sh || true
+      source /etc/profile || true
+      
+      # Vérifier que Claude est installé
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      
       ${envSetup}
       ${aiCommand} "${prompt.replace(/"/g, '\"')}"
     `
@@ -93,103 +100,101 @@ export class ClaudeExecutor {
   }
 
   async executeWorkflow(containerId: string, task: any): Promise<void> {
+    const updateTaskStatus = async (status: string, error?: string) => {
+      await TaskModel.findByIdAndUpdate(task._id, { status, error: error || null });
+    };
+
     try {
-      console.log(`Starting Claude workflow for task ${task._id}`)
-      
-      const environment = await EnvironmentModel.findById(task.environmentId)
+      await updateTaskStatus('running');
+      console.log(`Starting Claude workflow for task ${task._id}`);
+
+      const environment = await EnvironmentModel.findById(task.environmentId);
       if (!environment) {
-        throw new Error(`Environment ${task.environmentId} not found`)
+        throw new Error(`Environment ${task.environmentId} not found`);
       }
-      
-      const workspaceDir = `/workspace/${environment.repository || 'ccweb'}/repo`
-      const aiProvider = environment.aiProvider || 'anthropic-api'
-      
-      // Exécuter le script de configuration en premier si défini
+
+      const workspaceDir = `/workspace/${environment.repository || 'ccweb'}/repo`;
+      const aiProvider = environment.aiProvider || 'anthropic-api';
+
       if (environment.configurationScript && environment.configurationScript.trim()) {
-        console.log('Executing configuration script')
-        
+        console.log('Executing configuration script');
         try {
-          const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir)
-          
+          const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir);
           await TaskMessageModel.create({
             id: uuidv4(),
             userId: task.userId,
             taskId: task._id,
             role: 'assistant',
             content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``
-          })
-          
-          console.log('Configuration script completed successfully')
-        } catch (configError) {
-          console.error('Configuration script failed:', configError)
-          
+          });
+          console.log('Configuration script completed successfully');
+        } catch (configError: any) {
+          console.error('Configuration script failed:', configError);
           await TaskMessageModel.create({
             id: uuidv4(),
             userId: task.userId,
             taskId: task._id,
             role: 'assistant',
             content: `❌ **Erreur lors de la configuration:**\n\`\`\`\n${configError.message}\n\`\`\``
-          })
-          
-          // Ne pas continuer si la configuration échoue
-          return
+          });
+          await updateTaskStatus('failed', configError.message);
+          return;
         }
       }
-      
-      const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 })
-      
+
+      const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 });
+
       if (userMessage) {
-        console.log(`Executing first AI command with user text (provider: ${aiProvider})`)
-        
-        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider)
-        
-        const aiProviderLabel = this.getAiProviderLabel(aiProvider)
+        console.log(`Executing first AI command with user text (provider: ${aiProvider})`);
+        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider);
+        const aiProviderLabel = this.getAiProviderLabel(aiProvider);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
           content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
-        })
+        });
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      const gitStatusBefore = await this.checkGitStatus(containerId, workspaceDir)
-      
-      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider})`)
-      
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const gitStatusBefore = await this.checkGitStatus(containerId, workspaceDir);
+
+      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider})`);
+
       const summaryOutput = await this.executeCommand(
         containerId,
         'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
         workspaceDir,
         aiProvider
-      )
-      
-      const aiProviderLabel = this.getAiProviderLabel(aiProvider)
+      );
+
+      const aiProviderLabel = this.getAiProviderLabel(aiProvider);
       await TaskMessageModel.create({
         id: uuidv4(),
         userId: task.userId,
         taskId: task._id,
-        role: 'assistant', 
+        role: 'assistant',
         content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
-      })
-      
-      const prCreator = new PullRequestCreator(this.docker)
-      await prCreator.createFromChanges(containerId, task, summaryOutput)
-      
-      console.log(`Claude workflow completed for task ${task._id}`)
-      
-    } catch (error) {
-      console.error(`Error in Claude workflow for task ${task._id}:`, error)
-      
+      });
+
+      const prCreator = new PullRequestCreator(this.docker);
+      await prCreator.createFromChanges(containerId, task, summaryOutput);
+
+      await updateTaskStatus('completed');
+      console.log(`Claude workflow completed for task ${task._id}`);
+
+    } catch (error: any) {
+      console.error(`Error in Claude workflow for task ${task._id}:`, error);
+      await updateTaskStatus('failed', error.message);
       await TaskMessageModel.create({
         id: uuidv4(),
         userId: task.userId,
         taskId: task._id,
         role: 'assistant',
         content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
-      })
+      });
     }
   }
 

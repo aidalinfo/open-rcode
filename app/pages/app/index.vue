@@ -34,9 +34,12 @@
 
 <script setup lang="ts">
 const toast = useToast()
+const router = useRouter()
+
 definePageMeta({
   middleware: 'auth'
 })
+
 // États réactifs
 const input = ref('')
 const loading = ref(false)
@@ -54,42 +57,36 @@ const fetchEnvironments = async () => {
 }
 
 const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
+  if (!data.task || !data.task.id) {
+    toast.add({ title: 'Erreur', description: 'La création de la tâche a échoué.', color: 'red' })
+    return
+  }
+
   loading.value = true
-  
+
   try {
-    console.log('Task créée:', data.task)
-    
-    if (data.task) {
-      // Créer automatiquement le conteneur Docker pour la tâche
-      try {
-        const containerResult = await $fetch(`/api/tasks/${data.task.id}/container`, {
-          method: 'POST',
-          body: {}
-        })
-        
-        console.log('Conteneur créé:', containerResult.container)
-        
-        toast.add({
-          title: 'Conteneur créé',
-          description: `Environnement Docker initialisé avec Claude Code`,
-          color: 'success'
-        })
-        
-      } catch (containerError) {
-        console.error('Erreur lors de la création du conteneur:', containerError)
-        toast.add({
-          title: 'Erreur conteneur',
-          description: 'Impossible de créer l\'environnement Docker',
-          color: 'error'
-        })
-      }
-    }
-    
+    // On redirige immédiatement vers la page de la tâche
+    router.push(`/app/task/${data.task.id}`)
+
+    // On lance la création du conteneur en arrière-plan, sans attendre
+    $fetch(`/api/tasks/${data.task.id}/container`, {
+      method: 'POST'
+    }).catch((error) => {
+      console.error('Erreur lors de la création du conteneur en arrière-plan:', error)
+      // Optionnel: on pourrait utiliser WebSocket ou une notification pour informer l'utilisateur de l'échec
+      toast.add({
+        title: 'Erreur de conteneur',
+        description: 'La création de l\'environnement Docker a échoué en arrière-plan.',
+        color: 'red',
+        timeout: 0 // Garder la notif visible
+      })
+    })
   } catch (error) {
-    console.error('Erreur lors du traitement:', error)
-  } finally {
+    console.error('Erreur lors de la redirection ou de l\'appel fetch:', error)
+    toast.add({ title: 'Erreur', description: 'Une erreur est survenue.', color: 'red' })
     loading.value = false
   }
+  // loading.value n'est pas remis à false ici car la page change.
 }
 
 // Chargement initial

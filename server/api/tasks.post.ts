@@ -2,7 +2,9 @@ import { connectToDatabase } from '../utils/database'
 import { UserModel } from '../models/User'
 import { SessionModel } from '../models/Session'
 import { TaskModel } from '../models/Task'
+import { TaskMessageModel } from '../models/TaskMessage'
 import { EnvironmentModel } from '../models/Environment'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -72,6 +74,15 @@ export default defineEventHandler(async (event) => {
     })
     
     await task.save()
+    
+    // Sauvegarder le message initial de l'utilisateur dans TaskMessageModel
+    await TaskMessageModel.create({
+      id: uuidv4(),
+      userId: user.githubId,
+      taskId: task._id,
+      role: 'user',
+      content: body.message
+    })
     
     return {
       task: {

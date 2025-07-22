@@ -1,5 +1,6 @@
 import { createTaskContainer } from '../../../utils/task-container'
 import { TaskModel } from '../../../models/Task'
+import { EnvironmentModel } from '../../../models/Environment'
 import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
 import { v4 as uuidv4 } from 'uuid'
@@ -16,7 +17,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Vérifier que la tâche existe et n'a pas déjà un conteneur
     const task = await TaskModel.findById(taskId)
     if (!task) {
       throw createError({
@@ -32,14 +32,22 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const body = await readBody(event)
+    const environment = await EnvironmentModel.findById(task.environmentId)
+    if (!environment) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Environment not found for this task'
+      })
+    }
     
-    // Créer le conteneur pour la tâche
     const result = await createTaskContainer({
       taskId,
-      runtimeVersion: body.runtimeVersion,
-      workspaceDir: body.workspaceDir,
-      additionalEnvVars: body.environmentVariables
+      runtime: environment.runtime,
+      repositoryUrl: `https://github.com/${environment.repositoryFullName}.git`,
+      additionalEnvVars: environment.environmentVariables.reduce((acc, v) => {
+        acc[v.key] = v.value
+        return acc
+      }, {} as Record<string, string>)
     })
 
     await TaskMessageModel.create({
@@ -55,7 +63,7 @@ export default defineEventHandler(async (event) => {
       container: result,
       message: 'Container created successfully for task'
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating task container:', error)
     
     if (error.statusCode) {
