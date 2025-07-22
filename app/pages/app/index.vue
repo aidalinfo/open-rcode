@@ -26,6 +26,8 @@
               Créer un environnement
             </UButton>
           </div>
+
+          <TaskTable v-if="environments.length > 0" />
         </div>
       </UContainer>
     </template>
