@@ -42,31 +42,46 @@ export class ContainerSetup {
       throw new Error(`User ${task.userId} not found`)
     }
 
-    // Vérifier que l'utilisateur a configuré le token nécessaire selon le provider
-    const aiProvider = environment.aiProvider || 'anthropic-api'
+    // Auto-détecter le provider AI selon les tokens disponibles
+    let aiProvider = environment.aiProvider || 'auto'
     let requiredToken: string | null = null
 
-    switch (aiProvider) {
-      case 'anthropic-api':
-        if (!user.anthropicKey) {
-          throw new Error(`User ${task.userId} has not configured Anthropic API key`)
-        }
-        requiredToken = decrypt(user.anthropicKey)
-        break
-      case 'claude-oauth':
-        if (!user.claudeOAuthToken) {
-          throw new Error(`User ${task.userId} has not configured Claude OAuth token`)
-        }
+    // Si aucun provider spécifié ou si le token requis n'est pas disponible,
+    // utiliser le premier token disponible
+    if (aiProvider === 'auto' || !this.isTokenAvailable(user, aiProvider)) {
+      console.log(`Auto-detecting AI provider for user ${task.userId}`)
+      
+      // Priorité : claude-oauth > anthropic-api > gemini-cli
+      if (user.claudeOAuthToken) {
+        aiProvider = 'claude-oauth'
         requiredToken = decrypt(user.claudeOAuthToken)
-        break
-      case 'gemini-cli':
-        if (!user.geminiApiKey) {
-          throw new Error(`User ${task.userId} has not configured Gemini API key`)
-        }
+        console.log(`✓ Using Claude OAuth token`)
+      } else if (user.anthropicKey) {
+        aiProvider = 'anthropic-api'
+        requiredToken = decrypt(user.anthropicKey)
+        console.log(`✓ Using Anthropic API key`)
+      } else if (user.geminiApiKey) {
+        aiProvider = 'gemini-cli'
         requiredToken = decrypt(user.geminiApiKey)
-        break
-      default:
-        throw new Error(`Unsupported AI provider: ${aiProvider}`)
+        console.log(`✓ Using Gemini API key`)
+      } else {
+        throw new Error(`User ${task.userId} has not configured any AI provider tokens. Please configure at least one of: Anthropic API key, Claude OAuth token, or Gemini API key.`)
+      }
+    } else {
+      // Utiliser le provider spécifié
+      switch (aiProvider) {
+        case 'anthropic-api':
+          requiredToken = decrypt(user.anthropicKey!)
+          break
+        case 'claude-oauth':
+          requiredToken = decrypt(user.claudeOAuthToken!)
+          break
+        case 'gemini-cli':
+          requiredToken = decrypt(user.geminiApiKey!)
+          break
+        default:
+          throw new Error(`Unsupported AI provider: ${aiProvider}`)
+      }
     }
 
     const containerName = `ccweb-task-${task._id}-${Date.now()}`
@@ -246,5 +261,18 @@ export class ContainerSetup {
       php: '8.3'
     }
     return versions[runtime] || versions.node
+  }
+
+  private isTokenAvailable(user: any, provider: string): boolean {
+    switch (provider) {
+      case 'anthropic-api':
+        return !!user.anthropicKey
+      case 'claude-oauth':
+        return !!user.claudeOAuthToken
+      case 'gemini-cli':
+        return !!user.geminiApiKey
+      default:
+        return false
+    }
   }
 }

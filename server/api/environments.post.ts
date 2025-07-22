@@ -49,6 +49,14 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    // Validation du provider AI si fourni
+    if (body.aiProvider && !['anthropic-api', 'claude-oauth', 'gemini-cli'].includes(body.aiProvider)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'aiProvider must be one of: anthropic-api, claude-oauth, gemini-cli'
+      })
+    }
+    
     // Créer l'environnement
     const environment = new EnvironmentModel({
       userId: user.githubId,
@@ -58,6 +66,7 @@ export default defineEventHandler(async (event) => {
       name: body.name,
       description: body.description,
       runtime: body.runtime,
+      aiProvider: body.aiProvider || 'anthropic-api',
       environmentVariables: body.environmentVariables || [],
       configurationScript: body.configurationScript
     })
@@ -73,6 +82,7 @@ export default defineEventHandler(async (event) => {
         name: environment.name,
         description: environment.description,
         runtime: environment.runtime,
+        aiProvider: environment.aiProvider,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
         createdAt: environment.createdAt,

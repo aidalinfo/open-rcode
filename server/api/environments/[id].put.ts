@@ -43,11 +43,20 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    // Validation du provider AI si fourni
+    if (body.aiProvider && !['anthropic-api', 'claude-oauth', 'gemini-cli'].includes(body.aiProvider)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'aiProvider must be one of: anthropic-api, claude-oauth, gemini-cli'
+      })
+    }
+    
     // Construire l'objet de mise à jour
     const updateData: any = {}
     if (body.name) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
     if (body.runtime) updateData.runtime = body.runtime
+    if (body.aiProvider) updateData.aiProvider = body.aiProvider
     if (body.environmentVariables) updateData.environmentVariables = body.environmentVariables
     if (body.configurationScript !== undefined) updateData.configurationScript = body.configurationScript
     if (body.organization && body.repository) {
@@ -81,6 +90,7 @@ export default defineEventHandler(async (event) => {
         name: environment.name,
         description: environment.description,
         runtime: environment.runtime,
+        aiProvider: environment.aiProvider,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
         createdAt: environment.createdAt,

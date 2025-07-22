@@ -87,8 +87,6 @@
               v-model="form.aiProvider"
               :items="aiProviderOptions"
               placeholder="Sélectionnez un provider IA"
-              value-attribute="value"
-              option-attribute="label"
               size="lg"
               class="w-full"
             />
@@ -229,7 +227,7 @@ const form = ref({
   name: '',
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
-  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+  aiProvider: 'anthropic-api',
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -297,10 +295,7 @@ const fetchEnvironment = async () => {
         label: getRuntimeLabel(data.environment.runtime),
         value: data.environment.runtime
       },
-      aiProvider: {
-        label: getAiProviderLabel(data.environment.aiProvider || 'anthropic-api'),
-        value: data.environment.aiProvider || 'anthropic-api'
-      },
+      aiProvider: data.environment.aiProvider || 'anthropic-api',
       environmentVariables: data.environment.environmentVariables || [],
       configurationScript: data.environment.configurationScript || ''
     }
@@ -364,6 +359,10 @@ const submitForm = async () => {
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
+    
+    console.log('UPDATE FORM VALUES:')
+    console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+    console.log('- form.value.aiProvider:', form.value.aiProvider)
     
     const payload = {
       organization,

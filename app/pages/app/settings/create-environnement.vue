@@ -73,8 +73,6 @@
               v-model="form.aiProvider"
               :items="aiProviderOptions"
               placeholder="Sélectionnez un provider IA"
-              value-attribute="value"
-              option-attribute="label"
               size="lg"
               class="w-full"
             />
@@ -275,7 +273,7 @@ const form = ref({
   name: '',
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
-  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+  aiProvider: 'anthropic-api',
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -359,6 +357,15 @@ const getAiProviderDescription = (provider: string) => {
   return descriptions[provider as keyof typeof descriptions] || ''
 }
 
+const getAiProviderLabel = (provider: string) => {
+  const labels = {
+    'anthropic-api': 'API Anthropic (Claude)',
+    'claude-oauth': 'OAuth Claude Code CLI',
+    'gemini-cli': 'Google Gemini CLI'
+  }
+  return labels[provider as keyof typeof labels] || provider
+}
+
 const submitForm = async () => {
   isSubmitting.value = true
   try {
@@ -378,8 +385,11 @@ const submitForm = async () => {
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
     
-    console.log('selectedRuntime:', selectedRuntime, typeof selectedRuntime)
-    console.log('selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+    console.log('FORM VALUES:')
+    console.log('- form.value:', form.value)
+    console.log('- selectedRuntime:', selectedRuntime, typeof selectedRuntime)
+    console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+    console.log('- form.value.aiProvider:', form.value.aiProvider)
     
     const payload = {
       organization,
@@ -436,6 +446,7 @@ const editEnvironment = (environment: any) => {
     name: environment.name,
     description: environment.description || '',
     runtime: environment.runtime,
+    aiProvider: environment.aiProvider || 'anthropic-api',
     environmentVariables: environment.environmentVariables || [],
     configurationScript: environment.configurationScript || ''
   }
@@ -453,7 +464,7 @@ const resetForm = () => {
     name: '',
     description: '',
     runtime: '',
-    aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+    aiProvider: 'anthropic-api',
     environmentVariables: [],
     configurationScript: ''
   }
