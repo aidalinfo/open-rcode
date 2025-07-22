@@ -11,6 +11,8 @@ export interface User {
   githubAppInstallationIds?: string[];
   githubAppInstalledAt?: Date;
   anthropicKey?: string;
+  claudeOAuthToken?: string;
+  geminiApiKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +30,8 @@ const userSchema = new Schema<UserDocument>({
   githubAppInstallationIds: { type: [String], default: [] },
   githubAppInstalledAt: { type: Date },
   anthropicKey: { type: String },
+  claudeOAuthToken: { type: String },
+  geminiApiKey: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

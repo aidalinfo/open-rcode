@@ -38,15 +38,41 @@ export class ContainerSetup {
     }
 
     const user = await UserModel.findOne({ githubId: task.userId })
-    if (!user || !user.anthropicKey) {
-      throw new Error(`User ${task.userId} not found or Anthropic API key not configured`)
+    if (!user) {
+      throw new Error(`User ${task.userId} not found`)
     }
 
-    const anthropicKey = decrypt(user.anthropicKey)
+    // Vérifier que l'utilisateur a configuré le token nécessaire selon le provider
+    const aiProvider = environment.aiProvider || 'anthropic-api'
+    let requiredToken: string | null = null
+
+    switch (aiProvider) {
+      case 'anthropic-api':
+        if (!user.anthropicKey) {
+          throw new Error(`User ${task.userId} has not configured Anthropic API key`)
+        }
+        requiredToken = decrypt(user.anthropicKey)
+        break
+      case 'claude-oauth':
+        if (!user.claudeOAuthToken) {
+          throw new Error(`User ${task.userId} has not configured Claude OAuth token`)
+        }
+        requiredToken = decrypt(user.claudeOAuthToken)
+        break
+      case 'gemini-cli':
+        if (!user.geminiApiKey) {
+          throw new Error(`User ${task.userId} has not configured Gemini API key`)
+        }
+        requiredToken = decrypt(user.geminiApiKey)
+        break
+      default:
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
+    }
+
     const containerName = `ccweb-task-${task._id}-${Date.now()}`
     const workspaceDir = options.workspaceDir || `/workspace/${environment.repository}`
 
-    const envVars = this.prepareEnvironmentVariables(environment, anthropicKey, options.additionalEnvVars)
+    const envVars = this.prepareEnvironmentVariables(environment, requiredToken, aiProvider, options.additionalEnvVars)
     const volumes = await this.prepareVolumes(task, environment)
 
     await this.ensureDockerImage('ccweb-task-runner:latest')
@@ -73,7 +99,8 @@ export class ContainerSetup {
 
   private prepareEnvironmentVariables(
     environment: any,
-    anthropicKey: string,
+    aiToken: string,
+    aiProvider: string,
     additionalEnvVars?: Record<string, string>
   ): Record<string, string> {
     const envVars: Record<string, string> = {
@@ -82,11 +109,23 @@ export class ContainerSetup {
       CODEX_ENV_RUST_VERSION: '1.87.0',
       CODEX_ENV_GO_VERSION: '1.23.8',
       CODEX_ENV_SWIFT_VERSION: '6.1',
-      CLAUDE_CODE_OAUTH_TOKEN: anthropicKey,
       ...Object.fromEntries(
         environment.environmentVariables.map((envVar: any) => [envVar.key, envVar.value])
       ),
       ...additionalEnvVars
+    }
+
+    // Configurer les variables d'environnement selon le provider IA sélectionné
+    switch (aiProvider) {
+      case 'anthropic-api':
+        envVars.ANTHROPIC_API_KEY = aiToken
+        break
+      case 'claude-oauth':
+        envVars.CLAUDE_CODE_OAUTH_TOKEN = aiToken
+        break
+      case 'gemini-cli':
+        envVars.GEMINI_API_KEY = aiToken
+        break
     }
 
     switch (environment.runtime) {

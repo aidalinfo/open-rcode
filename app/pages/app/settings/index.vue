@@ -10,63 +10,188 @@
         </p>
       </div>
 
-      <!-- API Key Anthropic -->
+      <!-- Tokens IA -->
       <UCard>
         <template #header>
           <h2 class="text-xl font-semibold">
-            Clé API Anthropic
+            Tokens d'Intelligence Artificielle
           </h2>
         </template>
 
-        <div class="space-y-4">
-          <p class="text-gray-600 dark:text-gray-400">
-            {{ hasAnthropicKey ? 'Votre clé API Anthropic est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API Anthropic pour utiliser le chat IA.' }}
-          </p>
+        <div class="space-y-6">
+          <!-- API Key Anthropic -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-cpu-chip" class="text-purple-500" />
+              <h3 class="text-lg font-medium">Clé API Anthropic</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              {{ hasAnthropicKey ? 'Votre clé API Anthropic est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API Anthropic pour utiliser Claude via API.' }}
+            </p>
 
-          <div v-if="!hasAnthropicKey" class="space-y-4">
-            <UFormGroup label="Clé API Anthropic" name="anthropicKey">
-              <div class="flex gap-2">
-                <UInput
-                  v-model="anthropicKeyInput"
-                  type="password"
-                  placeholder="sk-ant-..."
-                  size="lg"
-                  class="flex-1"
-                  :disabled="savingApiKey"
-                />
-                <UButton
-                  @click="saveAnthropicKey"
-                  :loading="savingApiKey"
-                  :disabled="!anthropicKeyInput || !anthropicKeyInput.startsWith('sk-ant-')"
-                  size="lg"
-                >
-                  <template #leading>
-                    <UIcon name="i-heroicons-key" />
-                  </template>
-                  Sauvegarder
-                </UButton>
+            <div v-if="!hasAnthropicKey" class="space-y-4">
+              <UFormGroup label="Clé API Anthropic" name="anthropicKey">
+                <div class="flex gap-2">
+                  <UInput
+                    v-model="anthropicKeyInput"
+                    type="password"
+                    placeholder="sk-ant-..."
+                    size="lg"
+                    class="flex-1"
+                    :disabled="savingApiKey"
+                  />
+                  <UButton
+                    @click="saveAnthropicKey"
+                    :loading="savingApiKey"
+                    :disabled="!anthropicKeyInput || !anthropicKeyInput.startsWith('sk-ant-')"
+                    size="lg"
+                  >
+                    <template #leading>
+                      <UIcon name="i-heroicons-key" />
+                    </template>
+                    Sauvegarder
+                  </UButton>
+                </div>
+              </UFormGroup>
+            </div>
+
+            <div v-else class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                  Clé API configurée
+                </span>
               </div>
-            </UFormGroup>
+              <UButton
+                @click="resetAnthropicKey"
+                variant="ghost"
+                size="sm"
+                color="red"
+              >
+                <template #leading>
+                  <UIcon name="i-heroicons-trash" />
+                </template>
+                Supprimer
+              </UButton>
+            </div>
           </div>
 
-          <div v-else class="flex items-center justify-between">
+          <UDivider />
+
+          <!-- Token OAuth Claude -->
+          <div class="space-y-4">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-shield-check" class="text-green-500" />
-              <span class="text-sm font-medium text-green-700 dark:text-green-400">
-                Clé API configurée
-              </span>
+              <UIcon name="i-heroicons-identification" class="text-blue-500" />
+              <h3 class="text-lg font-medium">Token OAuth Claude Code</h3>
             </div>
-            <UButton
-              @click="resetAnthropicKey"
-              variant="ghost"
-              size="sm"
-              color="red"
-            >
-              <template #leading>
-                <UIcon name="i-heroicons-trash" />
-              </template>
-              Supprimer
-            </UButton>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              {{ hasClaudeOAuth ? 'Votre token OAuth Claude Code est configuré et chiffré de manière sécurisée.' : 'Configurez votre token OAuth pour utiliser Claude Code CLI.' }}
+            </p>
+
+            <div v-if="!hasClaudeOAuth" class="space-y-4">
+              <UFormGroup label="Token OAuth Claude Code" name="claudeOAuthToken">
+                <div class="flex gap-2">
+                  <UInput
+                    v-model="claudeOAuthTokenInput"
+                    type="password"
+                    placeholder="oauth-token..."
+                    size="lg"
+                    class="flex-1"
+                    :disabled="savingOAuthToken"
+                  />
+                  <UButton
+                    @click="saveClaudeOAuthToken"
+                    :loading="savingOAuthToken"
+                    :disabled="!claudeOAuthTokenInput"
+                    size="lg"
+                  >
+                    <template #leading>
+                      <UIcon name="i-heroicons-key" />
+                    </template>
+                    Sauvegarder
+                  </UButton>
+                </div>
+              </UFormGroup>
+            </div>
+
+            <div v-else class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                  Token OAuth configuré
+                </span>
+              </div>
+              <UButton
+                @click="resetClaudeOAuthToken"
+                variant="ghost"
+                size="sm"
+                color="red"
+              >
+                <template #leading>
+                  <UIcon name="i-heroicons-trash" />
+                </template>
+                Supprimer
+              </UButton>
+            </div>
+          </div>
+
+          <UDivider />
+
+          <!-- API Key Gemini -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-sparkles" class="text-amber-500" />
+              <h3 class="text-lg font-medium">Clé API Google Gemini</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              {{ hasGeminiKey ? 'Votre clé API Gemini est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API pour utiliser Google Gemini CLI.' }}
+            </p>
+
+            <div v-if="!hasGeminiKey" class="space-y-4">
+              <UFormGroup label="Clé API Google Gemini" name="geminiApiKey">
+                <div class="flex gap-2">
+                  <UInput
+                    v-model="geminiApiKeyInput"
+                    type="password"
+                    placeholder="AIza..."
+                    size="lg"
+                    class="flex-1"
+                    :disabled="savingGeminiKey"
+                  />
+                  <UButton
+                    @click="saveGeminiApiKey"
+                    :loading="savingGeminiKey"
+                    :disabled="!geminiApiKeyInput"
+                    size="lg"
+                  >
+                    <template #leading>
+                      <UIcon name="i-heroicons-key" />
+                    </template>
+                    Sauvegarder
+                  </UButton>
+                </div>
+              </UFormGroup>
+            </div>
+
+            <div v-else class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                  Clé API configurée
+                </span>
+              </div>
+              <UButton
+                @click="resetGeminiApiKey"
+                variant="ghost"
+                size="sm"
+                color="red"
+              >
+                <template #leading>
+                  <UIcon name="i-heroicons-trash" />
+                </template>
+                Supprimer
+              </UButton>
+            </div>
           </div>
         </div>
       </UCard>
@@ -127,7 +252,7 @@
               Environnements
             </h2>
             <UButton
-              to="/app/settings/environnement"
+              to="/app/settings/create-environnement"
               icon="i-heroicons-plus"
               size="sm"
             >
@@ -174,7 +299,7 @@
             </div>
             <div class="flex items-center gap-2">
               <UButton
-                :to="`/app/settings/environnement?edit=${environment.id}`"
+                :to="`/app/settings/update-environnement?edit=${environment.id}`"
                 variant="ghost"
                 size="sm"
               >
@@ -213,8 +338,14 @@ const isInstalling = ref(false)
 const hasGithubApp = ref(false)
 const loadingGithubStatus = ref(true)
 const hasAnthropicKey = ref(false)
+const hasClaudeOAuth = ref(false)
+const hasGeminiKey = ref(false)
 const anthropicKeyInput = ref('')
+const claudeOAuthTokenInput = ref('')
+const geminiApiKeyInput = ref('')
 const savingApiKey = ref(false)
+const savingOAuthToken = ref(false)
+const savingGeminiKey = ref(false)
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -289,6 +420,24 @@ const checkAnthropicKey = async () => {
   }
 }
 
+const checkClaudeOAuthToken = async () => {
+  try {
+    const data = await $fetch('/api/user/claude-oauth-token')
+    hasClaudeOAuth.value = data.hasToken
+  } catch (error) {
+    console.error('Erreur lors de la vérification du token OAuth:', error)
+  }
+}
+
+const checkGeminiApiKey = async () => {
+  try {
+    const data = await $fetch('/api/user/gemini-api-key')
+    hasGeminiKey.value = data.hasApiKey
+  } catch (error) {
+    console.error('Erreur lors de la vérification de la clé API Gemini:', error)
+  }
+}
+
 const saveAnthropicKey = async () => {
   if (!anthropicKeyInput.value || !anthropicKeyInput.value.startsWith('sk-ant-')) {
     toast.add({
@@ -350,6 +499,128 @@ const resetAnthropicKey = async () => {
   }
 }
 
+const saveClaudeOAuthToken = async () => {
+  if (!claudeOAuthTokenInput.value) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez entrer un token OAuth valide',
+      color: 'error'
+    })
+    return
+  }
+
+  savingOAuthToken.value = true
+  try {
+    await $fetch('/api/user/claude-oauth-token', {
+      method: 'PUT',
+      body: { claudeOAuthToken: claudeOAuthTokenInput.value }
+    })
+    
+    toast.add({
+      title: 'Succès',
+      description: 'Token OAuth sauvegardé avec succès',
+      color: 'success'
+    })
+    
+    hasClaudeOAuth.value = true
+    claudeOAuthTokenInput.value = ''
+  } catch (error) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de sauvegarder le token OAuth',
+      color: 'error'
+    })
+  } finally {
+    savingOAuthToken.value = false
+  }
+}
+
+const resetClaudeOAuthToken = async () => {
+  if (confirm('Êtes-vous sûr de vouloir supprimer votre token OAuth Claude ?')) {
+    try {
+      await $fetch('/api/user/claude-oauth-token', {
+        method: 'PUT',
+        body: { claudeOAuthToken: '' }
+      })
+      
+      toast.add({
+        title: 'Succès',
+        description: 'Token OAuth supprimé avec succès',
+        color: 'success'
+      })
+      
+      hasClaudeOAuth.value = false
+    } catch (error) {
+      toast.add({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le token OAuth',
+        color: 'error'
+      })
+    }
+  }
+}
+
+const saveGeminiApiKey = async () => {
+  if (!geminiApiKeyInput.value) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez entrer une clé API Gemini valide',
+      color: 'error'
+    })
+    return
+  }
+
+  savingGeminiKey.value = true
+  try {
+    await $fetch('/api/user/gemini-api-key', {
+      method: 'PUT',
+      body: { geminiApiKey: geminiApiKeyInput.value }
+    })
+    
+    toast.add({
+      title: 'Succès',
+      description: 'Clé API Gemini sauvegardée avec succès',
+      color: 'success'
+    })
+    
+    hasGeminiKey.value = true
+    geminiApiKeyInput.value = ''
+  } catch (error) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de sauvegarder la clé API Gemini',
+      color: 'error'
+    })
+  } finally {
+    savingGeminiKey.value = false
+  }
+}
+
+const resetGeminiApiKey = async () => {
+  if (confirm('Êtes-vous sûr de vouloir supprimer votre clé API Gemini ?')) {
+    try {
+      await $fetch('/api/user/gemini-api-key', {
+        method: 'PUT',
+        body: { geminiApiKey: '' }
+      })
+      
+      toast.add({
+        title: 'Succès',
+        description: 'Clé API Gemini supprimée avec succès',
+        color: 'success'
+      })
+      
+      hasGeminiKey.value = false
+    } catch (error) {
+      toast.add({
+        title: 'Erreur',
+        description: 'Impossible de supprimer la clé API Gemini',
+        color: 'error'
+      })
+    }
+  }
+}
+
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('fr-FR')
 }
@@ -359,7 +630,9 @@ onMounted(async () => {
   await Promise.all([
     fetchEnvironments(),
     checkGithubAppStatus(),
-    checkAnthropicKey()
+    checkAnthropicKey(),
+    checkClaudeOAuthToken(),
+    checkGeminiApiKey()
   ])
 })
 </script>

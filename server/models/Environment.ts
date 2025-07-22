@@ -14,6 +14,7 @@ export interface Environment {
   name: string;
   description?: string;
   runtime: 'node' | 'php' | 'python';
+  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
   environmentVariables: EnvironmentVariable[];
   configurationScript?: string;
   createdAt: Date;
@@ -39,6 +40,12 @@ const environmentSchema = new Schema<EnvironmentDocument>({
     type: String, 
     enum: ['node', 'php', 'python'], 
     required: true 
+  },
+  aiProvider: {
+    type: String,
+    enum: ['anthropic-api', 'claude-oauth', 'gemini-cli'],
+    default: 'anthropic-api',
+    required: true
   },
   environmentVariables: [environmentVariableSchema],
   configurationScript: { type: String },

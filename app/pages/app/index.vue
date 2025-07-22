@@ -20,7 +20,7 @@
               Créez votre premier environnement pour commencer à utiliser le chat.
             </p>
             <UButton
-              to="/app/settings/environnement"
+              to="/app/settings/create-environnement"
               icon="i-heroicons-plus"
             >
               Créer un environnement

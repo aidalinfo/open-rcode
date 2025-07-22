@@ -67,6 +67,24 @@
             />
           </UFormField>
 
+          <!-- Provider IA -->
+          <UFormField label="Provider d'Intelligence Artificielle" name="aiProvider" required class="mt-10">
+            <USelectMenu
+              v-model="form.aiProvider"
+              :items="aiProviderOptions"
+              placeholder="Sélectionnez un provider IA"
+              value-attribute="value"
+              option-attribute="label"
+              size="lg"
+              class="w-full"
+            />
+            <template #help>
+              <p class="text-sm text-gray-500 mt-2">
+                {{ getAiProviderDescription(form.aiProvider?.value || form.aiProvider) }}
+              </p>
+            </template>
+          </UFormField>
+
           <!-- Variables d'environnement -->
           <div class="space-y-6 mt-10">
             <div class="flex items-center justify-between">
@@ -257,6 +275,7 @@ const form = ref({
   name: '',
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
+  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -266,6 +285,12 @@ const runtimeOptions = [
   { label: 'Node.js', value: 'node' },
   { label: 'PHP', value: 'php' },
   { label: 'Python', value: 'python' }
+]
+
+const aiProviderOptions = [
+  { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+  { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
+  { label: 'Google Gemini CLI', value: 'gemini-cli' }
 ]
 
 const repositoryOptions = computed(() => {
@@ -325,6 +350,15 @@ const removeVariable = (index: number) => {
   form.value.environmentVariables.splice(index, 1)
 }
 
+const getAiProviderDescription = (provider: string) => {
+  const descriptions = {
+    'anthropic-api': 'Utilise votre clé API Anthropic pour appeler Claude directement via API.',
+    'claude-oauth': 'Utilise votre token OAuth pour Claude Code CLI (recommandé pour les fonctionnalités avancées).',
+    'gemini-cli': 'Utilise votre clé API Google pour appeler Gemini via CLI.'
+  }
+  return descriptions[provider as keyof typeof descriptions] || ''
+}
+
 const submitForm = async () => {
   isSubmitting.value = true
   try {
@@ -342,8 +376,10 @@ const submitForm = async () => {
     
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
+    const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
     
     console.log('selectedRuntime:', selectedRuntime, typeof selectedRuntime)
+    console.log('selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
     
     const payload = {
       organization,
@@ -351,6 +387,7 @@ const submitForm = async () => {
       name: form.value.name,
       description: form.value.description,
       runtime: selectedRuntime,
+      aiProvider: selectedAiProvider,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
       configurationScript: form.value.configurationScript
     }
@@ -416,6 +453,7 @@ const resetForm = () => {
     name: '',
     description: '',
     runtime: '',
+    aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
     environmentVariables: [],
     configurationScript: ''
   }
