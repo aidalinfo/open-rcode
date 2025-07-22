@@ -18,7 +18,43 @@
           </h2>
         </template>
 
-        <div class="space-y-6">
+        <div v-if="loadingAITokens" class="space-y-6">
+          <!-- Anthropic API Key Skeleton -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <USkeleton class="h-5 w-5" />
+              <USkeleton class="h-6 w-48" />
+            </div>
+            <USkeleton class="h-4 w-full" />
+            <USkeleton class="h-10 w-full" />
+          </div>
+          
+          <UDivider />
+          
+          <!-- Claude OAuth Token Skeleton -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <USkeleton class="h-5 w-5" />
+              <USkeleton class="h-6 w-56" />
+            </div>
+            <USkeleton class="h-4 w-full" />
+            <USkeleton class="h-10 w-full" />
+          </div>
+          
+          <UDivider />
+          
+          <!-- Gemini API Key Skeleton -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <USkeleton class="h-5 w-5" />
+              <USkeleton class="h-6 w-52" />
+            </div>
+            <USkeleton class="h-4 w-full" />
+            <USkeleton class="h-10 w-full" />
+          </div>
+        </div>
+
+        <div v-else class="space-y-6">
           <!-- API Key Anthropic -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
@@ -340,6 +376,7 @@ const loadingGithubStatus = ref(true)
 const hasAnthropicKey = ref(false)
 const hasClaudeOAuth = ref(false)
 const hasGeminiKey = ref(false)
+const loadingAITokens = ref(true)
 const anthropicKeyInput = ref('')
 const claudeOAuthTokenInput = ref('')
 const geminiApiKeyInput = ref('')
@@ -435,6 +472,18 @@ const checkGeminiApiKey = async () => {
     hasGeminiKey.value = data.hasApiKey
   } catch (error) {
     console.error('Erreur lors de la vérification de la clé API Gemini:', error)
+  }
+}
+
+const checkAllAITokens = async () => {
+  try {
+    await Promise.all([
+      checkAnthropicKey(),
+      checkClaudeOAuthToken(), 
+      checkGeminiApiKey()
+    ])
+  } finally {
+    loadingAITokens.value = false
   }
 }
 
@@ -630,9 +679,7 @@ onMounted(async () => {
   await Promise.all([
     fetchEnvironments(),
     checkGithubAppStatus(),
-    checkAnthropicKey(),
-    checkClaudeOAuthToken(),
-    checkGeminiApiKey()
+    checkAllAITokens()
   ])
 })
 </script>
