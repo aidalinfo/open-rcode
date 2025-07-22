@@ -1,368 +1,152 @@
-# CCWeb - Claude Code Web Platform
+# CLAUDE.md
 
-## 🚀 Vue d'ensemble
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-CCWeb est une plateforme web d'automatisation de développement qui permet aux développeurs d'exécuter des tâches de programmation assistées par IA dans des environnements Docker isolés, avec création automatique de Pull Requests GitHub.
+## Project Overview
 
-### Fonctionnalités principales
-- 🤖 **Exécution de tâches Claude Code** dans des conteneurs Docker isolés
-- 🔐 **Authentification GitHub App** avec accès aux repositories privés
-- 🐳 **Environnements Docker dynamiques** avec support multi-runtimes
-- 🔄 **Workflow automatique** : Tâche → Exécution → Pull Request
-- ⚙️ **Environnements personnalisables** avec variables d'environnement
-- 📊 **Interface utilisateur moderne** avec Nuxt UI Pro
+CCWeb is a Docker-based web platform that enables developers to execute AI-assisted programming tasks in isolated containers, automatically creating GitHub Pull Requests. Built with Nuxt 4, MongoDB, and Docker integration.
 
-## 🏗️ Architecture Technique
+## Development Commands
 
-### Stack Technologique
-- **Frontend**: Nuxt 3, Vue 3, Nuxt UI Pro, TypeScript
-- **Backend**: Nuxt Server API, MongoDB, Docker
-- **IA**: Anthropic Claude Code
-- **Intégration**: GitHub Apps, GitHub API
-- **Infrastructure**: Docker containers, Node.js runtime
-
-### Structure des Dossiers
-```
-ccweb/
-├── app/                          # Frontend Nuxt.js
-│   ├── components/              # Composants Vue réutilisables
-│   │   ├── ChatPrompt.vue       # Interface de saisie des tâches
-│   │   └── ...
-│   ├── middleware/              # Middlewares de route
-│   ├── pages/                   # Pages de l'application
-│   │   ├── app/                # Pages principales de l'app
-│   │   │   ├── index.vue       # Dashboard principal
-│   │   │   └── settings/       # Configuration utilisateur
-│   │   └── login.vue           # Page de connexion
-│   └── layouts/                # Layouts de page
-├── server/                      # Backend API
-│   ├── api/                    # Endpoints API REST
-│   │   ├── auth/               # Authentification GitHub
-│   │   ├── tasks/              # Gestion des tâches
-│   │   ├── environments/       # Environnements de dev
-│   │   └── user/               # Gestion utilisateur
-│   ├── models/                 # Modèles MongoDB
-│   │   ├── Task.ts            # Modèle des tâches
-│   │   ├── Environment.ts     # Environnements de développement
-│   │   └── User.ts            # Utilisateurs
-│   ├── utils/                  # Utilitaires backend
-│   │   ├── task-container.ts   # Orchestrateur principal
-│   │   ├── container-setup.ts  # Configuration conteneurs
-│   │   ├── claude-executor.ts  # Exécution Claude Code
-│   │   ├── pull-request-creator.ts # Création PRs GitHub
-│   │   ├── repository-cloner.ts # Clonage repositories
-│   │   ├── docker.ts           # Gestionnaire Docker
-│   │   └── github-app.ts       # Intégration GitHub App
-│   └── plugins/                # Plugins Nuxt server
-└── public/                     # Assets statiques
-```
-
-## 📊 Modèles de Données
-
-### TaskModel
-```typescript
-{
-  userId: string,              // ID GitHub de l'utilisateur
-  environmentId: ObjectId,     // Référence à l'environnement
-  name: string,               // Nom de la tâche
-  dockerId?: string,          // ID du conteneur Docker
-  messages: [{                // Historique des messages
-    role: 'user' | 'assistant',
-    content: string,
-    timestamp: Date
-  }],
-  pr?: {                      // Informations de la PR créée
-    url: string,
-    number: number
-  },
-  merged: boolean,            // Statut de fusion
-  executed: boolean           // Statut d'exécution
-}
-```
-
-### EnvironmentModel
-```typescript
-{
-  userId: string,                    // Propriétaire de l'environnement
-  name: string,                     // Nom de l'environnement
-  repository: string,               // Nom du repository
-  repositoryFullName: string,       // owner/repo format
-  runtime: 'node' | 'python' | 'php', // Runtime principal
-  environmentVariables: [{          // Variables d'environnement
-    key: string,
-    value: string
-  }],
-  configurationScript?: string      // Script de configuration
-}
-```
-
-### UserModel
-```typescript
-{
-  githubId: string,                    // ID unique GitHub
-  username: string,                   // Nom d'utilisateur GitHub
-  name?: string,                      // Nom complet
-  email?: string,                     // Email
-  anthropicKey?: string,              // Clé API Anthropic (chiffrée)
-  githubAppInstallationIds: string[]  // IDs des installations GitHub App
-}
-```
-
-## 🔄 Workflow Principal
-
-### 1. Authentification et Configuration
-```
-Utilisateur → GitHub OAuth → Session → Configuration clé Anthropic
-```
-
-### 2. Création d'Environnement
-```
-Interface → Sélection Repository → Configuration Variables → Sauvegarde
-```
-
-### 3. Exécution de Tâche
-```mermaid
-sequenceDiagram
-    participant U as Utilisateur
-    participant UI as Interface
-    participant API as API Server
-    participant TCM as TaskContainerManager
-    participant D as Docker
-    participant C as Claude Code
-    participant GH as GitHub
-
-    U->>UI: Saisit tâche
-    UI->>API: POST /api/tasks
-    API->>TCM: createTaskContainer()
-    TCM->>D: Créer conteneur
-    D->>TCM: Conteneur prêt
-    TCM->>C: Exécuter tâche utilisateur
-    C->>TCM: Résultat + modifications
-    TCM->>C: Résumer modifications
-    C->>TCM: Résumé
-    TCM->>GH: Créer Pull Request
-    GH->>TCM: PR créée
-    TCM->>API: Workflow terminé
-    API->>UI: Mise à jour statut
-```
-
-## 🐳 Architecture des Conteneurs
-
-### Configuration Docker
-- **Image de base**: `ccweb-task-runner:latest` (construite dynamiquement)
-- **Runtime support**: Node.js 20, Python 3.12, PHP 8.3, Rust, Go, Swift
-- **Volumes**: Repository source + configuration Claude
-- **Network**: Bridge mode pour isolation
-- **User**: Root avec environnement configuré
-
-### Cycle de vie d'un conteneur
-1. **Création**: Image Docker avec runtime approprié
-2. **Setup**: Installation Claude Code + configuration
-3. **Clonage**: Repository GitHub avec authentification
-4. **Exécution**: Commandes Claude automatiques
-5. **Persistence**: Conteneur reste actif pour inspection
-6. **Cleanup**: Nettoyage manuel des ressources
-
-## 🔐 Sécurité
-
-### Authentification
-- **GitHub OAuth 2.0** pour l'authentification utilisateur
-- **GitHub Apps** pour l'accès aux repositories privés
-- **Sessions sécurisées** avec cookies HttpOnly
-
-### Chiffrement
-- **Clés API Anthropic** chiffrées en base de données
-- **Tokens GitHub** régénérés à la demande
-- **Variables d'environnement** isolées par conteneur
-
-### Isolation
-- **Conteneurs Docker** isolés par tâche
-- **Réseaux bridge** séparés
-- **Workspaces temporaires** avec cleanup automatique
-
-## 🛠️ APIs Principales
-
-### Authentification
-- `GET /api/auth/github` - Initier OAuth GitHub
-- `GET /api/auth/github-app` - Installation GitHub App
-- `POST /api/user/anthropic-key` - Configuration clé Anthropic
-
-### Environnements
-- `GET /api/environments` - Liste des environnements
-- `POST /api/environments` - Créer environnement
-- `PUT /api/environments/:id` - Mettre à jour environnement
-- `DELETE /api/environments/:id` - Supprimer environnement
-
-### Tâches
-- `POST /api/tasks` - Créer nouvelle tâche
-- `POST /api/tasks/:id/container` - Créer conteneur pour tâche
-- `POST /api/tasks/:id/execute` - Exécuter commande dans conteneur
-
-### Monitoring
-- `GET /api/monitoring/containers` - Statut des conteneurs
-- `POST /api/monitoring/cleanup` - Nettoyer conteneurs inactifs
-
-## 📝 Configuration
-
-### Variables d'Environnement
 ```bash
-# Base de données
+# Core development
+pnpm dev              # Start development server (http://localhost:3000)
+pnpm build           # Production build
+pnpm preview         # Preview production build
+
+# Code quality
+pnpm lint            # ESLint checking
+pnpm typecheck       # TypeScript validation
+
+# Docker operations
+docker build -t ccweb-task-runner:latest server/utils/docker/    # Build task runner image
+docker ps -f name=ccweb-task                                     # List active task containers
+docker logs <container_id>                                       # View container logs
+```
+
+## Architecture Overview
+
+### Core Workflow
+The platform orchestrates AI-assisted development through this flow:
+1. User submits task via web interface
+2. `TaskContainerManager` creates isolated Docker container
+3. `ClaudeExecutor` runs AI commands inside container
+4. `PullRequestCreator` commits changes and creates GitHub PR
+
+### Key Components
+
+**Backend Orchestration (`server/utils/`):**
+- `task-container.ts` - Main orchestrator for task execution workflow
+- `claude-executor.ts` - Executes Claude Code commands inside Docker containers
+- `container-setup.ts` - Configures Docker environments and runtime dependencies
+- `pull-request-creator.ts` - Handles Git operations and GitHub PR creation
+- `repository-cloner.ts` - Clones GitHub repositories with authentication
+
+**Data Models (`server/models/`):**
+- `Task.ts` - Tracks task execution, Docker containers, and PR status
+- `TaskMessage.ts` - Stores conversation history separately from tasks
+- `Environment.ts` - Repository-specific development configurations
+- `User.ts` - GitHub user profiles with encrypted API keys
+
+**API Structure (`server/api/`):**
+- `tasks/` - Task creation and container management endpoints
+- `environments/` - CRUD operations for development environments
+- `auth/` - GitHub OAuth and GitHub App integration
+- `monitoring/` - Container status and cleanup operations
+
+## Critical Implementation Details
+
+### Message Storage System
+The system uses dual message storage:
+- `Task.messages[]` - Legacy storage for compatibility
+- `TaskMessageModel` - Primary storage for conversation threading
+- **Important**: Always save user messages to both when creating tasks
+
+### Docker Container Management
+Containers persist after task completion for inspection. They accumulate quickly and consume disk space.
+- Monitor with: `GET /api/monitoring/containers`
+- Cleanup with: `docker stop $(docker ps -q -f name=ccweb-task) && docker rm $(docker ps -aq -f name=ccweb-task)`
+
+### AI Provider Configuration
+The system supports multiple AI providers through environment variables:
+- `claude-oauth` - Uses `CLAUDE_CODE_OAUTH_TOKEN`
+- `anthropic-api` - Uses `ANTHROPIC_API_KEY`
+- `gemini-cli` - Uses `GEMINI_API_KEY`
+
+Claude Code installation happens in container entrypoint (`server/utils/docker/entrypoint.sh`)
+
+### Authentication Flow
+- GitHub OAuth for user authentication (sessions in MongoDB)
+- GitHub Apps for repository access (installation IDs stored per user)
+- API keys encrypted in database using `ENCRYPTION_KEY`
+
+## Database Schema
+
+### Task Execution Flow
+```typescript
+Task {
+  userId: string,           // GitHub user ID
+  environmentId: ObjectId,  // Links to Environment
+  dockerId?: string,        // Container ID when running
+  messages: Message[],      // Legacy message storage
+  status: 'pending' | 'running' | 'completed' | 'failed'
+}
+
+TaskMessage {
+  taskId: string,          // Links to Task
+  role: 'user' | 'assistant',
+  content: string,
+  createdAt: Date
+}
+```
+
+### Environment Configuration
+```typescript
+Environment {
+  repository: string,                    // GitHub repo name
+  repositoryFullName: string,           // owner/repo format
+  runtime: 'node' | 'python' | 'php',  // Primary runtime
+  environmentVariables: { key, value }[],
+  configurationScript?: string          // Pre-execution setup
+}
+```
+
+## Common Issues and Solutions
+
+### "No space left on device" Errors
+Docker containers accumulate and fill disk space. Run cleanup commands regularly.
+
+### Claude Command Failed (Exit Code 128)
+- Verify Claude Code is installed in container
+- Check OAuth token validity
+- Ensure environment variables are properly set
+
+### Message Not Found in TaskMessageModel
+Ensure user messages are saved to `TaskMessageModel` when creating tasks in `server/api/tasks.post.ts`
+
+## Required Environment Variables
+
+```bash
+# Database
 DATABASE_URL=mongodb://localhost:27017/ccweb
 
-# GitHub App
+# GitHub Integration
 GITHUB_APP_ID=your_app_id
 GITHUB_PRIVATE_KEY=path/to/private-key.pem
 GITHUB_CLIENT_ID=your_oauth_client_id
 GITHUB_CLIENT_SECRET=your_oauth_client_secret
 
-# Chiffrement
+# Encryption and Sessions
 ENCRYPTION_KEY=your_32_character_secret_key
-
-# Session
 SESSION_SECRET=your_session_secret
 ```
 
-### Configuration Docker
-```dockerfile
-# server/utils/docker/Dockerfile
-FROM python:3.12
-RUN apt-get update && apt-get install -y nodejs npm
-RUN npm install -g @anthropic-ai/claude-code
-# ... configuration runtime
-```
+## Docker Configuration
 
-## 🚀 Installation et Déploiement
+The `ccweb-task-runner:latest` image includes:
+- Ubuntu 24.04 base with development tools
+- Node.js (18, 20, 22) via NVM
+- Claude Code and Gemini CLI installed globally
+- Git configuration and repository cloning capabilities
 
-### Prérequis
-- Node.js 20+
-- Docker Engine
-- MongoDB
-- GitHub App configurée
-
-### Installation locale
-```bash
-# Cloner le projet
-git clone https://github.com/user/ccweb.git
-cd ccweb
-
-# Installer dépendances
-pnpm install
-
-# Configurer variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos configurations
-
-# Démarrer MongoDB
-docker run -d -p 27017:27017 --name mongodb mongo:latest
-
-# Construire image Docker personnalisée
-docker build -t ccweb-task-runner:latest server/utils/docker/
-
-# Démarrer en développement
-pnpm dev
-```
-
-### Configuration GitHub App
-1. Créer une GitHub App sur GitHub
-2. Configurer les permissions : Repository (Read/Write), Pull Requests (Write)
-3. Générer une clé privée
-4. Noter l'App ID et installer l'app sur les repositories
-
-## 🧪 Utilisation
-
-### Créer un Environnement
-1. Se connecter via GitHub
-2. Aller dans "Paramètres" → "Environnements"
-3. Sélectionner un repository GitHub
-4. Configurer les variables d'environnement
-5. Sauvegarder
-
-### Exécuter une Tâche
-1. Sélectionner un environnement
-2. Saisir la description de la tâche
-3. Cliquer "Envoyer"
-4. Observer l'exécution en temps réel
-5. Vérifier la Pull Request créée automatiquement
-
-## 🔍 Monitoring et Observabilité
-
-### Logs Applicatifs
-- Création et gestion des conteneurs
-- Exécution des commandes Claude
-- Opérations Git et GitHub API
-- Erreurs et exceptions détaillées
-
-### Métriques Docker
-- Statut des conteneurs actifs
-- Utilisation des ressources
-- Temps d'exécution des tâches
-
-### Alertes
-- Échecs de création de conteneurs
-- Erreurs d'authentification GitHub
-- Timeouts d'exécution Claude
-
-## 🐛 Debugging et Troubleshooting
-
-### Logs de Debug
-```bash
-# Logs conteneurs Docker
-docker logs <container_id>
-
-# Logs application Nuxt
-tail -f .nuxt/dev/server.log
-
-# Monitoring conteneurs actifs
-GET /api/monitoring/containers
-```
-
-### Problèmes Courants
-- **"GitHub App not installed"**: Installer l'app sur le repository
-- **"Docker image not found"**: Construire l'image `ccweb-task-runner:latest`
-- **"Claude command failed"**: Vérifier la clé API Anthropic
-- **"Permission denied"**: Vérifier les permissions GitHub App
-
-## 🚧 Développement et Contribution
-
-### Architecture du Code
-- **Modularité**: Classes spécialisées par responsabilité
-- **DRY**: Pas de duplication de code
-- **Testabilité**: Injection de dépendances
-- **Maintenabilité**: Documentation inline et typage TypeScript
-
-### Standards de Code
-- TypeScript strict mode
-- ESLint + Prettier
-- Convention de nommage camelCase
-- Comments JSDoc pour les APIs publiques
-
-### Tests
-```bash
-# Tests unitaires
-pnpm test
-
-# Tests d'intégration
-pnpm test:e2e
-
-# Coverage
-pnpm test:coverage
-```
-
-## 📚 Resources et Liens
-
-- **Documentation Nuxt 3**: https://nuxt.com/docs
-- **Anthropic Claude**: https://docs.anthropic.com/
-- **GitHub Apps**: https://docs.github.com/en/apps
-- **Docker**: https://docs.docker.com/
-- **MongoDB**: https://docs.mongodb.com/
-
-## 🤝 Support et Communauté
-
-Pour questions, bugs ou contributions :
-- Ouvrir une issue sur GitHub
-- Consulter la documentation technique
-- Rejoindre les discussions de la communauté
-
----
-
-*Cette documentation est maintenue à jour avec chaque release majeure du projet.*
+Build with: `docker build -t ccweb-task-runner:latest server/utils/docker/`

@@ -77,7 +77,7 @@ Les modifications ont été poussées et une Pull Request a été créée automa
       
       task.messages.push({
         role: 'assistant',
-        content: `❌ **Erreur lors de la création de la PR:** ${error.message}`,
+        content: `❌ **Erreur lors de la création de la PR:** ${(error as any).message}`,
         timestamp: new Date()
       })
       await task.save()

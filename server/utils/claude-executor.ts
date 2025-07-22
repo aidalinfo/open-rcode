@@ -250,7 +250,7 @@ export class ClaudeExecutor {
       })
 
       return result.stdout
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error checking Git status in container ${containerId}:`, error)
       return `Error: ${error.message}`
     }

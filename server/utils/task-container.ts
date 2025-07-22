@@ -94,4 +94,3 @@ export async function executeClaudeInTask(taskId: string, prompt: string): Promi
 export async function cleanupTaskContainer(taskId: string): Promise<void> {
   return defaultTaskContainerManager.cleanupTaskContainer(taskId)
 }
-

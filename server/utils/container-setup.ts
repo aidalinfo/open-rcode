@@ -88,7 +88,6 @@ export class ContainerSetup {
     const workspaceDir = options.workspaceDir || `/workspace/${environment.repository}`
 
     const envVars = this.prepareEnvironmentVariables(environment, requiredToken, aiProvider, options.additionalEnvVars)
-    const volumes = await this.prepareVolumes(task, environment)
 
     await this.ensureDockerImage('ccweb-task-runner:latest')
 
@@ -97,12 +96,14 @@ export class ContainerSetup {
       name: containerName,
       workdir: workspaceDir,
       environment: envVars,
-      volumes,
       autoRemove: false,
       networkMode: 'bridge'
     })
 
     await this.waitForContainerReady(containerId)
+
+    // Cloner le repository directement dans le conteneur après le setup
+    await this.cloneRepositoryInContainer(task, environment, containerId)
 
     return {
       containerId,
@@ -158,32 +159,10 @@ export class ContainerSetup {
     return envVars
   }
 
-  private async prepareVolumes(task: any, environment: any): Promise<string[]> {
-    const volumes: string[] = []
-    const fs = await import('fs')
 
-    const hostWorkspaceDir = `/tmp/ccweb-workspaces/${task._id}`
-    const containerWorkspaceDir = `/workspace/${environment.repository}`
-    
-    if (!fs.existsSync(hostWorkspaceDir)) {
-      fs.mkdirSync(hostWorkspaceDir, { recursive: true })
-    }
-
-    await this.cloneRepository(task, environment, hostWorkspaceDir)
-    volumes.push(`${hostWorkspaceDir}:${containerWorkspaceDir}`)
-
-    const claudeConfigDir = '/tmp/ccweb-claude-config'
-    if (!fs.existsSync(claudeConfigDir)) {
-      fs.mkdirSync(claudeConfigDir, { recursive: true })
-    }
-    volumes.push(`${claudeConfigDir}:/home/user/.config/claude`)
-
-    return volumes
-  }
-
-  private async cloneRepository(task: any, environment: any, hostDir: string): Promise<void> {
-    const cloner = new RepositoryCloner()
-    await cloner.cloneToHost(task, environment, hostDir)
+  async cloneRepositoryInContainer(task: any, environment: any, containerId: string): Promise<void> {
+    const cloner = new RepositoryCloner(this.docker)
+    await cloner.cloneInContainer(task, environment, containerId)
   }
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
@@ -205,7 +184,7 @@ export class ContainerSetup {
         console.log(`Container still setting up... (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
         
-      } catch (error) {
+      } catch (error: any) {
         console.warn(`Error checking container readiness: ${error.message}`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
