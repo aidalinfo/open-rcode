@@ -34,7 +34,9 @@
 
 <script setup lang="ts">
 const toast = useToast()
-
+definePageMeta({
+  middleware: 'auth'
+})
 // États réactifs
 const input = ref('')
 const loading = ref(false)

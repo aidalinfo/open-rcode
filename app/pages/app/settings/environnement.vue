@@ -253,10 +253,10 @@ const environments = ref<any[]>([])
 
 // Formulaire
 const form = ref({
-  selectedRepository: '',
+  selectedRepository: { label: 'Please select a repository', value: '', description: '' },
   name: '',
   description: '',
-  runtime: '',
+  runtime: { label: 'Node.js', value: 'node' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })

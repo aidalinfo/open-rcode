@@ -33,7 +33,7 @@ if [ -n "${CODEX_ENV_NODE_VERSION}" ]; then
     echo 'export NVM_DIR="/root/.nvm"' >> /root/.bashrc
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc
     echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /root/.bashrc
-    
+    echo "export CLAUDE_CODE_OAUTH_TOKEN=\"${CLAUDE_CODE_OAUTH_TOKEN}\"" >> /root/.bashrc
     # Activer Node par défaut dans le PATH global
     NODE_PATH=$(nvm which "${CODEX_ENV_NODE_VERSION}")
     NODE_BIN_DIR=$(dirname "${NODE_PATH}")
@@ -73,22 +73,22 @@ fi
 #     fi
 # fi
 
-# Source NVM and install Claude Code if ANTHROPIC_API_KEY is set
-if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "Installing Claude Code..."
-    source /root/.nvm/nvm.sh
-    
-    # S'assurer que nous utilisons la bonne version de Node
-    if [ -n "${CODEX_ENV_NODE_VERSION}" ]; then
-        nvm use "${CODEX_ENV_NODE_VERSION}"
-    fi
-    
-    npm install -g @anthropic-ai/claude-code@1.0.31
-    # Configure Claude Code with proper settings
-    mkdir -p /root/.claude
-    
-    # Create settings.local.json with proper configuration
-    cat > /root/.claude/settings.json << EOF
+# Source NVM and install Claude Code
+echo "Installing Claude Code..."
+source /root/.nvm/nvm.sh
+
+# S'assurer que nous utilisons la bonne version de Node
+if [ -n "${CODEX_ENV_NODE_VERSION}" ]; then
+    nvm use "${CODEX_ENV_NODE_VERSION}"
+fi
+
+npm install -g @anthropic-ai/claude-code
+npm install -g @google/gemini-cli
+# Configure Claude Code with proper settings
+mkdir -p /root/.claude
+
+# Create settings.local.json with proper configuration
+cat > /root/.claude/settings.json << EOF
 {
   "permissions": {
     "allow": [
@@ -109,23 +109,12 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     ],
     "defaultMode": "acceptEdits"
   },
-  "env": {
-    "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
-    "DISABLE_AUTOUPDATER": "1",
-    "DISABLE_TELEMETRY": "1",
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
-  },
   "includeCoAuthoredBy": false,
   "cleanupPeriodDays": 7
 }
 EOF
-    
-    # Also create the legacy config.json for backward compatibility
-    mkdir -p /root/.config/claude
-    echo "{\"api_key\": \"${ANTHROPIC_API_KEY}\"}" > /root/.config/claude/config.json
-    
-    echo "Claude Code installed and configured with full permissions"
-fi
+
+echo "Claude Code installed and configured with full permissions"
 
 # S'assurer que tous les outils sont dans le PATH pour les connexions interactives
 echo 'source /etc/profile' >> /root/.bashrc

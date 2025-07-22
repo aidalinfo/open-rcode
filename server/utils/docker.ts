@@ -124,6 +124,13 @@ export class DockerManager {
   }
 
   /**
+   * Obtient l'instance Docker pour des opérations avancées
+   */
+  getDockerInstance(): Docker {
+    return this.docker
+  }
+
+  /**
    * Vérifie si Docker est disponible et en cours d'exécution
    */
   async isDockerAvailable(): Promise<boolean> {
