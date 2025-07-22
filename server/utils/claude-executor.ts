@@ -2,6 +2,8 @@ import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { PullRequestCreator } from './pull-request-creator'
+import { TaskMessageModel } from '../models/TaskMessage'
+import { v4 as uuidv4 } from 'uuid'
 
 export class ClaudeExecutor {
   private docker: DockerManager
@@ -44,7 +46,7 @@ export class ClaudeExecutor {
       git config --global --add safe.directory "${workdir}" || true
       
       ${envSetup}
-      ${aiCommand} "${prompt.replace(/"/g, '\\"')}"
+      ${aiCommand} "${prompt.replace(/"/g, '\"')}"
     `
 
     const result = await this.docker.executeInContainer({
@@ -109,40 +111,45 @@ export class ClaudeExecutor {
         try {
           const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir)
           
-          task.messages.push({
+          await TaskMessageModel.create({
+            id: uuidv4(),
+            userId: task.userId,
+            taskId: task._id,
             role: 'assistant',
-            content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``,
-            timestamp: new Date()
+            content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``
           })
           
           console.log('Configuration script completed successfully')
         } catch (configError) {
           console.error('Configuration script failed:', configError)
           
-          task.messages.push({
+          await TaskMessageModel.create({
+            id: uuidv4(),
+            userId: task.userId,
+            taskId: task._id,
             role: 'assistant',
-            content: `❌ **Erreur lors de la configuration:**\n\`\`\`\n${configError.message}\n\`\`\``,
-            timestamp: new Date()
+            content: `❌ **Erreur lors de la configuration:**\n\`\`\`\n${configError.message}\n\`\`\``
           })
           
           // Ne pas continuer si la configuration échoue
-          await task.save()
           return
         }
       }
       
-      const userMessage = task.messages.find((msg: any) => msg.role === 'user')?.content
+      const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 })
       
       if (userMessage) {
         console.log(`Executing first AI command with user text (provider: ${aiProvider})`)
         
-        const firstOutput = await this.executeCommand(containerId, userMessage, workspaceDir, aiProvider)
+        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider)
         
         const aiProviderLabel = this.getAiProviderLabel(aiProvider)
-        task.messages.push({
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``,
-          timestamp: new Date()
+          content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
         })
       }
       
@@ -154,19 +161,19 @@ export class ClaudeExecutor {
       
       const summaryOutput = await this.executeCommand(
         containerId,
-        'Résume les modifications que tu viens de faire dans ce projet. Utilise "git status" et "git diff" pour voir les changements.',
+        'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
         workspaceDir,
         aiProvider
       )
       
       const aiProviderLabel = this.getAiProviderLabel(aiProvider)
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant', 
-        content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``,
-        timestamp: new Date()
+        content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
       })
-      
-      await task.save()
       
       const prCreator = new PullRequestCreator(this.docker)
       await prCreator.createFromChanges(containerId, task, summaryOutput)
@@ -176,12 +183,13 @@ export class ClaudeExecutor {
     } catch (error) {
       console.error(`Error in Claude workflow for task ${task._id}:`, error)
       
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant',
-        content: `❌ **Erreur dans le workflow Claude:** ${error.message}`,
-        timestamp: new Date()
+        content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
       })
-      await task.save()
     }
   }
 

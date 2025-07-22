@@ -1,6 +1,8 @@
 import { executeClaudeInTask } from '../../../utils/task-container'
 import { TaskModel } from '../../../models/Task'
+import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -43,19 +45,21 @@ export default defineEventHandler(async (event) => {
     const output = await executeClaudeInTask(taskId, body.prompt)
 
     // Ajouter la commande et le résultat aux messages de la tâche
-    task.messages.push({
+    await TaskMessageModel.create({
+      id: uuidv4(),
+      userId: task.userId,
+      taskId,
       role: 'user',
-      content: body.prompt,
-      timestamp: new Date()
+      content: body.prompt
     })
 
-    task.messages.push({
+    await TaskMessageModel.create({
+      id: uuidv4(),
+      userId: task.userId,
+      taskId,
       role: 'assistant',
-      content: `**Résultat de l'exécution:**\n\`\`\`\n${output}\n\`\`\``,
-      timestamp: new Date()
+      content: `**Résultat de l'exécution:**\n\`\`\`\n${output}\n\`\`\``
     })
-
-    await task.save()
 
     return {
       success: true,

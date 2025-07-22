@@ -1,6 +1,8 @@
 import { createTaskContainer } from '../../../utils/task-container'
 import { TaskModel } from '../../../models/Task'
+import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
+import { v4 as uuidv4 } from 'uuid'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -38,6 +40,14 @@ export default defineEventHandler(async (event) => {
       runtimeVersion: body.runtimeVersion,
       workspaceDir: body.workspaceDir,
       additionalEnvVars: body.environmentVariables
+    })
+
+    await TaskMessageModel.create({
+      id: uuidv4(),
+      userId: task.userId,
+      taskId,
+      role: 'assistant',
+      content: `Container created successfully for task`
     })
 
     return {

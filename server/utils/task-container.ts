@@ -1,10 +1,12 @@
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
+import { TaskMessageModel } from '../models/TaskMessage'
 import { connectToDatabase } from './database'
 import { ContainerSetup } from './container-setup'
 import { ClaudeExecutor } from './claude-executor'
 import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
+import { v4 as uuidv4 } from 'uuid'
 
 export type { TaskContainerOptions, ContainerSetupResult }
 
@@ -33,10 +35,12 @@ export class TaskContainerManager {
     const task = await TaskModel.findById(options.taskId)
     if (task) {
       task.dockerId = result.containerId
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant',
-        content: `🐳 Environnement Docker créé avec succès.\n**Conteneur:** \`${result.containerName}\`\n**ID:** \`${result.containerId.substring(0, 12)}\``,
-        timestamp: new Date()
+        content: `🐳 Environnement Docker créé avec succès.\n**Conteneur:** ${result.containerName}\n**ID:** ${result.containerId.substring(0, 12)}`
       })
       await task.save()
 
@@ -90,3 +94,4 @@ export async function executeClaudeInTask(taskId: string, prompt: string): Promi
 export async function cleanupTaskContainer(taskId: string): Promise<void> {
   return defaultTaskContainerManager.cleanupTaskContainer(taskId)
 }
+

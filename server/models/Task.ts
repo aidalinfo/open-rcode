@@ -1,16 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose'
 
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
 export interface Task {
   userId: string;
   environmentId: string;
   name: string;
-  messages: Message[];
   dockerId?: string;
   pr?: string;
   merged: boolean;
@@ -22,17 +15,10 @@ export interface Task {
 
 export interface TaskDocument extends Task, Document {}
 
-const messageSchema = new Schema({
-  role: { type: String, enum: ['user', 'assistant'], required: true },
-  content: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now }
-})
-
 const taskSchema = new Schema<TaskDocument>({
   userId: { type: String, required: true },
   environmentId: { type: String, required: true },
   name: { type: String, required: true },
-  messages: [messageSchema],
   dockerId: { type: String },
   pr: { type: String },
   merged: { type: Boolean, default: false },

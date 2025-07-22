@@ -33,7 +33,6 @@ if [ -n "${CODEX_ENV_NODE_VERSION}" ]; then
     echo 'export NVM_DIR="/root/.nvm"' >> /root/.bashrc
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> /root/.bashrc
     echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> /root/.bashrc
-    echo "export CLAUDE_CODE_OAUTH_TOKEN=\"${CLAUDE_CODE_OAUTH_TOKEN}\"" >> /root/.bashrc
     # Activer Node par défaut dans le PATH global
     NODE_PATH=$(nvm which "${CODEX_ENV_NODE_VERSION}")
     NODE_BIN_DIR=$(dirname "${NODE_PATH}")
