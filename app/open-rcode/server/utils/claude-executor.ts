@@ -67,7 +67,12 @@ export class ClaudeExecutor {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    return result.stdout
+    // Filtrer le chemin indésirable du début de la sortie
+    let filteredOutput = result.stdout
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
+    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
+    
+    return filteredOutput
   }
 
   async executeConfigurationScript(containerId: string, configScript: string, workdir?: string): Promise<string> {
