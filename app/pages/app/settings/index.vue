@@ -66,7 +66,7 @@
             </p>
 
             <div v-if="!hasAnthropicKey" class="space-y-4">
-              <UFormGroup label="Clé API Anthropic" name="anthropicKey">
+              <UFormField label="Clé API Anthropic" name="anthropicKey">
                 <div class="flex gap-2">
                   <UInput
                     v-model="anthropicKeyInput"
@@ -88,7 +88,7 @@
                     Sauvegarder
                   </UButton>
                 </div>
-              </UFormGroup>
+              </UFormField>
             </div>
 
             <div v-else class="flex items-center justify-between">
@@ -125,7 +125,7 @@
             </p>
 
             <div v-if="!hasClaudeOAuth" class="space-y-4">
-              <UFormGroup label="Token OAuth Claude Code" name="claudeOAuthToken">
+              <UFormField label="Token OAuth Claude Code" name="claudeOAuthToken">
                 <div class="flex gap-2">
                   <UInput
                     v-model="claudeOAuthTokenInput"
@@ -147,7 +147,7 @@
                     Sauvegarder
                   </UButton>
                 </div>
-              </UFormGroup>
+              </UFormField>
             </div>
 
             <div v-else class="flex items-center justify-between">
@@ -184,7 +184,7 @@
             </p>
 
             <div v-if="!hasGeminiKey" class="space-y-4">
-              <UFormGroup label="Clé API Google Gemini" name="geminiApiKey">
+              <UFormField label="Clé API Google Gemini" name="geminiApiKey">
                 <div class="flex gap-2">
                   <UInput
                     v-model="geminiApiKeyInput"
@@ -206,7 +206,7 @@
                     Sauvegarder
                   </UButton>
                 </div>
-              </UFormGroup>
+              </UFormField>
             </div>
 
             <div v-else class="flex items-center justify-between">

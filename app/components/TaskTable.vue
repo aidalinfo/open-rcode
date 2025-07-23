@@ -22,49 +22,49 @@
 
     <UTable
       v-else
-      :rows="tasks"
+      :data="tasks"
       :columns="columns"
       :loading="loading"
       class="w-full"
     >
-      <template #name-data="{ row }">
+      <template #name-cell="{ row }">
         <div class="font-medium text-gray-900 dark:text-white truncate max-w-xs">
-          {{ row.name }}
+          {{ row.original.name }}
         </div>
       </template>
 
-      <template #status-data="{ row }">
+      <template #status-cell="{ row }">
         <UBadge
-          :color="getStatusColor(row)"
-          :variant="row.executed ? 'solid' : 'soft'"
+          :color="getStatusColor(row.original)"
+          :variant="row.original.executed ? 'solid' : 'soft'"
           size="xs"
         >
-          {{ getStatusText(row) }}
+          {{ getStatusText(row.original) }}
         </UBadge>
       </template>
 
-      <template #environment-data="{ row }">
+      <template #environment-cell="{ row }">
         <div class="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
-          {{ row.environment?.name || 'N/A' }}
+          {{ row.original.environment?.name || 'N/A' }}
         </div>
       </template>
 
-      <template #createdAt-data="{ row }">
+      <template #createdAt-cell="{ row }">
         <div class="text-sm text-gray-600 dark:text-gray-400">
-          {{ formatDate(row.createdAt) }}
+          {{ formatDate(row.original.createdAt) }}
         </div>
       </template>
 
-      <template #pr-data="{ row }">
-        <div v-if="row.pr">
+      <template #pr-cell="{ row }">
+        <div v-if="row.original.pr">
           <UButton
-            :to="row.pr.url"
+            :to="row.original.pr.url"
             target="_blank"
             size="xs"
             variant="ghost"
             icon="i-heroicons-arrow-top-right-on-square"
           >
-            PR #{{ row.pr.number }}
+            PR #{{ row.original.pr.number }}
           </UButton>
         </div>
         <div v-else class="text-sm text-gray-400">
@@ -72,13 +72,13 @@
         </div>
       </template>
 
-      <template #actions-data="{ row }">
+      <template #actions-cell="{ row }">
         <UButton
           size="xs"
           variant="ghost"
           icon="i-heroicons-chat-bubble-left-ellipsis"
-          @click="viewTask(row._id)"
-          :disabled="!row.executed"
+          @click="viewTask(row.original._id)"
+          :disabled="!row.original.executed"
         >
           Voir
         </UButton>
@@ -112,34 +112,28 @@ const loading = ref(false)
 // Configuration du tableau
 const columns = [
   {
-    key: 'name',
-    label: 'Tâche',
-    sortable: false
+    id: 'name',
+    header: 'Tâche'
   },
   {
-    key: 'status',
-    label: 'Statut',
-    sortable: false
+    id: 'status',
+    header: 'Statut'
   },
   {
-    key: 'environment',
-    label: 'Environnement',
-    sortable: false
+    id: 'environment',
+    header: 'Environnement'
   },
   {
-    key: 'createdAt',
-    label: 'Créée le',
-    sortable: false
+    id: 'createdAt',
+    header: 'Créée le'
   },
   {
-    key: 'pr',
-    label: 'Pull Request',
-    sortable: false
+    id: 'pr',
+    header: 'Pull Request'
   },
   {
-    key: 'actions',
-    label: 'Actions',
-    sortable: false
+    id: 'actions',
+    header: 'Actions'
   }
 ]
 
@@ -147,8 +141,13 @@ const columns = [
 const fetchTasks = async () => {
   loading.value = true
   try {
+    console.log('FETCHING TASKS...')
     const data = await $fetch('/api/tasks')
+    console.log('TASKS DATA RECEIVED:', data)
+    console.log('- tasks array:', data.tasks)
+    console.log('- tasks length:', data.tasks?.length || 0)
     tasks.value = data.tasks || []
+    console.log('TASKS STORED:', tasks.value)
   } catch (error) {
     console.error('Erreur lors de la récupération des tâches:', error)
   } finally {
@@ -161,9 +160,9 @@ const viewTask = (taskId: string) => {
 }
 
 const getStatusColor = (task: Task) => {
-  if (task.merged) return 'green'
-  if (task.executed) return 'blue'
-  return 'gray'
+  if (task.merged) return 'success'
+  if (task.executed) return 'info'
+  return 'neutral'
 }
 
 const getStatusText = (task: Task) => {

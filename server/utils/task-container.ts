@@ -8,8 +8,6 @@ import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
 import { v4 as uuidv4 } from 'uuid'
 
-export type { TaskContainerOptions, ContainerSetupResult }
-
 export class TaskContainerManager {
   private docker: DockerManager
   private containerSetup: ContainerSetup
