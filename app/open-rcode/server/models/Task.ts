@@ -11,6 +11,7 @@ export interface Task {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
+    type?: string;
   }>;
   dockerId?: string;
   pr?: string;
@@ -31,7 +32,8 @@ const taskSchema = new Schema<TaskDocument>({
   messages: [{
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true },
-    timestamp: { type: Date, default: Date.now }
+    timestamp: { type: Date, default: Date.now },
+    type: { type: String, required: false }
   }],
   dockerId: { type: String },
   pr: { type: String },

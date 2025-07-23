@@ -50,7 +50,7 @@ export class PullRequestCreator {
       
       await this.pushBranch(containerId, workspaceDir, branchName, environment.repositoryFullName, githubToken)
       
-      await this.createGitHubPullRequest(
+      const prUrl = await this.createGitHubPullRequest(
         environment.repositoryFullName,
         branchName,
         task.title || 'Automated Task Completion',
@@ -68,6 +68,13 @@ export class PullRequestCreator {
 
 Les modifications ont été poussées et une Pull Request a été créée automatiquement.`,
         timestamp: new Date()
+      })
+      
+      task.messages.push({
+        role: 'assistant',
+        content: prUrl,
+        timestamp: new Date(),
+        type: 'pr_link'
       })
       await task.save()
       
@@ -202,7 +209,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
     body: string,
     token: string,
     baseBranch: string = 'main'
-  ): Promise<void> {
+  ): Promise<string> {
     const [owner, repo] = repoFullName.split('/')
     
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
@@ -230,5 +237,6 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
     
     const prData = await response.json()
     console.log(`Pull request created: ${prData.html_url}`)
+    return prData.html_url
   }
 }

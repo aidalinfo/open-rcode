@@ -58,7 +58,25 @@
             class="flex-1"
           >
             <template #content="{ message }">
-              <MDC :value="message.content" :cache-key="message.id" unwrap="p" />
+              <div v-if="isPRLink(message)" class="pr-link-message">
+                <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                  <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request créée</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
+                  </div>
+                  <UButton
+                    @click="openGitHubPR(message.content)"
+                    icon="i-simple-icons-github"
+                    size="sm"
+                    color="gray"
+                    variant="outline"
+                    label="Ouvrir"
+                    target="_blank"
+                  />
+                </div>
+              </div>
+              <MDC v-else :value="message.content" :cache-key="message.id" unwrap="p" />
             </template>
           </UChatMessages>
         </div>
@@ -96,9 +114,25 @@ const formattedMessages = computed(() => {
     id: message._id || index,
     role: message.role,
     content: message.content,
-    timestamp: message.timestamp || new Date()
+    timestamp: message.timestamp || new Date(),
+    type: message.type
   }))
 })
+
+// Helper function to detect PR links
+const isPRLink = (message: any) => {
+  return message.type === 'pr_link' || (
+    message.role === 'assistant' && 
+    typeof message.content === 'string' && 
+    message.content.includes('github.com') && 
+    message.content.includes('/pull/')
+  )
+}
+
+// Function to open GitHub PR
+const openGitHubPR = (url: string) => {
+  window.open(url, '_blank')
+}
 
 // Status helpers
 const getStatusColor = (status: string) => {

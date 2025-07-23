@@ -6,6 +6,7 @@ export interface TaskMessage {
   taskId: string;
   role: 'user' | 'assistant';
   content: string;
+  type?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -18,6 +19,7 @@ const taskMessageSchema = new Schema<TaskMessageDocument>({
   taskId: { type: String, required: true, ref: 'Task' },
   role: { type: String, enum: ['user', 'assistant'], required: true },
   content: { type: String, required: true },
+  type: { type: String, required: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })
