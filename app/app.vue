@@ -62,7 +62,7 @@ useSeoMeta({
       <NuxtPage />
     </UMain>
 
-    <USeparator icon="i-simple-icons-nuxtdotjs" />
+    <USeparator />
 
     <UFooter>
       <template #left>
