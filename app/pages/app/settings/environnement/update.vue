@@ -465,7 +465,7 @@ const submitForm = async () => {
     })
     
     // Rediriger vers la page des environnements
-    router.push('/app/settings/create-environnement')
+    router.push('/app/settings/environnement/create')
     
   } catch (error) {
     console.error('Erreur lors de la mise à jour:', error)
@@ -497,7 +497,7 @@ const deleteEnvironment = async () => {
     })
     
     // Rediriger vers la page des environnements
-    router.push('/app/settings/create-environnement')
+    router.push('/app/settings/environnement/create')
     
   } catch (error) {
     console.error('Erreur lors de la suppression:', error)
@@ -512,7 +512,7 @@ const deleteEnvironment = async () => {
 }
 
 const goBack = () => {
-  router.push('/app/settings/create-environnement')
+  router.push('/app/settings/environnement/create')
 }
 
 // Chargement initial

@@ -29,7 +29,7 @@
             <USkeleton class="h-10 w-full" />
           </div>
           
-          <UDivider />
+          <USeparator />
           
           <!-- Claude OAuth Token Skeleton -->
           <div class="space-y-4">
@@ -41,7 +41,7 @@
             <USkeleton class="h-10 w-full" />
           </div>
           
-          <UDivider />
+          <USeparator />
           
           <!-- Gemini API Key Skeleton -->
           <div class="space-y-4">
@@ -112,7 +112,7 @@
             </div>
           </div>
 
-          <UDivider />
+          <USeparator />
 
           <!-- Token OAuth Claude -->
           <div class="space-y-4">
@@ -171,7 +171,7 @@
             </div>
           </div>
 
-          <UDivider />
+          <USeparator />
 
           <!-- API Key Gemini -->
           <div class="space-y-4">
@@ -288,7 +288,7 @@
               Environnements
             </h2>
             <UButton
-              to="/app/settings/create-environnement"
+              to="/app/settings/environnement/create"
               icon="i-heroicons-plus"
               size="sm"
             >
@@ -335,7 +335,7 @@
             </div>
             <div class="flex items-center gap-2">
               <UButton
-                :to="`/app/settings/update-environnement?edit=${environment.id}`"
+                :to="`/app/settings/environnement/update?edit=${environment.id}`"
                 variant="ghost"
                 size="sm"
               >
