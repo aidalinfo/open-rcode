@@ -10,7 +10,7 @@
     </template>
     
     <template #body>
-      <div class="flex flex-col h-full">
+      <UContainer class="flex flex-col h-full px-4">
         <div v-if="loading" class="flex-1 flex items-center justify-center">
           <div class="text-center">
             <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
@@ -26,24 +26,43 @@
         </div>
 
         <div v-else-if="task" class="flex flex-col h-full">
-          <UChatMessages 
-            :messages="formattedMessages" 
+          <UChatMessages
+            :assistant="{
+              side: 'left',
+              variant: 'outline',
+              avatar: {
+                icon: 'i-lucide-bot'
+              },
+              actions: [
+                {
+                  label: 'Copier',
+                  icon: 'i-lucide-copy'
+                }
+              ]
+            }"
+            :user="{
+              side: 'right',
+              variant: 'solid',
+              avatar: {
+                icon: 'i-lucide-user'
+              },
+              actions: [
+                {
+                  label: 'Copier',
+                  icon: 'i-lucide-copy'
+                }
+              ]
+            }"
+            :messages="formattedMessages"
             :status="chatStatus"
             class="flex-1"
           >
             <template #content="{ message }">
-              <UChatMessage
-                :content="message.content"
-                :side="message.role === 'user' ? 'right' : 'left'"
-                :avatar="getMessageAvatar(message.role)"
-                :variant="message.role === 'user' ? 'solid' : 'soft'"
-                :color="message.role === 'user' ? 'primary' : 'white'"
-                :actions="message.role === 'assistant' ? messageActions : []"
-              />
+              <MDC :value="message.content" :cache-key="message.id" unwrap="p" />
             </template>
           </UChatMessages>
         </div>
-      </div>
+      </UContainer>
     </template>
   </UDashboardPanel>
 </template>

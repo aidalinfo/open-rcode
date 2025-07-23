@@ -4,7 +4,8 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui-pro',
     '@nuxt/icon',
-    '@nuxt/scripts'
+    '@nuxt/scripts',
+    '@nuxtjs/mdc'
   ],
 
   devtools: {
