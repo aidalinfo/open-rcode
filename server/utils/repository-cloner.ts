@@ -24,14 +24,15 @@ export class RepositoryCloner {
     const repositoryUrl = `https://x-access-token:${installationToken}@github.com/${environment.repositoryFullName}.git`
 
     const workspaceDir = `/workspace/${environment.repository || 'ccweb'}`
+    const defaultBranch = environment.defaultBranch || 'main'
 
-    console.log(`Cloning repository ${environment.repositoryFullName} with GitHub App token in container`)
-
+    console.log(`Cloning repository ${environment.repositoryFullName} (branch: ${defaultBranch}) with GitHub App token in container`)
+    
     const cloneScript = `
       mkdir -p "${workspaceDir}"
       cd "${workspaceDir}"
       export GIT_TERMINAL_PROMPT=0
-      git clone "${repositoryUrl}" repo
+      git clone -b "${defaultBranch}" "${repositoryUrl}" repo
     `
 
     const result = await this.docker.executeInContainer({

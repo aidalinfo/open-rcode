@@ -55,7 +55,8 @@ export class PullRequestCreator {
         branchName,
         task.title || 'Automated Task Completion',
         summary,
-        githubToken
+        githubToken,
+        environment.defaultBranch || 'main'
       )
       
       task.messages.push({
@@ -199,7 +200,8 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
     branchName: string, 
     title: string,
     body: string,
-    token: string
+    token: string,
+    baseBranch: string = 'main'
   ): Promise<void> {
     const [owner, repo] = repoFullName.split('/')
     
@@ -213,7 +215,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
       body: JSON.stringify({
         title,
         head: branchName,
-        base: 'main',
+        base: baseBranch,
         body: `${body}
 
 🤖 This PR was created automatically by CCWeb after executing a Claude-powered task.`,

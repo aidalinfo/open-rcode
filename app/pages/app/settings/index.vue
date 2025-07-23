@@ -102,7 +102,7 @@
                 @click="resetAnthropicKey"
                 variant="ghost"
                 size="sm"
-                color="red"
+                color="error"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -161,7 +161,7 @@
                 @click="resetClaudeOAuthToken"
                 variant="ghost"
                 size="sm"
-                color="red"
+                color="error"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -220,7 +220,7 @@
                 @click="resetGeminiApiKey"
                 variant="ghost"
                 size="sm"
-                color="red"
+                color="error"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -248,7 +248,7 @@
         <div v-else class="space-y-4">
           <UAlert
             v-if="route.query.success === 'github_app_installed'"
-            color="green"
+            color="success"
             variant="soft"
             title="Succès"
             description="Votre GitHub App a été installée avec succès !"
@@ -256,7 +256,7 @@
           
           <UAlert
             v-if="route.query.error === 'github_app_auth_failed'"
-            color="red"
+            color="error"
             variant="soft"
             title="Erreur"
             description="Erreur lors de la connexion à GitHub App. Veuillez réessayer."

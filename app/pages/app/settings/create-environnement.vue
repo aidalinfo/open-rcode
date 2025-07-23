@@ -83,6 +83,26 @@
             </template>
           </UFormField>
 
+          <!-- Branche par défaut -->
+          <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
+            <USelectMenu
+              v-model="form.defaultBranch"
+              :items="branchOptions"
+              placeholder="Sélectionnez une branche"
+              :loading="loadingBranches"
+              value-attribute="value"
+              option-attribute="label"
+              size="lg"
+              class="w-full"
+              :disabled="!selectedRepository"
+            />
+            <template #help>
+              <p class="text-sm text-gray-500 mt-2">
+                Cette branche sera utilisée pour le clonage du repository et la création des pull requests.
+              </p>
+            </template>
+          </UFormField>
+
           <!-- Variables d'environnement -->
           <div class="space-y-6 mt-10">
             <div class="flex items-center justify-between">
@@ -166,89 +186,6 @@
         </UForm>
       </UCard>
 
-      <!-- Liste des environnements -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">
-              Environnements existants
-            </h2>
-            <UButton
-              @click="fetchEnvironments"
-              variant="ghost"
-              size="sm"
-              :loading="loadingEnvironments"
-            >
-              <template #leading>
-                <UIcon name="i-heroicons-arrow-path" />
-              </template>
-              Actualiser
-            </UButton>
-          </div>
-        </template>
-
-        <div v-if="environments.length === 0" class="text-center py-8">
-          <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucun environnement
-          </h3>
-          <p class="text-gray-600 dark:text-gray-400">
-            Créez votre premier environnement ci-dessus.
-          </p>
-        </div>
-
-        <div v-else class="space-y-4">
-          <div
-            v-for="environment in environments"
-            :key="environment.id"
-            class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-          >
-            <div class="flex-1">
-              <div class="flex items-center gap-3">
-                <h3 class="font-medium text-gray-900 dark:text-white">
-                  {{ environment.name }}
-                </h3>
-                <UBadge :color="getRuntimeColor(environment.runtime)" size="xs">
-                  {{ environment.runtime }}
-                </UBadge>
-              </div>
-              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {{ environment.repositoryFullName }}
-              </p>
-              <p v-if="environment.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {{ environment.description }}
-              </p>
-              <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>{{ environment.environmentVariables.length }} variables</span>
-                <span>Créé le {{ formatDate(environment.createdAt) }}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <UButton
-                @click="editEnvironment(environment)"
-                variant="ghost"
-                size="sm"
-              >
-                <template #leading>
-                  <UIcon name="i-heroicons-pencil-square" />
-                </template>
-                Modifier
-              </UButton>
-              <UButton
-                @click="deleteEnvironment(environment.id)"
-                color="error"
-                variant="ghost"
-                size="sm"
-              >
-                <template #leading>
-                  <UIcon name="i-heroicons-trash" />
-                </template>
-                Supprimer
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </UCard>
     </div>
   </UContainer>
 </template>
@@ -262,10 +199,12 @@ const editingId = ref<string | null>(null)
 const isSubmitting = ref(false)
 const loadingRepositories = ref(false)
 const loadingEnvironments = ref(false)
+const loadingBranches = ref(false)
 
 // Données
 const repositories = ref<any[]>([])
 const environments = ref<any[]>([])
+const branches = ref<any[]>([])
 
 // Formulaire
 const form = ref({
@@ -274,6 +213,7 @@ const form = ref({
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
   aiProvider: 'anthropic-api',
+  defaultBranch: { label: 'main', value: 'main' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -299,6 +239,17 @@ const repositoryOptions = computed(() => {
   }))
 })
 
+const branchOptions = computed(() => {
+  return branches.value.map((branch: any) => ({
+    label: branch.name,
+    value: branch.name
+  }))
+})
+
+const selectedRepository = computed(() => {
+  return form.value.selectedRepository?.value || form.value.selectedRepository
+})
+
 // Méthodes
 const fetchRepositories = async () => {
   loadingRepositories.value = true
@@ -316,19 +267,42 @@ const fetchRepositories = async () => {
   }
 }
 
-const fetchEnvironments = async () => {
-  loadingEnvironments.value = true
+
+const fetchBranches = async (repositoryFullName: string) => {
+  if (!repositoryFullName) return
+  
+  loadingBranches.value = true
   try {
-    const data = await $fetch('/api/environments')
-    environments.value = data.environments
+    const [owner, repo] = repositoryFullName.split('/')
+    const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
+    branches.value = data.branches
+    
+    // Sélectionner automatiquement la branche 'main' ou 'master' par défaut
+    const defaultBranch = branches.value.find((branch: any) => 
+      branch.name === 'main' || branch.name === 'master'
+    )
+    
+    if (defaultBranch) {
+      form.value.defaultBranch = {
+        label: defaultBranch.name,
+        value: defaultBranch.name
+      }
+    } else if (branches.value.length > 0) {
+      form.value.defaultBranch = {
+        label: branches.value[0].name,
+        value: branches.value[0].name
+      }
+    }
   } catch (error) {
+    console.error('Erreur lors de la récupération des branches:', error)
     toast.add({
       title: 'Erreur',
-      description: 'Impossible de récupérer les environnements',
+      description: 'Impossible de récupérer les branches du repository',
       color: 'error'
     })
+    branches.value = []
   } finally {
-    loadingEnvironments.value = false
+    loadingBranches.value = false
   }
 }
 
@@ -337,6 +311,14 @@ watch(() => form.value.selectedRepository, (newValue) => {
   const repoValue = newValue?.value || newValue
   if (repoValue && !form.value.name) {
     form.value.name = 'Production'
+  }
+  
+  // Récupérer les branches du repository sélectionné
+  if (repoValue && typeof repoValue === 'string') {
+    fetchBranches(repoValue)
+  } else {
+    branches.value = []
+    form.value.defaultBranch = { label: 'main', value: 'main' }
   }
 })
 
@@ -357,14 +339,6 @@ const getAiProviderDescription = (provider: string) => {
   return descriptions[provider as keyof typeof descriptions] || ''
 }
 
-const getAiProviderLabel = (provider: string) => {
-  const labels = {
-    'anthropic-api': 'API Anthropic (Claude)',
-    'claude-oauth': 'OAuth Claude Code CLI',
-    'gemini-cli': 'Google Gemini CLI'
-  }
-  return labels[provider as keyof typeof labels] || provider
-}
 
 const submitForm = async () => {
   isSubmitting.value = true
@@ -382,14 +356,16 @@ const submitForm = async () => {
     }
     
     const [organization, repository] = selectedRepo.split('/')
-    const selectedRuntime = form.value.runtime?.value || form.value.runtime
-    const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
+    const selectedRuntime = typeof form.value.runtime === 'object' ? form.value.runtime.value : form.value.runtime
+    const selectedAiProvider = typeof form.value.aiProvider === 'object' ? form.value.aiProvider.value : form.value.aiProvider
     
     console.log('FORM VALUES:')
     console.log('- form.value:', form.value)
     console.log('- selectedRuntime:', selectedRuntime, typeof selectedRuntime)
     console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
     console.log('- form.value.aiProvider:', form.value.aiProvider)
+    
+    const selectedDefaultBranch = typeof form.value.defaultBranch === 'object' ? form.value.defaultBranch.value : form.value.defaultBranch
     
     const payload = {
       organization,
@@ -398,34 +374,26 @@ const submitForm = async () => {
       description: form.value.description,
       runtime: selectedRuntime,
       aiProvider: selectedAiProvider,
+      defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
       configurationScript: form.value.configurationScript
     }
 
-    if (isEditing.value) {
-      await $fetch(`/api/environments/${editingId.value}`, {
-        method: 'PUT',
-        body: payload
-      })
-      toast.add({
-        title: 'Succès',
-        description: 'Environnement modifié avec succès',
-        color: 'success'
-      })
-    } else {
-      await $fetch('/api/environments', {
-        method: 'POST',
-        body: payload
-      })
-      toast.add({
-        title: 'Succès',
-        description: 'Environnement créé avec succès',
-        color: 'success'
-      })
-    }
+    await $fetch('/api/environments', {
+      method: 'POST',
+      body: payload
+    })
+    
+    toast.add({
+      title: 'Succès',
+      description: 'Environnement créé avec succès',
+      color: 'success'
+    })
 
     resetForm()
-    await fetchEnvironments()
+    
+    // Rediriger vers la page des paramètres
+    await navigateTo('/app/settings')
   } catch (error) {
     console.error('Erreur lors de la soumission du formulaire:', error)
     toast.add({
@@ -438,76 +406,24 @@ const submitForm = async () => {
   }
 }
 
-const editEnvironment = (environment: any) => {
-  isEditing.value = true
-  editingId.value = environment.id
-  form.value = {
-    selectedRepository: environment.repositoryFullName,
-    name: environment.name,
-    description: environment.description || '',
-    runtime: environment.runtime,
-    aiProvider: environment.aiProvider || 'anthropic-api',
-    environmentVariables: environment.environmentVariables || [],
-    configurationScript: environment.configurationScript || ''
-  }
-}
-
-const cancelEdit = () => {
-  resetForm()
-}
 
 const resetForm = () => {
-  isEditing.value = false
-  editingId.value = null
   form.value = {
-    selectedRepository: '',
+    selectedRepository: { label: 'Please select a repository', value: '', description: '' },
     name: '',
     description: '',
-    runtime: '',
+    runtime: { label: 'Node.js', value: 'node' },
     aiProvider: 'anthropic-api',
+    defaultBranch: { label: 'main', value: 'main' },
     environmentVariables: [],
     configurationScript: ''
   }
+  branches.value = []
 }
 
-const deleteEnvironment = async (id: string) => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer cet environnement ?')) {
-    try {
-      await $fetch(`/api/environments/${id}`, {
-        method: 'DELETE'
-      })
-      toast.add({
-        title: 'Succès',
-        description: 'Environnement supprimé avec succès',
-        color: 'success'
-      })
-      await fetchEnvironments()
-    } catch (error) {
-      toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer l\'environnement',
-        color: 'error'
-      })
-    }
-  }
-}
-
-const getRuntimeColor = (runtime: string) => {
-  switch (runtime) {
-    case 'node': return 'success'
-    case 'php': return 'info'
-    case 'python': return 'warning'
-    default: return 'secondary'
-  }
-}
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR')
-}
 
 // Chargement initial
 onMounted(() => {
   fetchRepositories()
-  fetchEnvironments()
 })
 </script>

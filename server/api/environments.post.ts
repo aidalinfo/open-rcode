@@ -35,10 +35,10 @@ export default defineEventHandler(async (event) => {
     console.log('Environment POST body:', body)
     
     // Validation des données
-    if (!body.organization || !body.repository || !body.name || !body.runtime) {
+    if (!body.organization || !body.repository || !body.name || !body.runtime || !body.defaultBranch) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Missing required fields: organization, repository, name, runtime'
+        statusMessage: 'Missing required fields: organization, repository, name, runtime, defaultBranch'
       })
     }
     
@@ -67,6 +67,7 @@ export default defineEventHandler(async (event) => {
       description: body.description,
       runtime: body.runtime,
       aiProvider: body.aiProvider || 'anthropic-api',
+      defaultBranch: body.defaultBranch,
       environmentVariables: body.environmentVariables || [],
       configurationScript: body.configurationScript
     })
@@ -83,6 +84,7 @@ export default defineEventHandler(async (event) => {
         description: environment.description,
         runtime: environment.runtime,
         aiProvider: environment.aiProvider,
+        defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
         createdAt: environment.createdAt,

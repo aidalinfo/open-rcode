@@ -15,6 +15,7 @@ export interface Environment {
   description?: string;
   runtime: 'node' | 'php' | 'python';
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
+  defaultBranch: string; // branche par défaut pour le clonage et les PRs
   environmentVariables: EnvironmentVariable[];
   configurationScript?: string;
   createdAt: Date;
@@ -46,6 +47,11 @@ const environmentSchema = new Schema<EnvironmentDocument>({
     enum: ['anthropic-api', 'claude-oauth', 'gemini-cli'],
     default: 'anthropic-api',
     required: true
+  },
+  defaultBranch: { 
+    type: String, 
+    required: true,
+    default: 'main'
   },
   environmentVariables: [environmentVariableSchema],
   configurationScript: { type: String },

@@ -99,6 +99,26 @@
             </template>
           </UFormField>
 
+          <!-- Branche par défaut -->
+          <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
+            <USelectMenu
+              v-model="form.defaultBranch"
+              :items="branchOptions"
+              placeholder="Sélectionnez une branche"
+              :loading="loadingBranches"
+              value-attribute="value"
+              option-attribute="label"
+              size="lg"
+              class="w-full"
+              :disabled="!selectedRepository"
+            />
+            <template #help>
+              <p class="text-sm text-gray-500 mt-2">
+                Cette branche sera utilisée pour le clonage du repository et la création des pull requests.
+              </p>
+            </template>
+          </UFormField>
+
           <!-- Variables d'environnement -->
           <div class="space-y-6 mt-10">
             <div class="flex items-center justify-between">
@@ -218,9 +238,11 @@ const loadError = ref('')
 const isSubmitting = ref(false)
 const isDeleting = ref(false)
 const loadingRepositories = ref(false)
+const loadingBranches = ref(false)
 
 // Données
 const repositories = ref<any[]>([])
+const branches = ref<any[]>([])
 const currentEnvironment = ref<any>(null)
 
 // Formulaire
@@ -230,6 +252,7 @@ const form = ref({
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
   aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+  defaultBranch: { label: 'main', value: 'main' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
@@ -255,6 +278,18 @@ const repositoryOptions = computed(() => {
   }))
 })
 
+const branchOptions = computed(() => {
+  return branches.value.map((branch: any) => ({
+    label: branch.name,
+    value: branch.name,
+    description: branch.protected ? 'Branche protégée' : ''
+  }))
+})
+
+const selectedRepository = computed(() => {
+  return form.value.selectedRepository?.value || form.value.selectedRepository
+})
+
 // Méthodes
 const fetchRepositories = async () => {
   loadingRepositories.value = true
@@ -269,6 +304,27 @@ const fetchRepositories = async () => {
     })
   } finally {
     loadingRepositories.value = false
+  }
+}
+
+const fetchBranches = async (repositoryFullName: string) => {
+  if (!repositoryFullName) return
+  
+  loadingBranches.value = true
+  try {
+    const [owner, repo] = repositoryFullName.split('/')
+    const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
+    branches.value = data.branches
+  } catch (error) {
+    console.error('Erreur lors de la récupération des branches:', error)
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de récupérer les branches du repository',
+      color: 'error'
+    })
+    branches.value = []
+  } finally {
+    loadingBranches.value = false
   }
 }
 
@@ -291,6 +347,9 @@ const fetchEnvironment = async () => {
     console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
     console.log('- environmentVariables:', data.environment.environmentVariables)
     
+    // Récupérer les branches du repository
+    await fetchBranches(data.environment.repositoryFullName)
+    
     // Remplir le formulaire avec les données existantes
     form.value = {
       selectedRepository: {
@@ -307,6 +366,10 @@ const fetchEnvironment = async () => {
       aiProvider: {
         label: getAiProviderLabel(data.environment.aiProvider),
         value: data.environment.aiProvider
+      },
+      defaultBranch: {
+        label: data.environment.defaultBranch || 'main',
+        value: data.environment.defaultBranch || 'main'
       },
       environmentVariables: data.environment.environmentVariables || [],
       configurationScript: data.environment.configurationScript
@@ -376,6 +439,8 @@ const submitForm = async () => {
     console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
     console.log('- form.value.aiProvider:', form.value.aiProvider)
     
+    const selectedDefaultBranch = form.value.defaultBranch?.value || form.value.defaultBranch
+    
     const payload = {
       organization,
       repository,
@@ -383,6 +448,7 @@ const submitForm = async () => {
       description: form.value.description,
       runtime: selectedRuntime,
       aiProvider: selectedAiProvider,
+      defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
       configurationScript: form.value.configurationScript
     }
@@ -459,6 +525,14 @@ onMounted(() => {
 watch(() => route.query.edit, (newId) => {
   if (newId) {
     fetchEnvironment()
+  }
+})
+
+// Watch pour les changements de repository
+watch(() => form.value.selectedRepository, (newValue) => {
+  const repoValue = newValue?.value || newValue
+  if (repoValue && typeof repoValue === 'string') {
+    fetchBranches(repoValue)
   }
 })
 </script>

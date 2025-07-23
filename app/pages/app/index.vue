@@ -92,7 +92,7 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
 }
 
 // Chargement initial
-onMounted(() => {
-  fetchEnvironments()
+onBeforeMount(async () => {
+  await fetchEnvironments()
 })
 </script>

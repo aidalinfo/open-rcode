@@ -1,64 +1,52 @@
 <template>
-  <div>
-    <UPageHero
-      title="Nuxt UI Pro - Starter"
-      description="Nuxt UI Pro is a collection of premium components built on top of Nuxt UI to create beautiful & responsive applications in minutes."
-      :links="[{
-        label: 'Get started',
-        to: 'https://ui.nuxt.com/getting-started/installation/pro/nuxt',
-        target: '_blank',
-        trailingIcon: 'i-lucide-arrow-right',
-        size: 'xl'
-      }, {
-        label: 'Use this template',
-        to: 'https://github.com/nuxt-ui-pro/starter',
-        target: '_blank',
-        icon: 'i-simple-icons-github',
-        size: 'xl',
-        color: 'neutral',
-        variant: 'subtle'
-      }]"
-    />
+  <UContainer>
+    <div class="min-h-screen flex items-center justify-center">
+      <UCard class="w-full max-w-md">
+        <template #header>
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Se connecter
+            </h2>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Utilisez votre compte GitHub pour vous connecter
+            </p>
+          </div>
+        </template>
 
-    <UPageSection
-      id="features"
-      title="The freedom to build anything"
-      description="Nuxt UI Pro ships with an extensive set of advanced components that cover a wide range of use-cases. Carefully crafted to reduce boilerplate code without sacrificing flexibility."
-      :features="[{
-        icon: 'i-lucide-wrench',
-        title: 'Fully customizable',
-        description: 'Customize any component through the App Config or fine-tune specific instances with the ui prop, just like Nuxt UI.'
-      }, {
-        icon: 'i-lucide-square-stack',
-        title: 'Powerful slot system',
-        description: 'Take full control of component layouts and content with Vue\'s comprehensive slot system for maximum flexibility.'
-      }, {
-        icon: 'i-lucide-smartphone',
-        title: 'Mobile-first & responsive',
-        description: 'Built with a mobile-first approach, all components automatically adapt to any screen size while maintaining a polished look.'
-      }]"
-    />
+        <div class="space-y-4">
+          <UAlert
+            v-if="error"
+            color="error"
+            variant="soft"
+            title="Erreur de connexion"
+            description="Une erreur s'est produite lors de la connexion. Veuillez réessayer."
+          />
 
-    <UPageSection>
-      <UPageCTA
-        title="Start with Nuxt UI Pro today!"
-        description="Nuxt UI Pro is free in development, but you need a license to use it in production."
-        variant="subtle"
-        :links="[{
-          label: 'Buy now',
-          to: 'https://ui.nuxt.com/pro/purchase',
-          target: '_blank',
-          icon: 'i-lucide-shopping-cart',
-          color: 'neutral'
-        }, {
-          label: 'License',
-          to: 'https://ui.nuxt.com/getting-started/license',
-          target: '_blank',
-          trailingIcon: 'i-lucide-circle-help',
-          color: 'neutral',
-          variant: 'subtle'
-        }]"
-      />
-    </UPageSection>
-  </div>
+          <UButton
+            @click="loginWithGitHub"
+            variant="outline"
+            size="lg"
+            block
+            :loading="isLoading"
+          >
+            <template #leading>
+              <UIcon name="i-simple-icons-github" class="w-5 h-5" />
+            </template>
+            Se connecter avec GitHub
+          </UButton>
+        </div>
+      </UCard>
+    </div>
+  </UContainer>
 </template>
+
+<script setup lang="ts">
+const route = useRoute()
+const isLoading = ref(false)
+const error = computed(() => route.query.error === 'auth_failed')
+
+const loginWithGitHub = () => {
+  isLoading.value = true
+  window.location.href = '/api/auth/github'
+}
+</script>
