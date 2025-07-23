@@ -1,12 +1,10 @@
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
-import { TaskMessageModel } from '../models/TaskMessage'
 import { connectToDatabase } from './database'
 import { ContainerSetup } from './container-setup'
 import { ClaudeExecutor } from './claude-executor'
 import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
-import { v4 as uuidv4 } from 'uuid'
 
 export class TaskContainerManager {
   private docker: DockerManager
@@ -33,13 +31,6 @@ export class TaskContainerManager {
     const task = await TaskModel.findById(options.taskId)
     if (task) {
       task.dockerId = result.containerId
-      await TaskMessageModel.create({
-        id: uuidv4(),
-        userId: task.userId,
-        taskId: task._id,
-        role: 'assistant',
-        content: `🐳 Environnement Docker créé avec succès.\n**Conteneur:** ${result.containerName}\n**ID:** ${result.containerId.substring(0, 12)}`
-      })
       await task.save()
 
       // Exécuter automatiquement le workflow Claude après le setup

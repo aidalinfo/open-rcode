@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type TaskStatus = 'pending' | 'running' | 'finished' | 'failed';
 
 export interface Task {
   userId: string;
@@ -28,7 +28,7 @@ const taskSchema = new Schema<TaskDocument>({
   userId: { type: String, required: true },
   environmentId: { type: String, required: true },
   name: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'running', 'completed', 'failed'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'running', 'finished', 'failed'], default: 'pending' },
   messages: [{
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true },

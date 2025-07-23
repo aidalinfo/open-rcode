@@ -2,8 +2,6 @@ import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { PullRequestCreator } from './pull-request-creator'
-import { TaskMessageModel } from '../models/TaskMessage'
-import { v4 as uuidv4 } from 'uuid'
 
 export class ClaudeExecutor {
   private docker: DockerManager
@@ -125,23 +123,9 @@ export class ClaudeExecutor {
         console.log('Executing configuration script');
         try {
           const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir);
-          await TaskMessageModel.create({
-            id: uuidv4(),
-            userId: task.userId,
-            taskId: task._id,
-            role: 'assistant',
-            content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``
-          });
           console.log('Configuration script completed successfully');
         } catch (configError: any) {
           console.error('Configuration script failed:', configError);
-          await TaskMessageModel.create({
-            id: uuidv4(),
-            userId: task.userId,
-            taskId: task._id,
-            role: 'assistant',
-            content: `❌ **Erreur lors de la configuration:**\n\`\`\`\n${configError.message}\n\`\`\``
-          });
           await updateTaskStatus('failed', configError.message);
           return;
         }
@@ -152,14 +136,6 @@ export class ClaudeExecutor {
       if (userMessage) {
         console.log(`Executing first AI command with user text (provider: ${aiProvider})`);
         const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider);
-        const aiProviderLabel = this.getAiProviderLabel(aiProvider);
-        await TaskMessageModel.create({
-          id: uuidv4(),
-          userId: task.userId,
-          taskId: task._id,
-          role: 'assistant',
-          content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
-        });
       }
 
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -175,31 +151,16 @@ export class ClaudeExecutor {
         aiProvider
       );
 
-      const aiProviderLabel = this.getAiProviderLabel(aiProvider);
-      await TaskMessageModel.create({
-        id: uuidv4(),
-        userId: task.userId,
-        taskId: task._id,
-        role: 'assistant',
-        content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
-      });
 
       const prCreator = new PullRequestCreator(this.docker);
       await prCreator.createFromChanges(containerId, task, summaryOutput);
 
-      await updateTaskStatus('completed');
+      await updateTaskStatus('finished');
       console.log(`Claude workflow completed for task ${task._id}`);
 
     } catch (error: any) {
       console.error(`Error in Claude workflow for task ${task._id}:`, error);
       await updateTaskStatus('failed', error.message);
-      await TaskMessageModel.create({
-        id: uuidv4(),
-        userId: task.userId,
-        taskId: task._id,
-        role: 'assistant',
-        content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
-      });
     } finally {
       // Nettoyer le conteneur après l'exécution (succès ou échec)
       console.log(`Cleaning up container for task ${task._id}`);
@@ -210,23 +171,8 @@ export class ClaudeExecutor {
         
         // Supprimer la référence du conteneur de la tâche
         await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
-        
-        await TaskMessageModel.create({
-          id: uuidv4(),
-          userId: task.userId,
-          taskId: task._id,
-          role: 'assistant',
-          content: `🧹 **Nettoyage automatique:** Le conteneur Docker a été supprimé après l'exécution de la tâche.`
-        });
       } catch (cleanupError: any) {
         console.error(`Failed to cleanup container ${containerId}:`, cleanupError);
-        await TaskMessageModel.create({
-          id: uuidv4(),
-          userId: task.userId,
-          taskId: task._id,
-          role: 'assistant',
-          content: `⚠️ **Attention:** Échec du nettoyage automatique du conteneur. Le conteneur devra être supprimé manuellement.`
-        });
       }
     }
   }
