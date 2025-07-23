@@ -25,7 +25,7 @@
         Aucun environnement
       </h3>
       <p class="text-gray-600 dark:text-gray-400">
-        Cr�ez votre premier environnement pour commencer.
+        Créez votre premier environnement pour commencer.
       </p>
     </div>
 
@@ -167,16 +167,16 @@ const columns = [
   }
 ]
 
-// M�thodes
+// Méthodes
 const deleteEnvironment = async (id: string) => {
-  if (confirm('�tes-vous s�r de vouloir supprimer cet environnement ?')) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cet environnement ?')) {
     try {
       await $fetch(`/api/environments/${id}`, {
         method: 'DELETE'
       })
       toast.add({
-        title: 'Succ�s',
-        description: 'Environnement supprim� avec succ�s',
+        title: 'Succès',
+        description: 'Environnement supprimé avec succès',
         color: 'success'
       })
       emit('refresh')
