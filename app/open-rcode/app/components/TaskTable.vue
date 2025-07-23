@@ -78,7 +78,6 @@
           variant="ghost"
           icon="i-heroicons-chat-bubble-left-ellipsis"
           @click="viewTask(row.original._id)"
-          :disabled="!row.original.executed"
         >
           Voir
         </UButton>
