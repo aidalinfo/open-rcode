@@ -51,7 +51,7 @@ const selectedEnvironment = ref('')
 // Méthodes
 const fetchEnvironments = async () => {
   try {
-    const data = await $fetch('/api/environments')
+    const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
   } catch (error) {
     console.error('Erreur lors de la récupération des environnements:', error)
