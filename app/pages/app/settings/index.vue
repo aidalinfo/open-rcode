@@ -281,84 +281,11 @@
       </UCard>
 
       <!-- Tableau des environnements -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">
-              Environnements
-            </h2>
-            <UButton
-              to="/app/settings/environnement/create"
-              icon="i-heroicons-plus"
-              size="sm"
-            >
-              New environnement
-            </UButton>
-          </div>
-        </template>
-
-        <div v-if="environments.length === 0" class="text-center py-8">
-          <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucun environnement
-          </h3>
-          <p class="text-gray-600 dark:text-gray-400">
-            Créez votre premier environnement pour commencer.
-          </p>
-        </div>
-
-        <div v-else class="space-y-4">
-          <div
-            v-for="environment in environments"
-            :key="environment.id"
-            class="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-          >
-            <div class="flex-1">
-              <div class="flex items-center gap-3">
-                <h3 class="font-medium text-gray-900 dark:text-white">
-                  {{ environment.name }}
-                </h3>
-                <UBadge :color="getRuntimeColor(environment.runtime)" size="xs">
-                  {{ environment.runtime }}
-                </UBadge>
-              </div>
-              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {{ environment.repositoryFullName }}
-              </p>
-              <p v-if="environment.description" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {{ environment.description }}
-              </p>
-              <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>{{ environment.environmentVariables.length }} variables</span>
-                <span>Créé le {{ formatDate(environment.createdAt) }}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <UButton
-                :to="`/app/settings/environnement/update?edit=${environment.id}`"
-                variant="ghost"
-                size="sm"
-              >
-                <template #leading>
-                  <UIcon name="i-heroicons-pencil-square" />
-                </template>
-                Modifier
-              </UButton>
-              <UButton
-                @click="deleteEnvironment(environment.id)"
-                color="error"
-                variant="ghost"
-                size="sm"
-              >
-                <template #leading>
-                  <UIcon name="i-heroicons-trash" />
-                </template>
-                Supprimer
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </UCard>
+      <EnvironnementsTable 
+        :environments="environments" 
+        :loading="loading"
+        @refresh="fetchEnvironments"
+      />
     </div>
   </UContainer>
 </template>
@@ -389,8 +316,9 @@ const fetchEnvironments = async () => {
   loading.value = true
   try {
     const data = await $fetch('/api/environments')
-    environments.value = data.environments
+    environments.value = data.environments || []
   } catch (error) {
+    console.error('Erreur lors de la récupération des environnements:', error)
     toast.add({
       title: 'Erreur',
       description: 'Impossible de récupérer les environnements',
@@ -401,36 +329,6 @@ const fetchEnvironments = async () => {
   }
 }
 
-const deleteEnvironment = async (id: string) => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer cet environnement ?')) {
-    try {
-      await $fetch(`/api/environments/${id}`, {
-        method: 'DELETE'
-      })
-      toast.add({
-        title: 'Succès',
-        description: 'Environnement supprimé avec succès',
-        color: 'success'
-      })
-      await fetchEnvironments()
-    } catch (error) {
-      toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer l\'environnement',
-        color: 'error'
-      })
-    }
-  }
-}
-
-const getRuntimeColor = (runtime: string) => {
-  switch (runtime) {
-    case 'node': return 'success'
-    case 'php': return 'info'
-    case 'python': return 'warning'
-    default: return 'secondary'
-  }
-}
 
 const installGitHubApp = () => {
   isInstalling.value = true
@@ -670,9 +568,6 @@ const resetGeminiApiKey = async () => {
   }
 }
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR')
-}
 
 // Chargement initial
 onMounted(async () => {
