@@ -1,5 +1,6 @@
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
+import { ContainerFactory } from './container/factory/container-factory'
 
 export class ContainerCleanup {
   private docker: DockerManager
@@ -15,8 +16,15 @@ export class ContainerCleanup {
         return
       }
 
-      await this.stopAndRemoveContainer(task.dockerId)
-      await this.cleanupWorkspaceFiles(taskId)
+      // Utiliser le TaskOrchestrator pour Kubernetes
+      if (ContainerFactory.isKubernetes()) {
+        const taskOrchestrator = ContainerFactory.getTaskOrchestrator()
+        await taskOrchestrator.cleanupTaskContainer(taskId)
+      } else {
+        // Utiliser Docker par défaut
+        await this.stopAndRemoveContainer(task.dockerId)
+        await this.cleanupWorkspaceFiles(taskId)
+      }
       
       // Supprimer la référence du conteneur de la tâche
       task.dockerId = null

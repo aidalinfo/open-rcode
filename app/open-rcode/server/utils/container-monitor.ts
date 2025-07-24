@@ -2,6 +2,7 @@ import { CronJob } from 'cron'
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { connectToDatabase } from './database'
+import { ContainerFactory } from './container/factory/container-factory'
 
 export class ContainerMonitor {
   private cronJob: CronJob | null = null
@@ -55,36 +56,99 @@ export class ContainerMonitor {
     try {
       await connectToDatabase()
 
-      // Vérifier si Docker est disponible
-      const isDockerAvailable = await this.docker.isDockerAvailable()
-      if (!isDockerAvailable) {
-        console.warn('Docker is not available - skipping container check')
-        return
+      // Vérifier si Docker/Kubernetes est disponible
+      if (ContainerFactory.isKubernetes()) {
+        await this.checkKubernetesContainers()
+      } else {
+        await this.checkDockerContainers()
       }
-
-      // Récupérer toutes les tasks avec un dockerId
-      const tasks = await TaskModel.find({
-        dockerId: { $exists: true, $ne: null },
-        executed: false // Seulement les tasks non terminées
-      })
-
-      if (tasks.length === 0) {
-        console.log('No active containers to monitor')
-        return
-      }
-
-      console.log(`Checking ${tasks.length} containers...`)
-
-      for (const task of tasks) {
-        try {
-          await this.checkSingleContainer(task)
-        } catch (error) {
-          console.error(`Error checking container for task ${task._id}:`, error)
-        }
-      }
-
     } catch (error) {
       console.error('Error in container monitoring:', error)
+    }
+  }
+
+  /**
+   * Vérifie l'état des pods Kubernetes
+   */
+  private async checkKubernetesContainers(): Promise<void> {
+    const containerManager = ContainerFactory.getContainerManager()
+    
+    // Récupérer toutes les tasks avec un dockerId
+    const tasks = await TaskModel.find({
+      dockerId: { $exists: true, $ne: null },
+      executed: false // Seulement les tasks non terminées
+    })
+
+    if (tasks.length === 0) {
+      console.log('No active pods to monitor')
+      return
+    }
+
+    console.log(`Checking ${tasks.length} pods...`)
+
+    for (const task of tasks) {
+      try {
+        const podInfo = await containerManager.getContainerInfo(task.dockerId)
+        
+        if (!podInfo) {
+          console.log(`Pod ${task.dockerId} no longer exists for task ${task._id}`)
+          await this.handleContainerNotFound(task)
+          continue
+        }
+
+        // Vérifier l'état du pod
+        switch (podInfo.state) {
+          case 'running':
+            console.log(`Pod ${task.dockerId} is running`)
+            break
+
+          case 'stopped':
+            console.log(`Pod ${task.dockerId} has stopped`)
+            await this.handleKubernetesPodStopped(task, podInfo)
+            break
+
+          case 'removing':
+          case 'unknown':
+            console.log(`Pod ${task.dockerId} is ${podInfo.state}`)
+            await this.handleContainerDead(task)
+            break
+        }
+      } catch (error) {
+        console.error(`Error checking pod for task ${task._id}:`, error)
+      }
+    }
+  }
+
+  /**
+   * Vérifie l'état des conteneurs Docker
+   */
+  private async checkDockerContainers(): Promise<void> {
+    // Vérifier si Docker est disponible
+    const isDockerAvailable = await this.docker.isDockerAvailable()
+    if (!isDockerAvailable) {
+      console.warn('Docker is not available - skipping container check')
+      return
+    }
+
+    // Récupérer toutes les tasks avec un dockerId
+    const tasks = await TaskModel.find({
+      dockerId: { $exists: true, $ne: null },
+      executed: false // Seulement les tasks non terminées
+    })
+
+    if (tasks.length === 0) {
+      console.log('No active containers to monitor')
+      return
+    }
+
+    console.log(`Checking ${tasks.length} containers...`)
+
+    for (const task of tasks) {
+      try {
+        await this.checkSingleContainer(task)
+      } catch (error) {
+        console.error(`Error checking container for task ${task._id}:`, error)
+      }
     }
   }
 
@@ -189,6 +253,39 @@ export class ContainerMonitor {
   }
 
   /**
+   * Gère le cas où un pod Kubernetes s'est arrêté
+   */
+  private async handleKubernetesPodStopped(task: any, podInfo: any): Promise<void> {
+    try {
+      const containerManager = ContainerFactory.getContainerManager()
+      
+      // Récupérer les logs du pod
+      const logs = await containerManager.getContainerLogs(task.dockerId, { tail: 1000 })
+      
+      console.log(`Task ${task._id} pod stopped, updating with logs`)
+      
+      task.executed = true
+      task.messages.push({
+        role: 'assistant',
+        content: `✅ Exécution terminée.\n\n**Logs:**\n\`\`\`\n${logs}\n\`\`\``,
+        timestamp: new Date()
+      })
+      
+      await task.save()
+      
+      // Kubernetes nettoie automatiquement les pods terminés
+      console.log(`Pod ${task.dockerId} will be auto-cleaned by Kubernetes`)
+      
+    } catch (error) {
+      console.error(`Error handling stopped pod for task ${task._id}:`, error)
+      
+      task.executed = true
+      task.error = `Pod stopped but failed to retrieve logs: ${error.message}`
+      await task.save()
+    }
+  }
+
+  /**
    * Gère le cas où le conteneur est mort ou en cours de suppression
    */
   private async handleContainerDead(task: any): Promise<void> {
@@ -210,15 +307,31 @@ export class ContainerMonitor {
    */
   async cleanupOrphanedContainers(): Promise<number> {
     try {
-      const isAvailable = await this.docker.isDockerAvailable()
-      if (!isAvailable) {
-        console.warn('Docker not available for cleanup')
-        return 0
-      }
+      if (ContainerFactory.isKubernetes()) {
+        const containerManager = ContainerFactory.getContainerManager()
+        const pods = await containerManager.listContainers({ label: ['app=ccweb'] })
+        
+        let cleanedCount = 0
+        for (const pod of pods) {
+          if (pod.state === 'stopped' || pod.state === 'unknown') {
+            await containerManager.removeContainer(pod.id)
+            cleanedCount++
+          }
+        }
+        
+        console.log(`Cleaned up ${cleanedCount} orphaned pods`)
+        return cleanedCount
+      } else {
+        const isAvailable = await this.docker.isDockerAvailable()
+        if (!isAvailable) {
+          console.warn('Docker not available for cleanup')
+          return 0
+        }
 
-      const cleanedCount = await this.docker.cleanupContainers()
-      console.log(`Cleaned up ${cleanedCount} orphaned containers`)
-      return cleanedCount
+        const cleanedCount = await this.docker.cleanupContainers()
+        console.log(`Cleaned up ${cleanedCount} orphaned containers`)
+        return cleanedCount
+      }
     } catch (error) {
       console.error('Error during container cleanup:', error)
       return 0
