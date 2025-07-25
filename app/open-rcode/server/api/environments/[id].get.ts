@@ -55,6 +55,7 @@ export default defineEventHandler(async (event) => {
         description: environment.description,
         runtime: environment.runtime,
         aiProvider: environment.aiProvider,
+        model: environment.model,
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
