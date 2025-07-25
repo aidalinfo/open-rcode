@@ -12,7 +12,7 @@ export class ClaudeExecutor {
     this.containerManager = containerManager
   }
 
-  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string): Promise<string> {
+  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
     const onOutput = (data: string) => {
       // Afficher la sortie Claude en temps réel
       const lines = data.split('\n').filter(line => line.trim())
@@ -27,13 +27,16 @@ export class ClaudeExecutor {
     let aiCommand = 'claude -p'
     let envSetup = ''
 
+    // Ajouter le paramètre --model si spécifié
+    const modelParam = model ? ` --model ${model}` : ''
+
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -41,7 +44,7 @@ export class ClaudeExecutor {
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
         break
       default:
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -81,18 +84,21 @@ export class ClaudeExecutor {
     return filteredOutput
   }
 
-  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string): Promise<string> {
+  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
     // Déterminer la commande à exécuter selon le provider
     let aiCommand = 'claude -p'
     let envSetup = ''
 
+    // Ajouter le paramètre --model si spécifié
+    const modelParam = model ? ` --model ${model}` : ''
+
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -101,7 +107,7 @@ export class ClaudeExecutor {
         break
       default:
         // Fallback pour la compatibilité
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -277,6 +283,7 @@ export class ClaudeExecutor {
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
       console.log(`🔧 Using workspace directory: ${workspaceDir}`);
       const aiProvider = environment.aiProvider || 'anthropic-api';
+      const model = environment.model || 'sonnet';
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
         console.log('Executing configuration script');
@@ -307,15 +314,15 @@ export class ClaudeExecutor {
       const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 });
 
       if (userMessage) {
-        console.log(`Executing first AI command with user text (provider: ${aiProvider})`);
-        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider);
+        console.log(`Executing first AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider, model);
         const aiProviderLabel = this.getAiProviderLabel(aiProvider);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
+          content: `🤖 **${aiProviderLabel} (${model}) - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
         });
       }
 
@@ -323,13 +330,14 @@ export class ClaudeExecutor {
 
       const gitStatusBefore = await this.checkGitStatus(containerId, workspaceDir);
 
-      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider})`);
+      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider}, model: ${model})`);
 
       const summaryOutput = await this.executeCommand(
         containerId,
         'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
         workspaceDir,
-        aiProvider
+        aiProvider,
+        model
       );
 
       const aiProviderLabel = this.getAiProviderLabel(aiProvider);
@@ -338,7 +346,7 @@ export class ClaudeExecutor {
         userId: task.userId,
         taskId: task._id,
         role: 'assistant',
-        content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
+        content: `📋 **${aiProviderLabel} (${model}) - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
       });
 
       const prCreator = new PullRequestCreator(this.containerManager);

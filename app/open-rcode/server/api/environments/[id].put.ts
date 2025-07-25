@@ -51,12 +51,21 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    // Validation du modèle si fourni
+    if (body.model && !['opus', 'sonnet'].includes(body.model)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'model must be one of: opus, sonnet'
+      })
+    }
+    
     // Construire l'objet de mise à jour
     const updateData: any = {}
     if (body.name) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
     if (body.runtime) updateData.runtime = body.runtime
     if (body.aiProvider) updateData.aiProvider = body.aiProvider
+    if (body.model) updateData.model = body.model
     if (body.defaultBranch) updateData.defaultBranch = body.defaultBranch
     if (body.environmentVariables) updateData.environmentVariables = body.environmentVariables
     if (body.configurationScript !== undefined) updateData.configurationScript = body.configurationScript
@@ -92,6 +101,7 @@ export default defineEventHandler(async (event) => {
         description: environment.description,
         runtime: environment.runtime,
         aiProvider: environment.aiProvider,
+        model: environment.model,
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
