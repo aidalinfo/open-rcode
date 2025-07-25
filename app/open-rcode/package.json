@@ -2,7 +2,7 @@
   "name": "nuxt-ui-pro-starter",
   "private": true,
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.1alpha",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
