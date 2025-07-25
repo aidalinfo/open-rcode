@@ -21,8 +21,8 @@ COPY . .
 ENV NODE_ENV=production
 ENV NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
 
-# Build the application
-RUN pnpm run build
+# Build the application with increased memory limit
+RUN NODE_OPTIONS="--max-old-space-size=8192" pnpm run build
 
 # Production stage
 FROM node:lts-alpine AS runner
@@ -35,6 +35,13 @@ LABEL org.opencontainers.image.title="Open-rcode"
 LABEL org.opencontainers.image.vendor="Aidalinfo"
 
 WORKDIR /app
+
+# Install kubectl
+RUN apk add --no-cache curl && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/ && \
+    apk del curl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
