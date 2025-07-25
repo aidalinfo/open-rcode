@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build artifacts
+.nuxt
+.output
+dist
+
+# Environment files
+.env
+.env.example
+.env.local
+.env.production
+
+# Development files
+.git
+.github
+.gitignore
+README.md
+*.md
+
+# IDE files
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Testing
+coverage
+.nyc_output
+
+# Cache
+.cache
+.eslintcache
