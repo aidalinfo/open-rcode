@@ -21,6 +21,7 @@ services:
       - /opt/kubeconfig/kubeconfig.yaml:/tmp/kubeconfig.yaml
     environment:
       NODE_ENV: production
+      GITHUB_APP_NAME: ${GITHUB_APP_NAME}
       CONTAINER_MODE: "kubernetes"
       GITHUB_APP_ID: ${GITHUB_APP_ID}
       KUBECONFIG: "/tmp/kubeconfig.yaml"
