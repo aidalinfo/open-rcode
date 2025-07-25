@@ -32,11 +32,11 @@ export class ClaudeExecutor {
 
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -44,7 +44,7 @@ export class ClaudeExecutor {
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
         break
       default:
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -94,11 +94,11 @@ export class ClaudeExecutor {
 
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -107,7 +107,7 @@ export class ClaudeExecutor {
         break
       default:
         // Fallback pour la compatibilité
-        aiCommand = `claude -p${modelParam}`
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
