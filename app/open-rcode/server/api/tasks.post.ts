@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
         updatedAt: task.updatedAt
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating task:', error)
     
     // Si c'est une erreur de validation Mongoose
@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
     // Erreur générique
     throw createError({
       statusCode: 500,
-      statusMessage: `Failed to create task: ${error.message}`
+      statusMessage: `Failed to create task: ${error instanceof Error ? error.message : String(error)}`
     })
   }
 })

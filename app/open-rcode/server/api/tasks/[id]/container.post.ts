@@ -42,9 +42,8 @@ export default defineEventHandler(async (event) => {
     
     const result = await createTaskContainer({
       taskId,
-      runtime: environment.runtime,
-      repositoryUrl: `https://github.com/${environment.repositoryFullName}.git`,
-      additionalEnvVars: environment.environmentVariables.reduce((acc, v) => {
+      runtimeVersion: environment.runtime,
+      additionalEnvVars: environment.environmentVariables.reduce((acc: Record<string, string>, v: any) => {
         acc[v.key] = v.value
         return acc
       }, {} as Record<string, string>)

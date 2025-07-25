@@ -2,14 +2,17 @@ import { CronJob } from 'cron'
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { connectToDatabase } from './database'
+import { createContainerManager, BaseContainerManager } from './container'
 
 export class ContainerMonitor {
   private cronJob: CronJob | null = null
-  private docker: DockerManager
+  private containerManager: BaseContainerManager
+  private docker: DockerManager // Maintenu pour compatibilité
   private isRunning = false
 
-  constructor(dockerOptions?: any) {
-    this.docker = new DockerManager(dockerOptions)
+  constructor(containerOptions?: any) {
+    this.containerManager = createContainerManager({ connectionOptions: containerOptions })
+    this.docker = new DockerManager(containerOptions) // Fallback pour compatibilité
   }
 
   /**
@@ -55,14 +58,15 @@ export class ContainerMonitor {
     try {
       await connectToDatabase()
 
-      // Vérifier si Docker est disponible
-      const isDockerAvailable = await this.docker.isDockerAvailable()
-      if (!isDockerAvailable) {
-        console.warn('Docker is not available - skipping container check')
+      // Vérifier si le gestionnaire de conteneurs est disponible
+      const isAvailable = await this.containerManager.isAvailable()
+      if (!isAvailable) {
+        const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Kubernetes' : 'Docker'
+        console.warn(`${containerType} is not available - skipping container check`)
         return
       }
 
-      // Récupérer toutes les tasks avec un dockerId
+      // Récupérer toutes les tasks avec un containerId (dockerId utilisé pour compatibilité)
       const tasks = await TaskModel.find({
         dockerId: { $exists: true, $ne: null },
         executed: false // Seulement les tasks non terminées
@@ -95,7 +99,7 @@ export class ContainerMonitor {
     if (!task.dockerId) return
 
     try {
-      const containerInfo = await this.docker.getContainerInfo(task.dockerId)
+      const containerInfo = await this.containerManager.getContainerInfo(task.dockerId)
 
       if (!containerInfo) {
         // Le conteneur n'existe plus
@@ -104,25 +108,20 @@ export class ContainerMonitor {
         return
       }
 
-      // Vérifier l'état du conteneur
-      switch (containerInfo.status.toLowerCase()) {
-        case 'running':
-          console.log(`Container ${task.dockerId} is running`)
-          break
-
-        case 'exited':
-          console.log(`Container ${task.dockerId} has exited`)
-          await this.handleContainerExited(task, containerInfo)
-          break
-
-        case 'dead':
-        case 'removing':
-          console.log(`Container ${task.dockerId} is ${containerInfo.status}`)
-          await this.handleContainerDead(task)
-          break
-
-        default:
-          console.log(`Container ${task.dockerId} status: ${containerInfo.status}`)
+      // Vérifier l'état du conteneur (compatible Docker et Kubernetes)
+      const status = containerInfo.status.toLowerCase()
+      const state = containerInfo.state.toLowerCase()
+      
+      if (status === 'running' || state === 'running') {
+        console.log(`Container ${task.dockerId} is running`)
+      } else if (status === 'exited' || state === 'succeeded' || state === 'failed') {
+        console.log(`Container ${task.dockerId} has ${status}/${state}`)
+        await this.handleContainerExited(task, containerInfo)
+      } else if (status === 'dead' || status === 'removing' || state === 'pending') {
+        console.log(`Container ${task.dockerId} is ${status}/${state}`)
+        await this.handleContainerDead(task)
+      } else {
+        console.log(`Container ${task.dockerId} status: ${status}/${state}`)
       }
 
     } catch (error) {
@@ -158,7 +157,7 @@ export class ContainerMonitor {
   private async handleContainerExited(task: any, containerInfo: any): Promise<void> {
     try {
       // Récupérer les logs du conteneur
-      const logs = await this.docker.getContainerLogs(task.dockerId, 1000)
+      const logs = await this.containerManager.getContainerLogs(task.dockerId, 1000)
       
       console.log(`Task ${task._id} container exited, updating with logs`)
       
@@ -171,9 +170,9 @@ export class ContainerMonitor {
       
       await task.save()
       
-      // Nettoyer le conteneur s'il n'est pas auto-remove
+      // Nettoyer le conteneur
       try {
-        await this.docker.removeContainer(task.dockerId, true)
+        await this.containerManager.removeContainer(task.dockerId, true)
         console.log(`Container ${task.dockerId} removed`)
       } catch (removeError) {
         console.log(`Container ${task.dockerId} may have been auto-removed`)
@@ -210,13 +209,14 @@ export class ContainerMonitor {
    */
   async cleanupOrphanedContainers(): Promise<number> {
     try {
-      const isAvailable = await this.docker.isDockerAvailable()
+      const isAvailable = await this.containerManager.isAvailable()
       if (!isAvailable) {
-        console.warn('Docker not available for cleanup')
+        const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Kubernetes' : 'Docker'
+        console.warn(`${containerType} not available for cleanup`)
         return 0
       }
 
-      const cleanedCount = await this.docker.cleanupContainers()
+      const cleanedCount = await this.containerManager.cleanupContainers()
       console.log(`Cleaned up ${cleanedCount} orphaned containers`)
       return cleanedCount
     } catch (error) {
@@ -255,13 +255,13 @@ let globalMonitor: ContainerMonitor | null = null
 /**
  * Démarre le monitoring global des conteneurs
  */
-export function startContainerMonitoring(dockerOptions?: any): ContainerMonitor {
+export function startContainerMonitoring(containerOptions?: any): ContainerMonitor {
   if (globalMonitor) {
     console.log('Container monitoring already started')
     return globalMonitor
   }
 
-  globalMonitor = new ContainerMonitor(dockerOptions)
+  globalMonitor = new ContainerMonitor(containerOptions)
   globalMonitor.start()
   return globalMonitor
 }

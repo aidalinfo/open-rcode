@@ -1,15 +1,15 @@
 import { UserModel } from '../models/User'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
-import type { DockerManager } from './docker'
+import type { BaseContainerManager } from './container/base-container-manager'
 
 export class RepositoryCloner {
-  private docker: DockerManager
+  private containerManager: BaseContainerManager
 
-  constructor(docker: DockerManager) {
-    this.docker = docker
+  constructor(containerManager: BaseContainerManager) {
+    this.containerManager = containerManager
   }
 
-  async cloneInContainer(task: any, environment: any, containerId: string): Promise<void> {
+  async cloneInContainer(task: any, environment: any, containerId: string, customWorkspaceDir?: string): Promise<void> {
     const user = await UserModel.findOne({ githubId: task.userId })
     if (!user) {
       throw new Error(`User ${task.userId} not found`)
@@ -23,7 +23,7 @@ export class RepositoryCloner {
 
     const repositoryUrl = `https://x-access-token:${installationToken}@github.com/${environment.repositoryFullName}.git`
 
-    const workspaceDir = `/workspace/${environment.repository || 'ccweb'}`
+    const workspaceDir = customWorkspaceDir || `/tmp/workspace-${Date.now()}/${environment.repository || 'ccweb'}`
     const defaultBranch = environment.defaultBranch || 'main'
 
     console.log(`Cloning repository ${environment.repositoryFullName} (branch: ${defaultBranch}) with GitHub App token in container`)
@@ -35,7 +35,7 @@ export class RepositoryCloner {
       git clone -b "${defaultBranch}" "${repositoryUrl}" repo
     `
 
-    const result = await this.docker.executeInContainer({
+    const result = await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', cloneScript],
       user: 'root',
@@ -81,7 +81,7 @@ export class RepositoryCloner {
       git config --global --add safe.directory "${repoDir}"
     `
 
-    await this.docker.executeInContainer({
+    await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', configScript],
       user: 'root',

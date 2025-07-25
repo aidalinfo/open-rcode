@@ -69,7 +69,7 @@
                     @click="openGitHubPR(message.content)"
                     icon="i-simple-icons-github"
                     size="sm"
-                    color="gray"
+                    color="neutral"
                     variant="outline"
                     label="Ouvrir"
                     target="_blank"
@@ -137,10 +137,10 @@ const openGitHubPR = (url: string) => {
 // Status helpers
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'completed': return 'green'
-    case 'failed': return 'red'
-    case 'running': return 'yellow'
-    default: return 'gray'
+    case 'completed': return 'success'
+    case 'failed': return 'error'
+    case 'running': return 'warning'
+    default: return 'neutral'
   }
 }
 

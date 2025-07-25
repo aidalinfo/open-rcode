@@ -6,23 +6,39 @@ import { ContainerSetup } from './container-setup'
 import { ClaudeExecutor } from './claude-executor'
 import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
+import { createContainerManager, ContainerManagerFactory } from './container/container-manager-factory'
+import { BaseContainerManager } from './container/base-container-manager'
+import { DockerAdapter } from './container/docker-adapter'
 import { v4 as uuidv4 } from 'uuid'
 
 export class TaskContainerManager {
-  private docker: DockerManager
+  private containerManager: BaseContainerManager
   private containerSetup: ContainerSetup
   private claudeExecutor: ClaudeExecutor
   private containerCleanup: ContainerCleanup
 
-  constructor(dockerOptions?: any) {
-    this.docker = new DockerManager(dockerOptions)
-    this.containerSetup = new ContainerSetup(this.docker)
-    this.claudeExecutor = new ClaudeExecutor(this.docker)
-    this.containerCleanup = new ContainerCleanup(this.docker)
+  constructor(containerOptions?: any) {
+    this.containerManager = createContainerManager({ connectionOptions: containerOptions })
+    
+    // Pour maintenir la compatibilité avec les classes existantes qui attendent DockerManager
+    const dockerManager = this.containerManager instanceof DockerAdapter 
+      ? (this.containerManager as DockerAdapter).getDockerManager()
+      : new DockerManager(containerOptions) // Fallback pour Kubernetes mode
+    
+    this.containerSetup = new ContainerSetup(this.containerManager, dockerManager)
+    this.claudeExecutor = new ClaudeExecutor(this.containerManager)
+    this.containerCleanup = new ContainerCleanup(this.containerManager)
   }
 
   /**
-   * Crée un environnement Docker pour une tâche avec Claude Code
+   * Obtient le gestionnaire de conteneurs (Docker ou Kubernetes)
+   */
+  getContainerManager(): BaseContainerManager {
+    return this.containerManager
+  }
+
+  /**
+   * Crée un environnement de conteneur pour une tâche avec Claude Code
    */
   async createTaskContainer(options: TaskContainerOptions): Promise<ContainerSetupResult> {
     await connectToDatabase()
@@ -33,17 +49,22 @@ export class TaskContainerManager {
     const task = await TaskModel.findById(options.taskId)
     if (task) {
       task.dockerId = result.containerId
+      const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Pod Kubernetes' : 'Conteneur Docker'
+      const icon = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? '☸️' : '🐳'
+      
       await TaskMessageModel.create({
         id: uuidv4(),
         userId: task.userId,
         taskId: task._id,
         role: 'assistant',
-        content: `🐳 Environnement Docker créé avec succès.\n**Conteneur:** ${result.containerName}\n**ID:** ${result.containerId.substring(0, 12)}`
+        content: `${icon} Environnement de conteneur créé avec succès.\n**${containerType}:** ${result.containerName}\n**ID:** ${result.containerId.substring(0, 12)}`
       })
       await task.save()
 
       // Exécuter automatiquement le workflow Claude après le setup
-      await this.claudeExecutor.executeWorkflow(result.containerId, task)
+      // Passer le workspaceDir complet avec /repo dans l'objet task temporairement  
+      const taskWithWorkspace = { ...task.toObject(), workspaceDir: `${result.workspaceDir}/repo` }
+      await this.claudeExecutor.executeWorkflow(result.containerId, taskWithWorkspace)
     }
 
     return result

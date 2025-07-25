@@ -60,7 +60,7 @@ const fetchEnvironments = async () => {
 
 const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
   if (!data.task || !data.task.id) {
-    toast.add({ title: 'Erreur', description: 'La création de la tâche a échoué.', color: 'red' })
+    toast.add({ title: 'Erreur', description: 'La création de la tâche a échoué.', color: 'error' })
     return
   }
 
@@ -79,13 +79,13 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
       toast.add({
         title: 'Erreur de conteneur',
         description: 'La création de l\'environnement Docker a échoué en arrière-plan.',
-        color: 'red',
-        timeout: 0 // Garder la notif visible
+        color: 'error',
+        duration: 0
       })
     })
   } catch (error) {
     console.error('Erreur lors de la redirection ou de l\'appel fetch:', error)
-    toast.add({ title: 'Erreur', description: 'Une erreur est survenue.', color: 'red' })
+    toast.add({ title: 'Erreur', description: 'Une erreur est survenue.', color: 'error' })
     loading.value = false
   }
   // loading.value n'est pas remis à false ici car la page change.

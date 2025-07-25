@@ -1,11 +1,12 @@
 import { DockerManager } from './docker'
+import { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
 
 export class ContainerCleanup {
-  private docker: DockerManager
+  private containerManager: BaseContainerManager
 
-  constructor(docker: DockerManager) {
-    this.docker = docker
+  constructor(containerManager: BaseContainerManager) {
+    this.containerManager = containerManager
   }
 
   async cleanupTaskContainer(taskId: string): Promise<void> {
@@ -30,8 +31,8 @@ export class ContainerCleanup {
 
   private async stopAndRemoveContainer(containerId: string): Promise<void> {
     try {
-      await this.docker.stopContainer(containerId)
-      await this.docker.removeContainer(containerId, true)
+      await this.containerManager.stopContainer(containerId)
+      await this.containerManager.removeContainer(containerId, true)
     } catch (error) {
       console.warn(`Container ${containerId} may have already been removed`)
     }

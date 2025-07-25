@@ -16,7 +16,7 @@
         <div class="space-y-4">
           <UAlert
             v-if="error"
-            color="red"
+            color="error"
             variant="soft"
             title="Erreur de connexion"
             description="Une erreur s'est produite lors de la connexion. Veuillez réessayer."

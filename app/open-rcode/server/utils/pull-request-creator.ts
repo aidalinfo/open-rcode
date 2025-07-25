@@ -1,13 +1,16 @@
-import { DockerManager } from './docker'
+import { BaseContainerManager } from './container/base-container-manager'
 import { EnvironmentModel } from '../models/Environment'
 import { UserModel } from '../models/User'
+import { TaskModel } from '../models/Task'
+import { TaskMessageModel } from '../models/TaskMessage'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
+import { v4 as uuidv4 } from 'uuid'
 
 export class PullRequestCreator {
-  private docker: DockerManager
+  private containerManager: BaseContainerManager
 
-  constructor(docker: DockerManager) {
-    this.docker = docker
+  constructor(containerManager: BaseContainerManager) {
+    this.containerManager = containerManager
   }
 
   async createFromChanges(containerId: string, task: any, summary: string): Promise<void> {
@@ -19,7 +22,7 @@ export class PullRequestCreator {
         throw new Error(`Environment ${task.environmentId} not found`)
       }
       
-      const workspaceDir = `/workspace/${environment.repository || 'ccweb'}/repo`
+      const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}/repo`
       
       const user = await UserModel.findOne({ githubId: task.userId })
       if (!user) {
@@ -28,12 +31,13 @@ export class PullRequestCreator {
 
       const hasChanges = await this.checkForChanges(containerId, workspaceDir)
       if (!hasChanges) {
-        task.messages.push({
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
           role: 'assistant',
-          content: '📝 **Aucune modification détectée** - Pas de Pull Request créée',
-          timestamp: new Date()
+          content: '📝 **Aucune modification détectée** - Pas de Pull Request créée'
         })
-        await task.save()
         return
       }
 
@@ -59,36 +63,40 @@ export class PullRequestCreator {
         environment.defaultBranch || 'main'
       )
       
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant',
         content: `✅ **Pull Request créée avec succès!**
         
 **Branche:** \`${branchName}\`
 **Repository:** ${environment.repositoryFullName}
 
-Les modifications ont été poussées et une Pull Request a été créée automatiquement.`,
-        timestamp: new Date()
+Les modifications ont été poussées et une Pull Request a été créée automatiquement.`
       })
       
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant',
         content: prUrl,
-        timestamp: new Date(),
         type: 'pr_link'
       })
-      await task.save()
       
       console.log(`Pull request created successfully for task ${task._id}`)
       
     } catch (error) {
       console.error(`Error creating pull request for task ${task._id}:`, error)
       
-      task.messages.push({
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
         role: 'assistant',
-        content: `❌ **Erreur lors de la création de la PR:** ${(error as any).message}`,
-        timestamp: new Date()
+        content: `❌ **Erreur lors de la création de la PR:** ${(error as any).message}`
       })
-      await task.save()
     }
   }
 
@@ -99,7 +107,7 @@ Les modifications ont été poussées et une Pull Request a été créée automa
       git status --porcelain
     `
     
-    const result = await this.docker.executeInContainer({
+    const result = await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', script],
       user: 'root'
@@ -132,7 +140,7 @@ EOF
 )"
     `
     
-    const result = await this.docker.executeInContainer({
+    const result = await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', script],
       user: 'root'
@@ -166,16 +174,17 @@ EOF
   }
 
   private async handleNoToken(task: any): Promise<void> {
-    task.messages.push({
+    await TaskMessageModel.create({
+      id: uuidv4(),
+      userId: task.userId,
+      taskId: task._id,
       role: 'assistant',
       content: `⚠️ **Modifications prêtes mais PR non créée automatiquement**
       
 Les modifications ont été faites dans le conteneur mais ne peuvent pas être poussées automatiquement car aucun token GitHub valide n'est disponible.
 
-Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
-      timestamp: new Date()
+Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
     })
-    await task.save()
   }
 
   private async pushBranch(
@@ -191,7 +200,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`,
       git push origin "${branchName}"
     `
     
-    const result = await this.docker.executeInContainer({
+    const result = await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', script],
       user: 'root'

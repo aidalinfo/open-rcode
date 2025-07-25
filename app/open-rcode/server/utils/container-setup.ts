@@ -1,9 +1,11 @@
 import { DockerManager } from './docker'
+import { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { UserModel } from '../models/User'
 import { decrypt } from './crypto'
 import { RepositoryCloner } from './repository-cloner'
+import { DockerAdapter } from './container/docker-adapter'
 
 export interface TaskContainerOptions {
   taskId: string
@@ -19,11 +21,19 @@ export interface ContainerSetupResult {
   claudeCommand?: string
 }
 
-export class ContainerSetup {
-  private docker: DockerManager
+function generateUniqueWorkspace(taskId: string, repository: string): string {
+  const timestamp = Date.now()
+  const taskPrefix = taskId.substring(0, 8)
+  return `/tmp/workspace-${timestamp}-${taskPrefix}/${repository}`
+}
 
-  constructor(docker: DockerManager) {
-    this.docker = docker
+export class ContainerSetup {
+  private containerManager: BaseContainerManager
+  private docker: DockerManager // Maintenu pour compatibility avec RepositoryCloner
+
+  constructor(containerManager: BaseContainerManager, docker?: DockerManager) {
+    this.containerManager = containerManager
+    this.docker = docker || new DockerManager() // Fallback pour RepositoryCloner
   }
 
   async setupContainer(options: TaskContainerOptions): Promise<ContainerSetupResult> {
@@ -85,25 +95,27 @@ export class ContainerSetup {
     }
 
     const containerName = `ccweb-task-${task._id}-${Date.now()}`
-    const workspaceDir = options.workspaceDir || `/workspace/${environment.repository}`
+    const workspaceDir = options.workspaceDir || generateUniqueWorkspace(options.taskId, environment.repository)
 
     const envVars = this.prepareEnvironmentVariables(environment, requiredToken, aiProvider, options.additionalEnvVars)
 
-    await this.ensureDockerImage('ccweb-task-runner:latest')
+    // Only ensure Docker image if we're using Docker mode
+    if (this.containerManager instanceof DockerAdapter) {
+      await this.ensureDockerImage('ccweb-task-runner:latest')
+    }
 
-    const containerId = await this.docker.createContainer({
+    const containerId = await this.containerManager.createContainer({
       image: 'ccweb-task-runner:latest',
       name: containerName,
       workdir: workspaceDir,
       environment: envVars,
-      autoRemove: false,
-      networkMode: 'bridge'
+      autoRemove: false
     })
 
     await this.waitForContainerReady(containerId)
 
     // Cloner le repository directement dans le conteneur après le setup
-    await this.cloneRepositoryInContainer(task, environment, containerId)
+    await this.cloneRepositoryInContainer(task, environment, containerId, workspaceDir)
 
     return {
       containerId,
@@ -160,9 +172,9 @@ export class ContainerSetup {
   }
 
 
-  async cloneRepositoryInContainer(task: any, environment: any, containerId: string): Promise<void> {
-    const cloner = new RepositoryCloner(this.docker)
-    await cloner.cloneInContainer(task, environment, containerId)
+  async cloneRepositoryInContainer(task: any, environment: any, containerId: string, workspaceDir?: string): Promise<void> {
+    const cloner = new RepositoryCloner(this.containerManager)
+    await cloner.cloneInContainer(task, environment, containerId, workspaceDir)
   }
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
@@ -173,7 +185,7 @@ export class ContainerSetup {
     
     while (Date.now() - startTime < maxWaitTime) {
       try {
-        const logs = await this.docker.getContainerLogs(containerId, 50)
+        const logs = await this.containerManager.getContainerLogs(containerId, 50)
         
         if (logs.includes('Environment ready') || logs.includes('Dropping you into a bash shell')) {
           console.log(`Container ${containerId} is ready!`)

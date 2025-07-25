@@ -1,5 +1,6 @@
 import Docker from 'dockerode'
 import crypto from 'crypto'
+import type { ExecuteResult } from './container/base-container-manager'
 
 export interface DockerContainerOptions {
   image: string
@@ -35,11 +36,6 @@ export interface ContainerInfo {
   labels?: Record<string, string>
 }
 
-export interface ExecuteResult {
-  stdout: string
-  stderr: string
-  exitCode: number
-}
 
 export interface DockerConnectionOptions {
   socketPath?: string
