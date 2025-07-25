@@ -27,7 +27,10 @@
             </UButton>
           </div>
 
-          <TaskTable v-if="environments.length > 0" />
+          <div v-if="environments.length > 0">
+            <TaskTableSkeleton v-if="!environmentsLoaded" />
+            <TaskTable v-else />
+          </div>
         </div>
       </UContainer>
     </template>
@@ -47,14 +50,17 @@ const input = ref('')
 const loading = ref(false)
 const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
+const environmentsLoaded = ref(false)
 
 // Méthodes
 const fetchEnvironments = async () => {
   try {
     const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
+    environmentsLoaded.value = true
   } catch (error) {
     console.error('Erreur lors de la récupération des environnements:', error)
+    environmentsLoaded.value = true
   }
 }
 
