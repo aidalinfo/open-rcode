@@ -29,6 +29,7 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       SESSION_SECRET: ${SESSION_SECRET}
+      MONGODB_URI: ${MONGODB_URI}
     ports:
       - "3072:3000"
     depends_on:
