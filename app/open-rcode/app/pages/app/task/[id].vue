@@ -10,7 +10,7 @@
     </template>
     
     <template #body>
-      <UContainer class="flex flex-col h-full px-4">
+      <UContainer class="flex flex-col h-full px-4 sm:px-4 px-0">
         <div v-if="loading" class="flex-1 flex items-center justify-center">
           <div class="text-center">
             <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
