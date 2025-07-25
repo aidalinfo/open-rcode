@@ -2,7 +2,9 @@
   <UDashboardPanel>
     <template #body>
       <UContainer>
-        <div class="py-8 space-y-6">
+        <AppSkeleton v-if="isInitialLoading" />
+        
+        <div v-else class="py-8 space-y-6">
           <ChatPrompt
             v-model:input="input"
             v-model:selectedEnvironment="selectedEnvironment"
@@ -47,6 +49,7 @@ const input = ref('')
 const loading = ref(false)
 const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
+const isInitialLoading = ref(true)
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -55,6 +58,8 @@ const fetchEnvironments = async () => {
     environments.value = data.environments
   } catch (error) {
     console.error('Erreur lors de la récupération des environnements:', error)
+  } finally {
+    isInitialLoading.value = false
   }
 }
 
