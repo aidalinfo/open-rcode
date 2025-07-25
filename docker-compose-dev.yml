@@ -7,7 +7,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: open-rcode
+      MONGO_INITDB_DATABASE: openrcode
     ports:
       - "27017:27017"
 
