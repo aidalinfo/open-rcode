@@ -1,7 +1,7 @@
 <template>
   <UDashboardPanel>
     <template #header>
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-center gap-4">
         <h1 class="text-xl font-semibold">
           {{ task ? `Tâche: ${task.name || task.id}` : 'Chargement...' }}
         </h1>
