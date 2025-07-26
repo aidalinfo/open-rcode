@@ -85,6 +85,10 @@ Les modifications ont été poussées et une Pull Request a été créée automa
         type: 'pr_link'
       })
       
+      // Stocker l'URL de la PR dans le modèle Task
+      task.pr = prUrl
+      await task.save()
+      
       console.log(`Pull request created successfully for task ${task._id}`)
       
     } catch (error) {
