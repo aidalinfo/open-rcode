@@ -40,21 +40,35 @@ export default defineEventHandler(async (event) => {
       .exec()
     
     // Formater les données pour le frontend
-    const formattedTasks = tasks.map(task => ({
-      _id: task._id,
-      name: task.name,
-      status: task.status,
-      executed: task.executed,
-      merged: task.merged,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-      environment: task.environmentId ? {
-        name: task.environmentId.name
-      } : null,
-      pr: task.pr,
-      dockerId: task.dockerId,
-      error: task.error
-    }))
+    const formattedTasks = tasks.map(task => {
+      // Extraire le numéro de PR de l'URL si elle existe
+      let prData = null
+      if (task.pr) {
+        const prMatch = task.pr.match(/\/pull\/(\d+)/)
+        if (prMatch) {
+          prData = {
+            url: task.pr,
+            number: parseInt(prMatch[1])
+          }
+        }
+      }
+      
+      return {
+        _id: task._id,
+        name: task.name,
+        status: task.status,
+        executed: task.executed,
+        merged: task.merged,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        environment: task.environmentId ? {
+          name: task.environmentId.name
+        } : null,
+        pr: prData,
+        dockerId: task.dockerId,
+        error: task.error
+      }
+    })
     
     return {
       tasks: formattedTasks
