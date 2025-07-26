@@ -11,8 +11,8 @@ useHead({
   }
 })
 
-const title = 'Nuxt Starter Template'
-const description = 'Nuxt UI Pro is a collection of premium Vue components built on top of Nuxt UI to create beautiful & responsive Nuxt applications in minutes.'
+const title = 'open-rcode'
+const description = 'Une plateforme de développement collaborative intégrant l\'IA pour optimiser vos projets de code.'
 
 useSeoMeta({
   title,
