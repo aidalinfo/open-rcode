@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
     const formattedTasks = tasks.map(task => ({
       _id: task._id,
       name: task.name,
+      status: task.status,
       executed: task.executed,
       merged: task.merged,
       createdAt: task.createdAt,

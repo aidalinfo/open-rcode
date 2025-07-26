@@ -268,7 +268,11 @@ export class ClaudeExecutor {
 
   async executeWorkflow(containerId: string, task: any): Promise<void> {
     const updateTaskStatus = async (status: string, error?: string) => {
-      await TaskModel.findByIdAndUpdate(task._id, { status, error: error || null });
+      await TaskModel.findByIdAndUpdate(task._id, { 
+        status, 
+        error: error || null,
+        updatedAt: new Date()
+      });
     };
 
     try {
