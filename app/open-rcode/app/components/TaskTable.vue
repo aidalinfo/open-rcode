@@ -36,7 +36,7 @@
       <template #status-cell="{ row }">
         <UBadge
           :color="getStatusColor(row.original)"
-          :variant="row.original.executed ? 'solid' : 'soft'"
+          :variant="row.original.status === 'completed' || row.original.status === 'failed' ? 'solid' : 'soft'"
           size="xs"
         >
           {{ getStatusText(row.original) }}
@@ -92,6 +92,7 @@ const router = useRouter()
 interface Task {
   _id: string
   name: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
   executed: boolean
   merged: boolean
   createdAt: string
@@ -102,6 +103,7 @@ interface Task {
     url: string
     number: number
   }
+  error?: string
 }
 
 // États réactifs
@@ -159,15 +161,32 @@ const viewTask = (taskId: string) => {
 }
 
 const getStatusColor = (task: Task) => {
-  if (task.merged) return 'success'
-  if (task.executed) return 'info'
-  return 'neutral'
+  switch (task.status) {
+    case 'completed':
+      return 'success'
+    case 'running':
+      return 'info'
+    case 'failed':
+      return 'danger'
+    case 'pending':
+    default:
+      return 'neutral'
+  }
 }
 
 const getStatusText = (task: Task) => {
-  if (task.merged) return 'Fusionnée'
-  if (task.executed) return 'Exécutée'
-  return 'En cours'
+  switch (task.status) {
+    case 'completed':
+      return 'Terminée'
+    case 'running':
+      return 'En cours'
+    case 'failed':
+      return 'Échouée'
+    case 'pending':
+      return 'En attente'
+    default:
+      return 'Inconnu'
+  }
 }
 
 const formatDate = (dateString: string) => {
