@@ -70,7 +70,10 @@ export class ClaudeExecutor {
       which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
       
       ${envSetup}
-      ${aiCommand} "${prompt.replace(/"/g, '\"')}"
+      ${aiCommand} "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
     `
 
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
@@ -154,7 +157,10 @@ export class ClaudeExecutor {
       which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
       
       ${envSetup}
-      ${aiCommand} "${prompt.replace(/"/g, '\"')}"
+      ${aiCommand} "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
     `
 
     const result = await this.containerManager.executeInContainer({
@@ -581,7 +587,10 @@ export class ClaudeExecutor {
       which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
       
       ${this.getEnvSetup(aiProvider)}
-      ${this.getAiCommand(aiProvider, model)} "${prompt.replace(/"/g, '\"')}"
+      ${this.getAiCommand(aiProvider, model)} "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
     `, (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
