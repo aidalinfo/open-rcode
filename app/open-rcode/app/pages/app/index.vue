@@ -16,16 +16,16 @@
           <div v-if="environments.length === 0" class="text-center py-8">
             <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Aucun environnement configuré
+              No configured environments
             </h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
-              Créez votre premier environnement pour commencer à utiliser le chat.
+              Create your first environment to start using the chat.
             </p>
             <UButton
               to="/app/settings/environnement/create"
               icon="i-heroicons-plus"
             >
-              Créer un environnement
+              Create an environment
             </UButton>
           </div>
 
@@ -57,7 +57,7 @@ const fetchEnvironments = async () => {
     const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
   } catch (error) {
-    console.error('Erreur lors de la récupération des environnements:', error)
+    console.error('Error fetching environments:', error)
   } finally {
     isInitialLoading.value = false
   }
@@ -65,41 +65,41 @@ const fetchEnvironments = async () => {
 
 const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
   if (!data.task || !data.task.id) {
-    toast.add({ title: 'Erreur', description: 'La création de la tâche a échoué.', color: 'error' })
+    toast.add({ title: 'Error', description: 'Task creation failed.', color: 'error' })
     return
   }
 
   loading.value = true
 
   try {
-    // On redirige immédiatement vers la page de la tâche
+    // Redirect immediately to the task page
     router.push(`/app/task/${data.task.id}`)
 
-    // On lance la création du conteneur en arrière-plan, sans attendre
+    // Launch container creation in the background, without waiting
     $fetch(`/api/tasks/${data.task.id}/container`, {
       method: 'POST'
     }).catch((error) => {
-      console.error('Erreur lors de la création du conteneur en arrière-plan:', error)
-      // Ne pas afficher de toast d'erreur si c'est juste un conflit (409)
-      // ou si la tâche a déjà un conteneur
+      console.error('Error creating container in background:', error)
+      // Don't show error toast if it's just a conflict (409)
+      // or if the task already has a container
       if (error.statusCode !== 409) {
         toast.add({
-          title: 'Erreur de conteneur',
-          description: 'La création de l\'environnement Docker a échoué en arrière-plan.',
+          title: 'Container Error',
+          description: 'Docker environment creation failed in the background.',
           color: 'error',
           duration: 0
         })
       }
     })
   } catch (error) {
-    console.error('Erreur lors de la redirection ou de l\'appel fetch:', error)
-    toast.add({ title: 'Erreur', description: 'Une erreur est survenue.', color: 'error' })
+    console.error('Error during redirect or fetch call:', error)
+    toast.add({ title: 'Error', description: 'An error occurred.', color: 'error' })
     loading.value = false
   }
-  // loading.value n'est pas remis à false ici car la page change.
+  // loading.value is not set to false here because the page is changing.
 }
 
-// Chargement initial
+// Initial loading
 onBeforeMount(async () => {
   await fetchEnvironments()
 })

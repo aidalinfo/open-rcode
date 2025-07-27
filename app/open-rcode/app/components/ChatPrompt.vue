@@ -2,7 +2,7 @@
   <UChatPrompt 
     v-model="localInput" 
     :status="loading ? 'streaming' : 'ready'"
-    placeholder="Posez votre question..."
+    placeholder="Ask your question..."
     @submit="handleSubmit"
   >
     <UChatPromptSubmit />
@@ -12,7 +12,7 @@
         v-model="localSelectedEnvironment"
         :items="environmentOptions"
         icon="i-heroicons-cube"
-        placeholder="Sélectionnez un environnement"
+        placeholder="Select an environment"
         variant="ghost"
         :disabled="environments.length === 0"
       />
@@ -39,7 +39,7 @@ const emit = defineEmits<Emits>()
 
 const toast = useToast()
 
-// Computed properties pour le two-way binding
+// Computed properties for two-way binding
 const localInput = computed({
   get: () => props.input,
   set: (value) => emit('update:input', value)
@@ -50,7 +50,7 @@ const localSelectedEnvironment = computed({
   set: (value) => emit('update:selectedEnvironment', value)
 })
 
-// Options pour le sélecteur d'environnements
+// Options for environment selector
 const environmentOptions = computed(() => {
   return props.environments.map((env: any) => ({
     label: `${env.name} (${env.repositoryFullName})`,
@@ -64,15 +64,15 @@ const handleSubmit = async () => {
   
   if (!localSelectedEnvironment.value) {
     toast.add({
-      title: 'Erreur',
-      description: 'Veuillez sélectionner un environnement',
+      title: 'Error',
+      description: 'Please select an environment',
       color: 'error'
     })
     return
   }
 
   try {
-    // Créer la task en base de données
+    // Create task in database
     const task = await $fetch('/api/tasks', {
       method: 'POST',
       body: {
@@ -82,25 +82,25 @@ const handleSubmit = async () => {
     })
 
     toast.add({
-      title: 'Task créée',
-      description: 'Votre tâche a été créée avec succès',
+      title: 'Task created',
+      description: 'Your task has been created successfully',
       color: 'success'
     })
 
-    // Émettre l'événement avec la task créée
+    // Emit event with created task
     emit('submit', {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task
     })
 
-    // Vider l'input après avoir émis l'événement
+    // Clear input after emitting event
     localInput.value = ''
   } catch (error) {
-    console.error('Erreur lors de la création de la task:', error)
+    console.error('Error creating task:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de créer la tâche',
+      title: 'Error',
+      description: 'Unable to create task',
       color: 'error'
     })
   }

@@ -3,14 +3,14 @@
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold">
-          Environnements
+          Environments
         </h2>
         <UButton
           to="/app/settings/environnement/create"
           icon="i-heroicons-plus"
           size="sm"
         >
-          Nouvel environnement
+          New environment
         </UButton>
       </div>
     </template>
@@ -22,10 +22,10 @@
     <div v-else-if="environments.length === 0" class="text-center py-8">
       <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        Aucun environnement
+        No environments
       </h3>
       <p class="text-gray-600 dark:text-gray-400">
-        Créez votre premier environnement pour commencer.
+        Create your first environment to get started.
       </p>
     </div>
 
@@ -90,7 +90,7 @@
             size="xs"
             icon="i-heroicons-pencil-square"
           >
-            Modifier
+            Edit
           </UButton>
           <UButton
             @click="deleteEnvironment(row.original.id)"
@@ -99,7 +99,7 @@
             size="xs"
             icon="i-heroicons-trash"
           >
-            Supprimer
+            Delete
           </UButton>
         </div>
       </template>
@@ -135,11 +135,11 @@ const emit = defineEmits<{
   delete: [id: string]
 }>()
 
-// Configuration du tableau
+// Table configuration
 const columns = [
   {
     id: 'name',
-    header: 'Nom'
+    header: 'Name'
   },
   {
     id: 'repository',
@@ -147,11 +147,11 @@ const columns = [
   },
   {
     id: 'defaultBranch',
-    header: 'Branche'
+    header: 'Branch'
   },
   {
     id: 'aiProvider',
-    header: 'Provider IA'
+    header: 'AI Provider'
   },
   {
     id: 'variables',
@@ -159,7 +159,7 @@ const columns = [
   },
   {
     id: 'createdAt',
-    header: 'Créé le'
+    header: 'Created on'
   },
   {
     id: 'actions',
@@ -167,23 +167,23 @@ const columns = [
   }
 ]
 
-// Méthodes
+// Methods
 const deleteEnvironment = async (id: string) => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer cet environnement ?')) {
+  if (confirm('Are you sure you want to delete this environment?')) {
     try {
       await $fetch(`/api/environments/${id}`, {
         method: 'DELETE'
       })
       toast.add({
-        title: 'Succès',
-        description: 'Environnement supprimé avec succès',
+        title: 'Success',
+        description: 'Environment deleted successfully',
         color: 'success'
       })
       emit('refresh')
     } catch (error) {
       toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer l\'environnement',
+        title: 'Error',
+        description: 'Unable to delete environment',
         color: 'error'
       })
     }
@@ -228,7 +228,7 @@ const getAiProviderLabel = (provider: string) => {
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'

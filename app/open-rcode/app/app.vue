@@ -14,7 +14,7 @@ useHead({
 })
 
 const title = 'open-rcode'
-const description = 'Une plateforme de développement collaborative intégrant l\'IA pour optimiser vos projets de code.'
+const description = 'A collaborative development platform integrating AI to optimize your code projects.'
 
 useSeoMeta({
   title,

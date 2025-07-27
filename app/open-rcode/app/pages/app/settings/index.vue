@@ -3,18 +3,18 @@
     <div class="py-8 space-y-8">
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Paramètres
+          Settings
         </h1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
-          Gérez vos paramètres et configurations
+          Manage your settings and configurations
         </p>
       </div>
 
-      <!-- Tokens IA -->
+      <!-- AI Tokens -->
       <UCard>
         <template #header>
           <h2 class="text-xl font-semibold">
-            Tokens d'Intelligence Artificielle
+            Artificial Intelligence Tokens
           </h2>
         </template>
 
@@ -59,14 +59,14 @@
           <div class="space-y-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-cpu-chip" class="text-purple-500" />
-              <h3 class="text-lg font-medium">Clé API Anthropic</h3>
+              <h3 class="text-lg font-medium">Anthropic API Key</h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
-              {{ hasAnthropicKey ? 'Votre clé API Anthropic est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API Anthropic pour utiliser Claude via API.' }}
+              {{ hasAnthropicKey ? 'Your Anthropic API key is configured and securely encrypted.' : 'Configure your Anthropic API key to use Claude via API.' }}
             </p>
 
             <div v-if="!hasAnthropicKey" class="space-y-4">
-              <UFormField label="Clé API Anthropic" name="anthropicKey">
+              <UFormField label="Anthropic API Key" name="anthropicKey">
                 <div class="flex gap-2">
                   <UInput
                     v-model="anthropicKeyInput"
@@ -85,7 +85,7 @@
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
                     </template>
-                    Sauvegarder
+                    Save
                   </UButton>
                 </div>
               </UFormField>
@@ -95,7 +95,7 @@
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-shield-check" class="text-green-500" />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
-                  Clé API configurée
+                  API Key configured
                 </span>
               </div>
               <UButton
@@ -107,7 +107,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
                 </template>
-                Supprimer
+                Delete
               </UButton>
             </div>
           </div>
@@ -118,14 +118,14 @@
           <div class="space-y-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-identification" class="text-blue-500" />
-              <h3 class="text-lg font-medium">Token OAuth Claude Code</h3>
+              <h3 class="text-lg font-medium">Claude Code OAuth Token</h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
-              {{ hasClaudeOAuth ? 'Votre token OAuth Claude Code est configuré et chiffré de manière sécurisée.' : 'Configurez votre token OAuth pour utiliser Claude Code CLI.' }}
+              {{ hasClaudeOAuth ? 'Your Claude Code OAuth token is configured and securely encrypted.' : 'Configure your OAuth token to use Claude Code CLI.' }}
             </p>
 
             <div v-if="!hasClaudeOAuth" class="space-y-4">
-              <UFormField label="Token OAuth Claude Code" name="claudeOAuthToken">
+              <UFormField label="Claude Code OAuth Token" name="claudeOAuthToken">
                 <div class="flex gap-2">
                   <UInput
                     v-model="claudeOAuthTokenInput"
@@ -144,7 +144,7 @@
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
                     </template>
-                    Sauvegarder
+                    Save
                   </UButton>
                 </div>
               </UFormField>
@@ -154,7 +154,7 @@
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-shield-check" class="text-green-500" />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
-                  Token OAuth configuré
+                  OAuth Token configured
                 </span>
               </div>
               <UButton
@@ -166,7 +166,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
                 </template>
-                Supprimer
+                Delete
               </UButton>
             </div>
           </div>
@@ -177,14 +177,14 @@
           <div class="space-y-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-sparkles" class="text-amber-500" />
-              <h3 class="text-lg font-medium">Clé API Google Gemini</h3>
+              <h3 class="text-lg font-medium">Google Gemini API Key</h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
-              {{ hasGeminiKey ? 'Votre clé API Gemini est configurée et chiffrée de manière sécurisée.' : 'Configurez votre clé API pour utiliser Google Gemini CLI.' }}
+              {{ hasGeminiKey ? 'Your Gemini API key is configured and securely encrypted.' : 'Configure your API key to use Google Gemini CLI.' }}
             </p>
 
             <div v-if="!hasGeminiKey" class="space-y-4">
-              <UFormField label="Clé API Google Gemini" name="geminiApiKey">
+              <UFormField label="Google Gemini API Key" name="geminiApiKey">
                 <div class="flex gap-2">
                   <UInput
                     v-model="geminiApiKeyInput"
@@ -203,7 +203,7 @@
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
                     </template>
-                    Sauvegarder
+                    Save
                   </UButton>
                 </div>
               </UFormField>
@@ -213,7 +213,7 @@
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-shield-check" class="text-green-500" />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
-                  Clé API configurée
+                  API Key configured
                 </span>
               </div>
               <UButton
@@ -225,18 +225,18 @@
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
                 </template>
-                Supprimer
+                Delete
               </UButton>
             </div>
           </div>
         </div>
       </UCard>
 
-      <!-- Connexion GitHub App -->
+      <!-- GitHub App Connection -->
       <UCard>
         <template #header>
           <h2 class="text-xl font-semibold">
-            Connexion GitHub App
+            GitHub App Connection
           </h2>
         </template>
 
@@ -250,20 +250,20 @@
             v-if="route.query.success === 'github_app_installed'"
             color="success"
             variant="soft"
-            title="Succès"
-            description="Votre GitHub App a été installée avec succès !"
+            title="Success"
+            description="Your GitHub App has been successfully installed!"
           />
           
           <UAlert
             v-if="route.query.error === 'github_app_auth_failed'"
             color="error"
             variant="soft"
-            title="Erreur"
-            description="Erreur lors de la connexion à GitHub App. Veuillez réessayer."
+            title="Error"
+            description="Error connecting to GitHub App. Please try again."
           />
 
           <p class="text-gray-600 dark:text-gray-400">
-            {{ hasGithubApp ? 'Modifiez les droits de votre GitHub App sur vos repositories.' : 'Installez notre GitHub App sur vos repositories pour permettre l\'interaction avec vos projets.' }}
+            {{ hasGithubApp ? 'Modify your GitHub App permissions on your repositories.' : 'Install our GitHub App on your repositories to enable interaction with your projects.' }}
           </p>
 
           <UButton
@@ -275,7 +275,7 @@
             <template #leading>
               <UIcon name="i-simple-icons-github" class="w-5 h-5" />
             </template>
-            {{ hasGithubApp ? 'Modifier les droits GitHub' : 'Installer GitHub App' }}
+            {{ hasGithubApp ? 'Modify GitHub permissions' : 'Install GitHub App' }}
           </UButton>
         </div>
       </UCard>
@@ -318,10 +318,10 @@ const fetchEnvironments = async () => {
     const data = await $fetch('/api/environments')
     environments.value = data.environments || []
   } catch (error) {
-    console.error('Erreur lors de la récupération des environnements:', error)
+    console.error('Error fetching environments:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de récupérer les environnements',
+      title: 'Error',
+      description: 'Unable to fetch environments',
       color: 'error'
     })
   } finally {
@@ -351,7 +351,7 @@ const checkAnthropicKey = async () => {
     const data = await $fetch('/api/user/anthropic-key')
     hasAnthropicKey.value = data.hasApiKey
   } catch (error) {
-    console.error('Erreur lors de la vérification de la clé API:', error)
+    console.error('Error checking API key:', error)
   }
 }
 
@@ -360,7 +360,7 @@ const checkClaudeOAuthToken = async () => {
     const data = await $fetch('/api/user/claude-oauth-token')
     hasClaudeOAuth.value = data.hasToken
   } catch (error) {
-    console.error('Erreur lors de la vérification du token OAuth:', error)
+    console.error('Error checking OAuth token:', error)
   }
 }
 
@@ -369,7 +369,7 @@ const checkGeminiApiKey = async () => {
     const data = await $fetch('/api/user/gemini-api-key')
     hasGeminiKey.value = data.hasApiKey
   } catch (error) {
-    console.error('Erreur lors de la vérification de la clé API Gemini:', error)
+    console.error('Error checking Gemini API key:', error)
   }
 }
 
@@ -388,8 +388,8 @@ const checkAllAITokens = async () => {
 const saveAnthropicKey = async () => {
   if (!anthropicKeyInput.value || !anthropicKeyInput.value.startsWith('sk-ant-')) {
     toast.add({
-      title: 'Erreur',
-      description: 'Veuillez entrer une clé API Anthropic valide',
+      title: 'Error',
+      description: 'Please enter a valid Anthropic API key',
       color: 'error'
     })
     return
@@ -403,8 +403,8 @@ const saveAnthropicKey = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Clé API sauvegardée avec succès',
+      title: 'Success',
+      description: 'API key saved successfully',
       color: 'success'
     })
     
@@ -412,8 +412,8 @@ const saveAnthropicKey = async () => {
     anthropicKeyInput.value = ''
   } catch (error) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de sauvegarder la clé API',
+      title: 'Error',
+      description: 'Unable to save API key',
       color: 'error'
     })
   } finally {
@@ -422,7 +422,7 @@ const saveAnthropicKey = async () => {
 }
 
 const resetAnthropicKey = async () => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer votre clé API Anthropic ?')) {
+  if (confirm('Are you sure you want to delete your Anthropic API key?')) {
     try {
       await $fetch('/api/user/anthropic-key', {
         method: 'PUT',
@@ -430,16 +430,16 @@ const resetAnthropicKey = async () => {
       })
       
       toast.add({
-        title: 'Succès',
-        description: 'Clé API supprimée avec succès',
+        title: 'Success',
+        description: 'API key deleted successfully',
         color: 'success'
       })
       
       hasAnthropicKey.value = false
     } catch (error) {
       toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer la clé API',
+        title: 'Error',
+        description: 'Unable to delete API key',
         color: 'error'
       })
     }
@@ -449,8 +449,8 @@ const resetAnthropicKey = async () => {
 const saveClaudeOAuthToken = async () => {
   if (!claudeOAuthTokenInput.value) {
     toast.add({
-      title: 'Erreur',
-      description: 'Veuillez entrer un token OAuth valide',
+      title: 'Error',
+      description: 'Please enter a valid OAuth token',
       color: 'error'
     })
     return
@@ -464,8 +464,8 @@ const saveClaudeOAuthToken = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Token OAuth sauvegardé avec succès',
+      title: 'Success',
+      description: 'OAuth token saved successfully',
       color: 'success'
     })
     
@@ -473,8 +473,8 @@ const saveClaudeOAuthToken = async () => {
     claudeOAuthTokenInput.value = ''
   } catch (error) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de sauvegarder le token OAuth',
+      title: 'Error',
+      description: 'Unable to save OAuth token',
       color: 'error'
     })
   } finally {
@@ -483,7 +483,7 @@ const saveClaudeOAuthToken = async () => {
 }
 
 const resetClaudeOAuthToken = async () => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer votre token OAuth Claude ?')) {
+  if (confirm('Are you sure you want to delete your Claude OAuth token?')) {
     try {
       await $fetch('/api/user/claude-oauth-token', {
         method: 'PUT',
@@ -491,16 +491,16 @@ const resetClaudeOAuthToken = async () => {
       })
       
       toast.add({
-        title: 'Succès',
-        description: 'Token OAuth supprimé avec succès',
+        title: 'Success',
+        description: 'OAuth token deleted successfully',
         color: 'success'
       })
       
       hasClaudeOAuth.value = false
     } catch (error) {
       toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer le token OAuth',
+        title: 'Error',
+        description: 'Unable to delete OAuth token',
         color: 'error'
       })
     }
@@ -510,8 +510,8 @@ const resetClaudeOAuthToken = async () => {
 const saveGeminiApiKey = async () => {
   if (!geminiApiKeyInput.value) {
     toast.add({
-      title: 'Erreur',
-      description: 'Veuillez entrer une clé API Gemini valide',
+      title: 'Error',
+      description: 'Please enter a valid Gemini API key',
       color: 'error'
     })
     return
@@ -525,8 +525,8 @@ const saveGeminiApiKey = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Clé API Gemini sauvegardée avec succès',
+      title: 'Success',
+      description: 'Gemini API key saved successfully',
       color: 'success'
     })
     
@@ -534,8 +534,8 @@ const saveGeminiApiKey = async () => {
     geminiApiKeyInput.value = ''
   } catch (error) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de sauvegarder la clé API Gemini',
+      title: 'Error',
+      description: 'Unable to save Gemini API key',
       color: 'error'
     })
   } finally {
@@ -544,7 +544,7 @@ const saveGeminiApiKey = async () => {
 }
 
 const resetGeminiApiKey = async () => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer votre clé API Gemini ?')) {
+  if (confirm('Are you sure you want to delete your Gemini API key?')) {
     try {
       await $fetch('/api/user/gemini-api-key', {
         method: 'PUT',
@@ -552,16 +552,16 @@ const resetGeminiApiKey = async () => {
       })
       
       toast.add({
-        title: 'Succès',
-        description: 'Clé API Gemini supprimée avec succès',
+        title: 'Success',
+        description: 'Gemini API key deleted successfully',
         color: 'success'
       })
       
       hasGeminiKey.value = false
     } catch (error) {
       toast.add({
-        title: 'Erreur',
-        description: 'Impossible de supprimer la clé API Gemini',
+        title: 'Error',
+        description: 'Unable to delete Gemini API key',
         color: 'error'
       })
     }
@@ -569,7 +569,7 @@ const resetGeminiApiKey = async () => {
 }
 
 
-// Chargement initial
+// Initial loading
 onMounted(async () => {
   await Promise.all([
     fetchEnvironments(),
