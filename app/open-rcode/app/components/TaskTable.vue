@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Tâches récentes
+          Recent tasks
         </h3>
         <UIcon name="i-heroicons-clock" class="w-5 h-5 text-gray-400" />
       </div>
@@ -16,7 +16,7 @@
     <div v-else-if="tasks.length === 0" class="text-center py-8">
       <UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
       <p class="text-gray-600 dark:text-gray-400">
-        Aucune tâche n'a encore été exécutée.
+        No tasks have been executed yet.
       </p>
     </div>
 
@@ -104,11 +104,11 @@ interface Task {
   error?: string
 }
 
-// États réactifs
+// Reactive states
 const tasks = ref<Task[]>([])
 const loading = ref(false)
 
-// Configuration du tableau
+// Table configuration
 const columns = [
   {
     id: 'actions',
@@ -116,19 +116,19 @@ const columns = [
   },
   {
     id: 'name',
-    header: 'Tâche'
+    header: 'Task'
   },
   {
     id: 'status',
-    header: 'Statut'
+    header: 'Status'
   },
   {
     id: 'environment',
-    header: 'Environnement'
+    header: 'Environment'
   },
   {
     id: 'createdAt',
-    header: 'Créée le'
+    header: 'Created on'
   },
   {
     id: 'pr',
@@ -136,7 +136,7 @@ const columns = [
   }
 ]
 
-// Méthodes
+// Methods
 const fetchTasks = async () => {
   loading.value = true
   try {
@@ -148,7 +148,7 @@ const fetchTasks = async () => {
     tasks.value = data.tasks || []
     console.log('TASKS STORED:', tasks.value)
   } catch (error) {
-    console.error('Erreur lors de la récupération des tâches:', error)
+    console.error('Error fetching tasks:', error)
   } finally {
     loading.value = false
   }
@@ -175,21 +175,21 @@ const getStatusColor = (task: Task) => {
 const getStatusText = (task: Task) => {
   switch (task.status) {
     case 'completed':
-      return 'Terminée'
+      return 'Completed'
     case 'running':
-      return 'En cours'
+      return 'Running'
     case 'failed':
-      return 'Échouée'
+      return 'Failed'
     case 'pending':
-      return 'En attente'
+      return 'Pending'
     default:
-      return 'Inconnu'
+      return 'Unknown'
   }
 }
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -198,15 +198,15 @@ const formatDate = (dateString: string) => {
   }).format(date)
 }
 
-// Chargement initial
+// Initial loading
 onMounted(() => {
   fetchTasks()
 })
 
-// Actualisation périodique optionnelle
+// Optional periodic refresh
 const refreshInterval = setInterval(() => {
   fetchTasks()
-}, 30000) // Toutes les 30 secondes
+}, 30000) // Every 30 seconds
 
 onUnmounted(() => {
   clearInterval(refreshInterval)

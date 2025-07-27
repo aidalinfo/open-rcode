@@ -3,10 +3,10 @@
     <div class="py-8 space-y-8">
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Modifier l'environnement
+          Edit environment
         </h1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
-          Modifiez la configuration de votre environnement
+          Modify your environment configuration
         </p>
       </div>
 
@@ -24,21 +24,21 @@
         class="mb-6"
       />
 
-      <!-- Formulaire de modification -->
+      <!-- Modification form -->
       <UCard v-if="!isLoadingEnvironment && !loadError">
         <template #header>
           <h2 class="text-xl font-semibold">
-            Configuration de l'environnement
+            Environment configuration
           </h2>
         </template>
 
         <UForm :state="form" @submit="submitForm" class="space-y-12">
-          <!-- Sélection du repository -->
+          <!-- Repository selection -->
           <UFormField label="Repository" name="repository" required class="mt-8">
             <USelectMenu
               v-model="form.selectedRepository"
               :items="repositoryOptions"
-              placeholder="Sélectionnez un repository"
+              placeholder="Select a repository"
               :loading="loadingRepositories"
               value-attribute="value"
               option-attribute="label"
@@ -47,8 +47,8 @@
             />
           </UFormField>
 
-          <!-- Nom de l'environnement -->
-          <UFormField label="Nom" name="name" required class="mt-10">
+          <!-- Environment name -->
+          <UFormField label="Name" name="name" required class="mt-10">
             <UInput
               v-model="form.name"
               placeholder="ex: Production, Staging, Development"
@@ -61,7 +61,7 @@
           <UFormField label="Description" name="description" class="mt-10">
             <UTextarea
               v-model="form.description"
-              placeholder="Description de l'environnement"
+              placeholder="Environment description"
               :rows="3"
               size="lg"
               class="w-full"
@@ -69,11 +69,11 @@
           </UFormField>
 
           <!-- Runtime -->
-          <UFormField label="Runtime d'exécution" name="runtime" required class="mt-10">
+          <UFormField label="Runtime" name="runtime" required class="mt-10">
             <USelectMenu
               v-model="form.runtime"
               :items="runtimeOptions"
-              placeholder="Sélectionnez un runtime"
+              placeholder="Select a runtime"
               value-attribute="value"
               option-attribute="label"
               size="lg"
@@ -81,12 +81,12 @@
             />
           </UFormField>
 
-          <!-- Provider IA -->
-          <UFormField label="Provider d'Intelligence Artificielle" name="aiProvider" required class="mt-10">
+          <!-- AI Provider -->
+          <UFormField label="Artificial Intelligence Provider" name="aiProvider" required class="mt-10">
             <USelectMenu
               v-model="form.aiProvider"
               :items="aiProviderOptions"
-              placeholder="Sélectionnez un provider IA"
+              placeholder="Select an AI provider"
               value-attribute="value"
               option-attribute="label"
               size="lg"
@@ -99,12 +99,12 @@
             </template>
           </UFormField>
 
-          <!-- Modèle IA -->
-          <UFormField v-if="canSelectModel" label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
+          <!-- AI Model -->
+          <UFormField v-if="canSelectModel" label="Artificial Intelligence Model" name="model" required class="mt-10">
             <USelectMenu
               v-model="form.model"
               :items="modelOptions"
-              placeholder="Sélectionnez un modèle"
+              placeholder="Select a model"
               value-attribute="value"
               option-attribute="label"
               size="lg"
@@ -117,12 +117,12 @@
             </template>
           </UFormField>
 
-          <!-- Branche par défaut -->
-          <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
+          <!-- Default branch -->
+          <UFormField label="Default branch" name="defaultBranch" required class="mt-10">
             <USelectMenu
               v-model="form.defaultBranch"
               :items="branchOptions"
-              placeholder="Sélectionnez une branche"
+              placeholder="Select a branch"
               :loading="loadingBranches"
               value-attribute="value"
               option-attribute="label"
@@ -132,16 +132,16 @@
             />
             <template #help>
               <p class="text-sm text-gray-500 mt-2">
-                Cette branche sera utilisée pour le clonage du repository et la création des pull requests.
+                This branch will be used for repository cloning and pull request creation.
               </p>
             </template>
           </UFormField>
 
-          <!-- Variables d'environnement -->
+          <!-- Environment variables -->
           <div class="space-y-6 mt-10">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Variables de l'environnement
+                Environment variables
               </h3>
               <UButton
                 @click="addVariable"
@@ -151,7 +151,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-plus" />
                 </template>
-                Ajouter
+                Add
               </UButton>
             </div>
             
@@ -164,7 +164,7 @@
                 <div class="flex-1">
                   <UInput
                     v-model="variable.key"
-                    placeholder="Clé (ex: NODE_ENV)"
+                    placeholder="Key (e.g.: NODE_ENV)"
                     size="lg"
                     class="w-full"
                   />
@@ -172,7 +172,7 @@
                 <div class="flex-1">
                   <UInput
                     v-model="variable.value"
-                    placeholder="Valeur (ex: production)"
+                    placeholder="Value (e.g.: production)"
                     size="lg"
                     class="w-full"
                   />
@@ -190,18 +190,18 @@
             </div>
           </div>
 
-          <!-- Script de configuration -->
-          <UFormField label="Script de configuration" name="configurationScript" class="mt-10">
+          <!-- Configuration script -->
+          <UFormField label="Configuration script" name="configurationScript" class="mt-10">
             <UTextarea
               v-model="form.configurationScript"
-              placeholder="ex: npm install && npm run build"
+              placeholder="e.g.: npm install && npm run build"
               :rows="4"
               size="lg"
               class="w-full"
             />
           </UFormField>
 
-          <!-- Boutons d'action -->
+          <!-- Action buttons -->
           <div class="flex justify-between gap-3 mt-12">
             <UButton
               @click="goBack"
@@ -210,7 +210,7 @@
               <template #leading>
                 <UIcon name="i-heroicons-arrow-left" />
               </template>
-              Retour
+              Back
             </UButton>
             
             <div class="flex gap-3">
@@ -223,7 +223,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
                 </template>
-                Supprimer
+                Delete
               </UButton>
               <UButton
                 type="submit"
@@ -232,7 +232,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-check" />
                 </template>
-                Sauvegarder
+                Save
               </UButton>
             </div>
           </div>
@@ -250,7 +250,7 @@ const router = useRouter()
 // Get environment ID from query params
 const environmentId = computed(() => route.query.edit as string)
 
-// États réactifs
+// Reactive states
 const isLoadingEnvironment = ref(true)
 const loadError = ref('')
 const isSubmitting = ref(false)
@@ -258,12 +258,12 @@ const isDeleting = ref(false)
 const loadingRepositories = ref(false)
 const loadingBranches = ref(false)
 
-// Données
+// Data
 const repositories = ref<any[]>([])
 const branches = ref<any[]>([])
 const currentEnvironment = ref<any>(null)
 
-// Formulaire
+// Form
 const form = ref({
   selectedRepository: { label: '', value: '', description: '' },
   name: '',
@@ -298,7 +298,7 @@ const repositoryOptions = computed(() => {
   return repositories.value.map((repo: any) => ({
     label: repo.full_name,
     value: repo.full_name,
-    description: repo.description || 'Aucune description'
+    description: repo.description || 'No description'
   }))
 })
 
@@ -306,7 +306,7 @@ const branchOptions = computed(() => {
   return branches.value.map((branch: any) => ({
     label: branch.name,
     value: branch.name,
-    description: branch.protected ? 'Branche protégée' : ''
+    description: branch.protected ? 'Protected branch' : ''
   }))
 })
 
@@ -319,7 +319,7 @@ const canSelectModel = computed(() => {
   return provider === 'anthropic-api' || provider === 'claude-oauth'
 })
 
-// Méthodes
+// Methods
 const fetchRepositories = async () => {
   loadingRepositories.value = true
   try {
@@ -327,8 +327,8 @@ const fetchRepositories = async () => {
     repositories.value = data.repositories
   } catch (error) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de récupérer les repositories',
+      title: 'Error',
+      description: 'Unable to fetch repositories',
       color: 'error'
     })
   } finally {
@@ -345,10 +345,10 @@ const fetchBranches = async (repositoryFullName: string) => {
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
   } catch (error) {
-    console.error('Erreur lors de la récupération des branches:', error)
+    console.error('Error fetching branches:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de récupérer les branches du repository',
+      title: 'Error',
+      description: 'Unable to fetch repository branches',
       color: 'error'
     })
     branches.value = []
@@ -359,7 +359,7 @@ const fetchBranches = async (repositoryFullName: string) => {
 
 const fetchEnvironment = async () => {
   if (!environmentId.value) {
-    loadError.value = 'ID d\'environnement manquant'
+    loadError.value = 'Missing environment ID'
     isLoadingEnvironment.value = false
     return
   }
@@ -377,10 +377,10 @@ const fetchEnvironment = async () => {
     console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
     console.log('- environmentVariables:', data.environment.environmentVariables)
     
-    // Récupérer les branches du repository
+    // Fetch repository branches
     await fetchBranches(data.environment.repositoryFullName)
     
-    // Remplir le formulaire avec les données existantes
+    // Fill form with existing data
     form.value = {
       selectedRepository: {
         label: data.environment.repositoryFullName,
@@ -409,8 +409,8 @@ const fetchEnvironment = async () => {
       configurationScript: data.environment.configurationScript
     }
   } catch (error) {
-    console.error('Erreur lors du chargement de l\'environnement:', error)
-    loadError.value = 'Impossible de charger l\'environnement'
+    console.error('Error loading environment:', error)
+    loadError.value = 'Unable to load environment'
   } finally {
     isLoadingEnvironment.value = false
   }
@@ -436,9 +436,9 @@ const getAiProviderLabel = (provider: string) => {
 
 const getAiProviderDescription = (provider: string) => {
   const descriptions = {
-    'anthropic-api': 'Utilise votre clé API Anthropic pour appeler Claude directement via API.',
-    'claude-oauth': 'Utilise votre token OAuth pour Claude Code CLI (recommandé pour les fonctionnalités avancées).',
-    'gemini-cli': 'Utilise votre clé API Google pour appeler Gemini via CLI.'
+    'anthropic-api': 'Uses your Anthropic API key to call Claude directly via API.',
+    'claude-oauth': 'Uses your OAuth token for Claude Code CLI (recommended for advanced features).',
+    'gemini-cli': 'Uses your Google API key to call Gemini via CLI.'
   }
   return descriptions[provider as keyof typeof descriptions] || ''
 }
@@ -453,8 +453,8 @@ const getModelLabel = (model: string) => {
 
 const getModelDescription = (model: string) => {
   const descriptions = {
-    'sonnet': 'Claude Sonnet - Modèle équilibré entre performance et vitesse (recommandé).',
-    'opus': 'Claude Opus - Modèle le plus puissant pour les tâches complexes.'
+    'sonnet': 'Claude Sonnet - Balanced model between performance and speed (recommended).',
+    'opus': 'Claude Opus - Most powerful model for complex tasks.'
   }
   return descriptions[model as keyof typeof descriptions] || ''
 }
@@ -474,8 +474,8 @@ const submitForm = async () => {
     
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un repository',
+        title: 'Error',
+        description: 'Please select a repository',
         color: 'error'
       })
       return
@@ -512,19 +512,19 @@ const submitForm = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Environnement mis à jour avec succès',
+      title: 'Success',
+      description: 'Environment updated successfully',
       color: 'success'
     })
     
-    // Rediriger vers la page des paramètres
+    // Redirect to settings page
     router.push('/app/settings')
     
   } catch (error) {
-    console.error('Erreur lors de la mise à jour:', error)
+    console.error('Error updating environment:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de mettre à jour l\'environnement',
+      title: 'Error',
+      description: 'Unable to update environment',
       color: 'error'
     })
   } finally {
@@ -533,7 +533,7 @@ const submitForm = async () => {
 }
 
 const deleteEnvironment = async () => {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer cet environnement ? Cette action est irréversible.')) {
+  if (!confirm('Are you sure you want to delete this environment? This action is irreversible.')) {
     return
   }
 
@@ -544,19 +544,19 @@ const deleteEnvironment = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Environnement supprimé avec succès',
+      title: 'Success',
+      description: 'Environment deleted successfully',
       color: 'success'
     })
     
-    // Rediriger vers la page des paramètres
+    // Redirect to settings page
     router.push('/app/settings')
     
   } catch (error) {
-    console.error('Erreur lors de la suppression:', error)
+    console.error('Error deleting environment:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de supprimer l\'environnement',
+      title: 'Error',
+      description: 'Unable to delete environment',
       color: 'error'
     })
   } finally {
@@ -568,20 +568,20 @@ const goBack = () => {
   router.push('/app/settings')
 }
 
-// Chargement initial
+// Initial loading
 onMounted(() => {
   fetchRepositories()
   fetchEnvironment()
 })
 
-// Watch pour les changements d'ID dans l'URL
+// Watch for ID changes in URL
 watch(() => route.query.edit, (newId) => {
   if (newId) {
     fetchEnvironment()
   }
 })
 
-// Watch pour les changements de repository
+// Watch for repository changes
 watch(() => form.value.selectedRepository, (newValue) => {
   const repoValue = newValue?.value || newValue
   if (repoValue && typeof repoValue === 'string') {
