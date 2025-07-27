@@ -76,11 +76,9 @@
         <UButton
           size="xs"
           variant="ghost"
-          icon="i-heroicons-chat-bubble-left-ellipsis"
+          icon="i-lucide-eye"
           @click="viewTask(row.original._id)"
-        >
-          Voir
-        </UButton>
+        />
       </template>
     </UTable>
   </UCard>
@@ -113,6 +111,10 @@ const loading = ref(false)
 // Configuration du tableau
 const columns = [
   {
+    id: 'actions',
+    header: ''
+  },
+  {
     id: 'name',
     header: 'Tâche'
   },
@@ -131,10 +133,6 @@ const columns = [
   {
     id: 'pr',
     header: 'Pull Request'
-  },
-  {
-    id: 'actions',
-    header: 'Actions'
   }
 ]
 
