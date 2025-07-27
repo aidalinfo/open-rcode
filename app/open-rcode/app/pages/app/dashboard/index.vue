@@ -57,27 +57,33 @@ const stats = computed<Stat[]>(() => {
       Error loading stats: {{ error.message }}
     </div>
     
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div
-        v-for="(stat, index) in stats"
-        :key="index"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {{ stat.title }}
-            </p>
-            <div class="mt-2 flex items-baseline">
-              <span class="text-2xl font-semibold text-gray-900 dark:text-white">
-                {{ stat.value }}
-              </span>
+    <div v-else>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div
+          v-for="(stat, index) in stats"
+          :key="index"
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+        >
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {{ stat.title }}
+              </p>
+              <div class="mt-2 flex items-baseline">
+                <span class="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {{ stat.value }}
+                </span>
+              </div>
+            </div>
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">
+              <Icon :name="stat.icon" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">
-            <Icon :name="stat.icon" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
         </div>
+      </div>
+      
+      <div class="mt-8">
+        <LazyHomeChart />
       </div>
     </div>
   </div>
