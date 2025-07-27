@@ -32,12 +32,16 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Récupérer les tâches de l'utilisateur avec l'environnement
+    // Récupérer les tâches de l'utilisateur
     const tasks = await TaskModel.find({ userId: user.githubId })
-      .populate('environmentId', 'name')
       .sort({ createdAt: -1 })
       .limit(50)
       .exec()
+    
+    // Récupérer tous les environnements en une seule requête
+    const environmentIds = tasks.map(task => task.environmentId).filter(Boolean)
+    const environments = await EnvironmentModel.find({ _id: { $in: environmentIds } })
+    const environmentMap = new Map(environments.map(env => [env._id.toString(), env]))
     
     // Formater les données pour le frontend
     const formattedTasks = tasks.map(task => {
@@ -53,6 +57,9 @@ export default defineEventHandler(async (event) => {
         }
       }
       
+      // Récupérer l'environnement depuis le map
+      const environment = task.environmentId ? environmentMap.get(task.environmentId) : null
+      
       return {
         _id: task._id,
         name: task.name,
@@ -61,8 +68,8 @@ export default defineEventHandler(async (event) => {
         merged: task.merged,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
-        environment: task.environmentId ? {
-          name: task.environmentId.name
+        environment: environment ? {
+          name: environment.name
         } : null,
         pr: prData,
         dockerId: task.dockerId,
