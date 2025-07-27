@@ -45,6 +45,41 @@
   @apply break-words;
 }
 
+/* Fix for highlighted code blocks (MDC/Shiki) */
+[data-chat-messages] .shiki,
+[data-chat-messages] .highlight,
+[data-chat-messages] pre[class*="language-"],
+[data-chat-messages] pre[class*="shiki"] {
+  @apply overflow-x-auto max-w-full rounded-md;
+}
+
+/* Ensure code containers don't overflow */
+[data-chat-messages] .prose pre,
+[data-chat-messages] .prose .shiki {
+  @apply max-w-full overflow-x-auto;
+}
+
+/* Fix for inline code that might be too long */
+[data-chat-messages] code:not(pre code) {
+  @apply break-all;
+}
+
+/* MDC component specific fixes */
+[data-chat-messages] .mdc-content pre,
+[data-chat-messages] .mdc pre {
+  @apply overflow-x-auto max-w-full;
+}
+
+/* Ensure highlighted blocks stay within message boundaries */
+[data-chat-messages] [data-chat-message-content] pre {
+  @apply max-w-full overflow-x-auto;
+}
+
+/* Fix for code blocks with line numbers */
+[data-chat-messages] .line-numbers {
+  @apply overflow-x-auto;
+}
+
 /* Mobile specific adjustments */
 @media (max-width: 640px) {
   [data-chat-messages] {
@@ -53,5 +88,12 @@
   
   [data-chat-messages] [data-chat-message] {
     @apply max-w-[calc(100vw-2rem)];
+  }
+  
+  /* Additional mobile fixes for code blocks */
+  [data-chat-messages] pre,
+  [data-chat-messages] .shiki,
+  [data-chat-messages] .highlight {
+    @apply max-w-[calc(100vw-3rem)];
   }
 }
