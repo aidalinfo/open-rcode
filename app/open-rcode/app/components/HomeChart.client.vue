@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
+import { useElementSize } from '@vueuse/core'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -29,7 +30,7 @@ const { data: costsData, pending } = await useFetch('/api/dashboard/costs-histor
 const data = computed<DataRecord[]>(() => {
   if (!costsData.value?.costs) return []
   
-  return costsData.value.costs.map(c => ({
+  return costsData.value.costs.map((c: any) => ({
     date: new Date(c.date),
     amount: c.amount
   }))
@@ -109,14 +110,12 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
         :x="x"
         :y="y"
         color="var(--ui-primary)"
-        :curve-type="'monotone-x'"
       />
       <VisArea
         :x="x"
         :y="y"
         color="var(--ui-primary)"
         :opacity="0.1"
-        :curve-type="'monotone-x'"
       />
 
       <VisAxis

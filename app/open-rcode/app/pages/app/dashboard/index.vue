@@ -20,7 +20,8 @@ const { data: statsData, pending, error } = await useFetch('/api/dashboard/stats
 const stats = computed<Stat[]>(() => {
   if (!statsData.value?.stats) return []
   
-  const { taskCount, totalCostUSD, pullRequestCount, environmentCount } = statsData.value.stats
+  const statsValue = statsData.value.stats as any
+  const { taskCount, totalCostUSD, pullRequestCount, environmentCount } = statsValue
   
   return [
     {
