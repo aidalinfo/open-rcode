@@ -35,25 +35,23 @@ useSeoMeta({
       </template>
 
       <template #right>
-        <UButton
+        <NuxtLink
           to="/app/dashboard"
-          icon="i-heroicons-chart-bar"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           aria-label="Dashboard"
-          color="neutral"
-          variant="ghost"
         >
-          Dashboard
-        </UButton>
+          <UIcon name="i-heroicons-chart-bar" class="w-5 h-5 flex-shrink-0" />
+          <span>Dashboard</span>
+        </NuxtLink>
 
-        <UButton
+        <NuxtLink
           to="/app/settings"
-          icon="i-heroicons-cog-6-tooth"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           aria-label="Settings"
-          color="neutral"
-          variant="ghost"
         >
-          Settings
-        </UButton>
+          <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 flex-shrink-0" />
+          <span>Settings</span>
+        </NuxtLink>
 
         <UColorModeButton />
 
