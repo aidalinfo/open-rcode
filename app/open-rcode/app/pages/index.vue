@@ -49,4 +49,18 @@ const loginWithGitHub = () => {
   isLoading.value = true
   window.location.href = '/api/auth/github'
 }
+
+// Check if user is already logged in on mount
+onMounted(async () => {
+  try {
+    // Try to fetch user data to check if authenticated
+    const response = await fetch('/api/user/anthropic-key')
+    if (response.ok) {
+      // User is authenticated, redirect to /app
+      await navigateTo('/app')
+    }
+  } catch (error) {
+    // User is not authenticated, stay on login page
+  }
+})
 </script>
