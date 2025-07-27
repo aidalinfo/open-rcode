@@ -16,3 +16,42 @@
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
 }
+
+/* Fix for long messages breaking responsive layout */
+[data-chat-messages] {
+  @apply max-w-full;
+}
+
+[data-chat-messages] [data-chat-message] {
+  @apply max-w-full;
+}
+
+[data-chat-messages] [data-chat-message-content] {
+  @apply break-words overflow-wrap-anywhere;
+}
+
+/* Specific fix for message content */
+[data-chat-messages] p,
+[data-chat-messages] div {
+  @apply break-words overflow-wrap-anywhere;
+}
+
+/* Fix for code blocks in messages */
+[data-chat-messages] pre {
+  @apply overflow-x-auto max-w-full;
+}
+
+[data-chat-messages] code {
+  @apply break-words;
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 640px) {
+  [data-chat-messages] {
+    @apply px-2;
+  }
+  
+  [data-chat-messages] [data-chat-message] {
+    @apply max-w-[calc(100vw-2rem)];
+  }
+}
