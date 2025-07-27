@@ -100,7 +100,7 @@
           </UFormField>
 
           <!-- Modèle IA -->
-          <UFormField label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
+          <UFormField v-if="canSelectModel" label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
             <USelectMenu
               v-model="form.model"
               :items="modelOptions"
@@ -314,6 +314,11 @@ const selectedRepository = computed(() => {
   return form.value.selectedRepository?.value || form.value.selectedRepository
 })
 
+const canSelectModel = computed(() => {
+  const provider = form.value.aiProvider?.value || form.value.aiProvider
+  return provider === 'anthropic-api' || provider === 'claude-oauth'
+})
+
 // Méthodes
 const fetchRepositories = async () => {
   loadingRepositories.value = true
@@ -479,7 +484,7 @@ const submitForm = async () => {
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
-    const selectedModel = form.value.model?.value || form.value.model
+    const selectedModel = canSelectModel.value ? (form.value.model?.value || form.value.model) : null
     
     console.log('UPDATE FORM VALUES:')
     console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
