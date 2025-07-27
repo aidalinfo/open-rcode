@@ -31,13 +31,15 @@ export class ClaudeExecutor {
     // Ajouter le paramètre --model si spécifié
     const modelParam = model ? ` --model ${model}` : ''
 
+    console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
+
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = `claude${modelParam} -p`
+        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = `claude${modelParam} -p`
+        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -45,7 +47,7 @@ export class ClaudeExecutor {
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
         break
       default:
-        aiCommand = `claude${modelParam} -p`
+        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -82,12 +84,35 @@ export class ClaudeExecutor {
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    return filteredOutput
+    // Parser la sortie JSON pour extraire les tool calls et les formater
+    const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
+    
+    // Combiner pour le retour (pour compatibilité)
+    const formattedParts: string[] = []
+    
+    // Ajouter chaque tool call formaté
+    for (const toolCall of parsedOutput.toolCalls) {
+      formattedParts.push(this.formatToolCall(toolCall))
+    }
+    
+    // Ajouter les messages texte
+    if (parsedOutput.textMessages.length > 0) {
+      formattedParts.push('\n💬 **Réponse:**')
+      formattedParts.push(parsedOutput.textMessages.join('\n'))
+    }
+    
+    // Ajouter le résultat final si différent des messages
+    if (parsedOutput.finalResult && !parsedOutput.textMessages.includes(parsedOutput.finalResult)) {
+      formattedParts.push('\n📋 **Résumé:**')
+      formattedParts.push(parsedOutput.finalResult)
+    }
+    
+    return formattedParts.length > 0 ? formattedParts.join('\n\n') : filteredOutput
   }
 
   async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
     // Déterminer la commande à exécuter selon le provider
-    let aiCommand = 'claude -p'
+    let aiCommand = 'claude --output-format stream-json -p'
     let envSetup = ''
 
     // Ajouter le paramètre --model si spécifié
@@ -320,15 +345,7 @@ export class ClaudeExecutor {
 
       if (userMessage) {
         console.log(`Executing first AI command with user text (provider: ${aiProvider}, model: ${model})`);
-        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider, model);
-        const aiProviderLabel = this.getAiProviderLabel(aiProvider);
-        await TaskMessageModel.create({
-          id: uuidv4(),
-          userId: task.userId,
-          taskId: task._id,
-          role: 'assistant',
-          content: `🤖 **${aiProviderLabel} (${model}) - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
-        });
+        await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
       }
 
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -337,22 +354,15 @@ export class ClaudeExecutor {
 
       console.log(`Executing second AI command to summarize changes (provider: ${aiProvider}, model: ${model})`);
 
-      const summaryOutput = await this.executeCommand(
+      const summaryOutput = await this.executeAndSaveToolMessages(
         containerId,
         'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
         workspaceDir,
         aiProvider,
-        model
+        model,
+        task,
+        'Résumé des modifications'
       );
-
-      const aiProviderLabel = this.getAiProviderLabel(aiProvider);
-      await TaskMessageModel.create({
-        id: uuidv4(),
-        userId: task.userId,
-        taskId: task._id,
-        role: 'assistant',
-        content: `📋 **${aiProviderLabel} (${model}) - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
-      });
 
       const prCreator = new PullRequestCreator(this.containerManager);
       await prCreator.createFromChanges(containerId, task, summaryOutput);
@@ -451,5 +461,255 @@ export class ClaudeExecutor {
       'gemini-cli': 'Gemini'
     }
     return labels[provider as keyof typeof labels] || provider
+  }
+
+  private parseClaudeJsonOutput(rawOutput: string): { toolCalls: any[], textMessages: string[], finalResult: string } {
+    try {
+      const lines = rawOutput.split('\n')
+      let toolCalls: any[] = []
+      let toolResults: Map<string, any> = new Map()
+      let textMessages: string[] = []
+      let finalResult = ''
+      
+      for (const line of lines) {
+        if (!line.trim() || line.trim().startsWith('[') && line.trim().endsWith(']')) continue
+        
+        try {
+          const jsonData = JSON.parse(line.trim())
+          
+          if (jsonData.type === 'assistant' && jsonData.message?.content) {
+            for (const content of jsonData.message.content) {
+              if (content.type === 'tool_use') {
+                toolCalls.push({
+                  id: content.id,
+                  name: content.name,
+                  input: content.input
+                })
+              } else if (content.type === 'text' && content.text?.trim()) {
+                textMessages.push(content.text.trim())
+              }
+            }
+          } else if (jsonData.type === 'user' && jsonData.message?.content) {
+            for (const content of jsonData.message.content) {
+              if (content.type === 'tool_result') {
+                toolResults.set(content.tool_use_id, content)
+              }
+            }
+          } else if (jsonData.type === 'result' && jsonData.result) {
+            finalResult = jsonData.result
+          }
+        } catch (parseError) {
+          continue
+        }
+      }
+      
+      // Associer les résultats aux tool calls
+      const toolCallsWithResults = toolCalls.map(toolCall => ({
+        ...toolCall,
+        result: toolResults.get(toolCall.id)
+      }))
+      
+      return {
+        toolCalls: toolCallsWithResults,
+        textMessages,
+        finalResult
+      }
+      
+    } catch (error) {
+      console.error('Error parsing Claude JSON output:', error)
+      return {
+        toolCalls: [],
+        textMessages: [],
+        finalResult: rawOutput
+      }
+    }
+  }
+
+  private formatToolCall(toolCall: any): string {
+    const parts: string[] = []
+    
+    parts.push(`🔧 **${toolCall.name}**`)
+    
+    // Formater l'input selon le type de tool de façon générique
+    if (toolCall.input) {
+      const inputEntries = Object.entries(toolCall.input)
+      
+      if (inputEntries.length === 1) {
+        const [key, value] = inputEntries[0]
+        
+        // Cas spéciaux avec émojis appropriés
+        if (key === 'file_path') {
+          const emoji = toolCall.name === 'Read' ? '📁' : toolCall.name === 'Write' ? '📝' : toolCall.name === 'Edit' ? '✏️' : '📄'
+          const action = toolCall.name === 'Read' ? 'Lecture' : toolCall.name === 'Write' ? 'Écriture' : toolCall.name === 'Edit' ? 'Édition' : 'Fichier'
+          parts.push(`   ${emoji} ${action}: \`${value}\``)
+        } else if (key === 'command') {
+          parts.push(`   💻 Commande: \`${value}\``)
+        } else if (key === 'path') {
+          parts.push(`   📂 Chemin: \`${value}\``)
+        } else if (key === 'pattern') {
+          parts.push(`   🔍 Motif: \`${value}\``)
+        } else if (key === 'url') {
+          parts.push(`   🌐 URL: \`${value}\``)
+        } else if (key === 'query') {
+          parts.push(`   🔎 Recherche: \`${value}\``)
+        } else if (key === 'todos' && Array.isArray(value)) {
+          parts.push(`   📝 Todos: ${value.length} tâches`)
+        } else {
+          // Formater les objets complexes
+          if (typeof value === 'object' && value !== null) {
+            if (Array.isArray(value)) {
+              parts.push(`   ⚙️ ${key}: ${value.length} éléments`)
+            } else {
+              const formattedValue = JSON.stringify(value, null, 2).replace(/\n/g, ' ').replace(/\s+/g, ' ')
+              if (formattedValue.length > 100) {
+                parts.push(`   ⚙️ ${key}: ${formattedValue.substring(0, 100)}...`)
+              } else {
+                parts.push(`   ⚙️ ${key}: ${formattedValue}`)
+              }
+            }
+          } else {
+            parts.push(`   ⚙️ ${key}: \`${value}\``)
+          }
+        }
+      } else if (inputEntries.length > 1) {
+        // Plusieurs paramètres
+        parts.push(`   ⚙️ Paramètres: ${inputEntries.map(([key, value]) => {
+          const formattedValue = typeof value === 'object' ? JSON.stringify(value, null, 2).replace(/\n/g, ' ').replace(/\s+/g, ' ') : value;
+          return `${key}=${formattedValue}`;
+        }).join(', ')}`)
+      }
+    }
+    
+    // Ajouter le résultat
+    if (toolCall.result) {
+      if (toolCall.result.is_error) {
+        parts.push(`   ❌ Erreur: ${toolCall.result.content}`)
+      } else if (toolCall.result.content && toolCall.result.content.length < 200) {
+        parts.push(`   ✅ Résultat: ${toolCall.result.content}`)
+      } else {
+        parts.push(`   ✅ Succès`)
+      }
+    }
+    
+    return parts.join('\n')
+  }
+
+  async executeAndSaveToolMessages(
+    containerId: string, 
+    prompt: string, 
+    workdir: string, 
+    aiProvider: string, 
+    model: string, 
+    task: any, 
+    actionLabel: string
+  ): Promise<string> {
+    
+    // Exécuter la commande Claude
+    const result = await this.executeWithStreamingBash(containerId, `
+      # Create and change to working directory
+      mkdir -p "${workdir}"
+      cd "${workdir}"
+      
+      # Configuration Git
+      git config --global user.email "ccweb@example.com" || true
+      git config --global user.name "CCWeb Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      # Charger l'environnement Node et npm global (version bash)
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      
+      # Vérifier que Claude est installé
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      
+      ${this.getEnvSetup(aiProvider)}
+      ${this.getAiCommand(aiProvider, model)} "${prompt.replace(/"/g, '\"')}"
+    `, (data: string) => {
+      const lines = data.split('\n').filter(line => line.trim())
+      lines.forEach(line => {
+        if (line.trim() && !line.includes('===')) {
+          console.log(`🤖 Claude: ${line.trim()}`)
+        }
+      })
+    })
+
+    if (result.exitCode !== 0) {
+      throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
+    }
+
+    // Filtrer le chemin indésirable
+    let filteredOutput = result.stdout
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
+    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
+    
+    // Parser la sortie JSON
+    const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
+    const aiProviderLabel = this.getAiProviderLabel(aiProvider)
+    
+    // Créer un message pour chaque tool call
+    for (const toolCall of parsedOutput.toolCalls) {
+      const toolContent = this.formatToolCall(toolCall)
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
+      })
+    }
+    
+    // Créer un message pour les réponses texte s'il y en a
+    if (parsedOutput.textMessages.length > 0) {
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n💬 **Réponse:**\n${parsedOutput.textMessages.join('\n')}`
+      })
+    }
+    
+    // Créer un message pour le résultat final s'il est différent
+    if (parsedOutput.finalResult && !parsedOutput.textMessages.includes(parsedOutput.finalResult)) {
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n📋 **Résumé:**\n${parsedOutput.finalResult}`
+      })
+    }
+    
+    // Retourner le résultat final pour la création de PR
+    return parsedOutput.finalResult || parsedOutput.textMessages.join('\n') || 'Tâche terminée'
+  }
+
+  private getEnvSetup(aiProvider: string): string {
+    switch (aiProvider) {
+      case 'anthropic-api':
+        return 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
+      case 'claude-oauth':
+        return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+      case 'gemini-cli':
+        return 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+      default:
+        return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+    }
+  }
+
+  private getAiCommand(aiProvider: string, model?: string): string {
+    const modelParam = model ? ` --model ${model}` : ''
+    
+    switch (aiProvider) {
+      case 'anthropic-api':
+        return `claude --verbose --output-format stream-json${modelParam} -p`
+      case 'claude-oauth':
+        return `claude --verbose --output-format stream-json${modelParam} -p`
+      case 'gemini-cli':
+        return 'gemini -p'
+      default:
+        return `claude --verbose --output-format stream-json${modelParam} -p`
+    }
   }
 }

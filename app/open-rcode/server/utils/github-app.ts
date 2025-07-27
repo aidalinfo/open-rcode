@@ -50,13 +50,23 @@ export async function getInstallationRepositories(installationId: string) {
 export async function getRepositoryBranches(installationId: string, owner: string, repo: string) {
   const token = await generateInstallationToken(installationId)
   
-  const response = await $fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
-    headers: {
-      'Authorization': `token ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'ccweb-app'
-    }
-  })
+  let allBranches: any[] = []
+  let page = 1
+  let hasMore = true
   
-  return response
+  while (hasMore) {
+    const response = await $fetch(`https://api.github.com/repos/${owner}/${repo}/branches?per_page=100&page=${page}`, {
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'ccweb-app'
+      }
+    })
+    
+    allBranches = allBranches.concat(response)
+    hasMore = response.length === 100
+    page++
+  }
+  
+  return allBranches
 }
