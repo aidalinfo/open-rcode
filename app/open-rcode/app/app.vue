@@ -36,6 +36,16 @@ useSeoMeta({
 
       <template #right>
         <UButton
+          to="/app/dashboard"
+          icon="i-heroicons-chart-bar"
+          aria-label="Dashboard"
+          color="neutral"
+          variant="ghost"
+        >
+          Dashboard
+        </UButton>
+
+        <UButton
           to="/app/settings"
           icon="i-heroicons-cog-6-tooth"
           aria-label="Settings"
