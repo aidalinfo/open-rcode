@@ -340,10 +340,10 @@ export class KubernetesManager {
         process.kill('SIGTERM')
         resolve({
           stdout,
-          stderr: stderr + '\nCommand timed out after 15 minutes',
+          stderr: stderr + '\nCommand timed out after 30 minutes',
           exitCode: 124
         })
-      }, 900000) // 15 minutes timeout
+      }, 1800000) // 30 minutes timeout
       
       process.on('close', (code) => {
         clearTimeout(timeout)
