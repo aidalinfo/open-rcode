@@ -14,7 +14,12 @@ export class ClaudeExecutor {
     this.containerManager = containerManager
   }
 
-  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
+  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
+    // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
+    if (task) {
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
+    }
+    
     const onOutput = (data: string) => {
       // Afficher la sortie Claude en temps réel
       const lines = data.split('\n').filter(line => line.trim())
@@ -354,6 +359,15 @@ PROMPT_EOF
       
       if (userMessage) {
         console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        // Créer le message initial avant de commencer l'exécution
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🚀 **Démarrage de l'exécution avec ${this.getAiProviderLabel(aiProvider)} (${model})...**`
+        });
+        
         finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
       }
 
@@ -575,7 +589,59 @@ PROMPT_EOF
     actionLabel: string
   ): Promise<string> {
     
-    // Exécuter la commande Claude
+    const aiProviderLabel = this.getAiProviderLabel(aiProvider)
+    let streamBuffer = ''
+    let processedToolCallIds = new Set<string>()
+    
+    // Fonction pour traiter les messages en temps réel
+    const processStreamingOutput = async (data: string) => {
+      const lines = data.split('\n').filter(line => line.trim())
+      
+      for (const line of lines) {
+        if (line.trim() && !line.includes('===')) {
+          console.log(`🤖 Claude: ${line.trim()}`)
+          
+          // Ajouter la ligne au buffer
+          streamBuffer += line + '\n'
+          
+          // Essayer de parser les lignes JSON complètes
+          try {
+            const jsonData = JSON.parse(line.trim())
+            
+            // Traiter les tool calls en temps réel
+            if (jsonData.type === 'assistant' && jsonData.message?.content) {
+              for (const content of jsonData.message.content) {
+                if (content.type === 'tool_use' && !processedToolCallIds.has(content.id)) {
+                  processedToolCallIds.add(content.id)
+                  
+                  // Créer un message immédiatement pour ce tool call
+                  const toolCall = {
+                    id: content.id,
+                    name: content.name,
+                    input: content.input
+                  }
+                  
+                  const toolContent = this.formatToolCall(toolCall)
+                  await TaskMessageModel.create({
+                    id: uuidv4(),
+                    userId: task.userId,
+                    taskId: task._id,
+                    role: 'assistant',
+                    content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
+                  })
+                  
+                  console.log(`💾 Tool call saved in real-time: ${content.name}`)
+                }
+              }
+            }
+          } catch (parseError) {
+            // Ignorer les erreurs de parsing, la ligne n'est peut-être pas du JSON
+          }
+        }
+      }
+    }
+    
+    // Exécuter la commande Claude avec le callback de streaming
     const result = await this.executeWithStreamingBash(containerId, `
       # Create and change to working directory
       mkdir -p "${workdir}"
@@ -599,14 +665,7 @@ PROMPT_EOF
 ${prompt}
 PROMPT_EOF
 )"
-    `, (data: string) => {
-      const lines = data.split('\n').filter(line => line.trim())
-      lines.forEach(line => {
-        if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
-        }
-      })
-    })
+    `, processStreamingOutput)
 
     if (result.exitCode !== 0) {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
@@ -617,9 +676,8 @@ PROMPT_EOF
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Parser la sortie JSON
+    // Parser la sortie JSON complète pour les éléments finaux
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
-    const aiProviderLabel = this.getAiProviderLabel(aiProvider)
     
     // Créer un document UserCost si total_cost_usd est disponible
     if (parsedOutput.totalCostUsd) {
@@ -638,16 +696,18 @@ PROMPT_EOF
       }
     }
     
-    // Créer un message pour chaque tool call
+    // Traiter les tool calls qui n'ont pas été traités en temps réel (avec résultats)
     for (const toolCall of parsedOutput.toolCalls) {
-      const toolContent = this.formatToolCall(toolCall)
-      await TaskMessageModel.create({
-        id: uuidv4(),
-        userId: task.userId,
-        taskId: task._id,
-        role: 'assistant',
-        content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
-      })
+      if (!processedToolCallIds.has(toolCall.id) && toolCall.result) {
+        const toolContent = this.formatToolCall(toolCall)
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
+        })
+      }
     }
     
     // Créer un message pour les réponses texte s'il y en a
