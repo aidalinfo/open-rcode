@@ -76,7 +76,7 @@
         <UButton
           size="xs"
           variant="ghost"
-          icon="i-heroicons-chat-bubble-left-ellipsis"
+          icon="i-lucide-eye"
           @click="viewTask(row.original._id)"
         >
           Voir
