@@ -3,6 +3,7 @@ import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { PullRequestCreator } from './pull-request-creator'
 import { TaskMessageModel } from '../models/TaskMessage'
+import { CountRequestModel } from '../models/CountRequest'
 import { v4 as uuidv4 } from 'uuid'
 
 export class ClaudeExecutor {
@@ -355,6 +356,15 @@ export class ClaudeExecutor {
 
       const prCreator = new PullRequestCreator(this.containerManager);
       await prCreator.createFromChanges(containerId, task, summaryOutput);
+
+      // Créer un document CountRequest pour suivre l'utilisation
+      await CountRequestModel.create({
+        userId: task.userId,
+        environmentId: task.environmentId,
+        model: model,
+        taskId: task._id
+      });
+      console.log(`CountRequest created for task ${task._id}`);
 
       await updateTaskStatus('completed');
       console.log(`Claude workflow completed for task ${task._id}`);
