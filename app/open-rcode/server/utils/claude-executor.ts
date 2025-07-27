@@ -380,11 +380,16 @@ export class ClaudeExecutor {
         content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
       });
     } finally {
-      // Nettoyer le conteneur après l'exécution (succès ou échec)
-      console.log(`Cleaning up container for task ${task._id}`);
+      // Détecter si on utilise Kubernetes
+      const isKubernetes = this.containerManager.constructor.name === 'KubernetesAdapter';
+      const resourceType = isKubernetes ? 'pod' : 'conteneur';
+      const resourceTypeCapitalized = isKubernetes ? 'Pod' : 'Conteneur Docker';
+      
+      // Nettoyer le conteneur/pod après l'exécution (succès ou échec)
+      console.log(`Cleaning up ${resourceType} for task ${task._id}`);
       try {
         await this.containerManager.removeContainer(containerId, true);
-        console.log(`Container ${containerId} cleaned up successfully`);
+        console.log(`${resourceTypeCapitalized} ${containerId} cleaned up successfully`);
         
         // Supprimer la référence du conteneur de la tâche
         await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
@@ -394,16 +399,16 @@ export class ClaudeExecutor {
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🧹 **Nettoyage automatique:** Le conteneur Docker a été supprimé après l'exécution de la tâche.`
+          content: `🧹 **Nettoyage automatique:** Le ${resourceType} a été supprimé après l'exécution de la tâche.`
         });
       } catch (cleanupError: any) {
-        console.error(`Failed to cleanup container ${containerId}:`, cleanupError);
+        console.error(`Failed to cleanup ${resourceType} ${containerId}:`, cleanupError);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `⚠️ **Attention:** Échec du nettoyage automatique du conteneur. Le conteneur devra être supprimé manuellement.`
+          content: `⚠️ **Attention:** Échec du nettoyage automatique du ${resourceType}. Le ${resourceType} devra être supprimé manuellement.`
         });
       }
     }
