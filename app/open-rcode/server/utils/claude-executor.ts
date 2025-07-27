@@ -343,29 +343,15 @@ export class ClaudeExecutor {
 
       const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 });
 
+      let finalResult = 'Tâche terminée'
+      
       if (userMessage) {
-        console.log(`Executing first AI command with user text (provider: ${aiProvider}, model: ${model})`);
-        await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
+        console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const gitStatusBefore = await this.checkGitStatus(containerId, workspaceDir);
-
-      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider}, model: ${model})`);
-
-      const summaryOutput = await this.executeAndSaveToolMessages(
-        containerId,
-        'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
-        workspaceDir,
-        aiProvider,
-        model,
-        task,
-        'Résumé des modifications'
-      );
-
       const prCreator = new PullRequestCreator(this.containerManager);
-      await prCreator.createFromChanges(containerId, task, summaryOutput);
+      await prCreator.createFromChanges(containerId, task, finalResult);
 
       // Créer un document CountRequest pour suivre l'utilisation
       await CountRequestModel.create({
@@ -424,35 +410,6 @@ export class ClaudeExecutor {
     }
   }
 
-  private async checkGitStatus(containerId: string, workdir: string): Promise<string> {
-    try {
-      const script = `
-        cd "${workdir}"
-        git config --global --add safe.directory "${workdir}" || true
-        echo "=== Current directory ==="
-        pwd
-        echo "=== Git status ==="
-        git status --porcelain
-        echo "=== Git diff (staged) ==="
-        git diff --cached
-        echo "=== Git diff (unstaged) ==="
-        git diff
-        echo "=== Git log (last 3 commits) ==="
-        git log --oneline -3
-      `
-
-      const result = await this.containerManager.executeInContainer({
-        containerId,
-        command: ['sh', '-c', script],
-        user: 'root'
-      })
-
-      return result.stdout
-    } catch (error: any) {
-      console.error(`Error checking Git status in container ${containerId}:`, error)
-      return `Error: ${error.message}`
-    }
-  }
 
   private getAiProviderLabel(provider: string): string {
     const labels = {
