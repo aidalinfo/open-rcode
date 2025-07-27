@@ -42,8 +42,22 @@
 
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
 const isLoading = ref(false)
 const error = computed(() => route.query.error === 'auth_failed')
+
+// Vérifier si l'utilisateur est déjà connecté
+onMounted(async () => {
+  try {
+    const { data } = await $fetch('/api/auth/verify')
+    if (data.valid) {
+      await router.push('/app')
+    }
+  } catch (error) {
+    // L'utilisateur n'est pas connecté, rester sur la page de login
+    console.error('Session verification failed:', error)
+  }
+})
 
 const loginWithGitHub = () => {
   isLoading.value = true
