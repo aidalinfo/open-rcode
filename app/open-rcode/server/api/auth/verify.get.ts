@@ -1,20 +1,11 @@
-import { Session } from '~/server/models/Session'
-import type { User } from '~/server/models/User'
-import { verifySession } from '~/server/utils/auth'
+import { getUserIdFromSession } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Récupérer le cookie de session
-    const sessionCookie = getCookie(event, 'session')
-    
-    if (!sessionCookie) {
-      return { valid: false }
-    }
-
     // Vérifier la session
-    const session = await verifySession(event)
+    const userId = await getUserIdFromSession(event)
     
-    if (!session) {
+    if (!userId) {
       return { valid: false }
     }
 
