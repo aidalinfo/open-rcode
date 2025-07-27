@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+const route = useRoute()
+
 useHead({
   meta: [
     { name: 'viewport', content: 'width=device-width, initial-scale=1' }
@@ -20,9 +22,21 @@ useSeoMeta({
   ogTitle: title,
   ogDescription: description,
   ogImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
-  twitterImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
+  twitterImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
   twitterCard: 'summary_large_image'
 })
+
+const items = computed(() => [{
+  label: 'Dashboard',
+  to: '/app/dashboard',
+  icon: 'i-heroicons-chart-bar',
+  active: route.path.startsWith('/app/dashboard')
+}, {
+  label: 'Settings',
+  to: '/app/settings',
+  icon: 'i-heroicons-cog-6-tooth',
+  active: route.path.startsWith('/app/settings')
+}])
 </script>
 
 <template>
@@ -34,27 +48,12 @@ useSeoMeta({
         </NuxtLink>
       </template>
 
+      <UNavigationMenu
+        :items="items"
+        variant="link"
+      />
+
       <template #right>
-        <UButton
-          to="/app/dashboard"
-          icon="i-heroicons-chart-bar"
-          aria-label="Dashboard"
-          color="neutral"
-          variant="ghost"
-        >
-          Dashboard
-        </UButton>
-
-        <UButton
-          to="/app/settings"
-          icon="i-heroicons-cog-6-tooth"
-          aria-label="Settings"
-          color="neutral"
-          variant="ghost"
-        >
-          Settings
-        </UButton>
-
         <UColorModeButton />
 
         <UButton
