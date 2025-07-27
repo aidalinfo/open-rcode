@@ -6,6 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CCWeb is a container-based web platform that enables developers to execute AI-assisted programming tasks in isolated containers (Docker or Kubernetes), automatically creating GitHub Pull Requests. Built with Nuxt 4, MongoDB, and supports both Docker and Kubernetes orchestration.
 
+## Tech Stack
+
+**Frontend:**
+- Nuxt 4 with Vue 3 and TypeScript
+- Nuxt UI Pro (component library)
+- TailwindCSS 4.x for styling
+- SSR/SPA hybrid rendering
+
+**Backend:**
+- Nuxt Server API (Nitro)
+- MongoDB with Mongoose ODM
+- Docker/Kubernetes for container orchestration
+- GitHub Apps API integration
+
+**Key Dependencies:**
+- `@octokit/auth-app` - GitHub App authentication
+- `dockerode` - Docker API client
+- `jsonwebtoken` - JWT token handling
+- `mongoose` - MongoDB object modeling
+- `cron` - Task scheduling
+
 ## Development Commands
 
 ```bash
@@ -14,7 +35,7 @@ pnpm dev              # Start development server (http://localhost:3000)
 pnpm build           # Production build
 pnpm preview         # Preview production build
 
-# Code quality
+# Code quality (ALWAYS run before committing)
 pnpm lint            # ESLint checking
 pnpm typecheck       # TypeScript validation
 
@@ -113,55 +134,184 @@ Set the container orchestration mode using environment variables:
 - GitHub Apps for repository access (installation IDs stored per user)
 - API keys encrypted in database using `ENCRYPTION_KEY`
 
+## API Structure
+
+### Core Endpoints
+- `GET /api/tasks` - List user tasks with pagination
+- `POST /api/tasks` - Create new task (saves to both Task.messages and TaskMessageModel)
+- `GET /api/tasks/[id]` - Get task details
+- `POST /api/tasks/[id]/execute` - Execute task in container
+- `GET /api/tasks/[id]/messages` - Get task conversation history
+
+### Environment Management
+- `GET /api/environments` - List user environments
+- `POST /api/environments` - Create new environment
+- `PUT /api/environments/[id]` - Update environment
+- `DELETE /api/environments/[id]` - Delete environment
+
+### Authentication & GitHub
+- `GET /api/auth/github` - GitHub OAuth flow
+- `GET /api/auth/github-app` - GitHub App installation
+- `GET /api/auth/verify` - Verify session
+
+### User Settings
+- `GET/PUT /api/user/anthropic-key` - Anthropic API key management
+- `GET/PUT /api/user/claude-oauth-token` - Claude OAuth token management
+- `GET/PUT /api/user/gemini-api-key` - Gemini API key management
+
+### Monitoring
+- `GET /api/monitoring/containers` - Container status
+- `POST /api/monitoring/cleanup` - Container cleanup
+
 ## Database Schema
 
-### Task Execution Flow
+### Core Models (server/models/)
+
+**Task Model:**
 ```typescript
 Task {
-  userId: string,           // GitHub user ID
-  environmentId: ObjectId,  // Links to Environment
-  dockerId?: string,        // Container ID when running
-  messages: Message[],      // Legacy message storage
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  _id: ObjectId,
+  userId: string,                       // GitHub user ID
+  environmentId: ObjectId,              // Links to Environment
+  dockerId?: string,                    // Container/Pod ID when running
+  podName?: string,                     // Kubernetes pod name
+  messages: Message[],                  // Legacy message storage (keep for compatibility)
+  status: 'pending' | 'running' | 'completed' | 'failed',
+  createdAt: Date,
+  updatedAt: Date,
+  pullRequestUrl?: string,              // Generated PR URL
+  errorMessage?: string                 // Error details if failed
 }
+```
 
+**TaskMessage Model:**
+```typescript
 TaskMessage {
-  taskId: string,          // Links to Task
+  _id: ObjectId,
+  taskId: string,                       // Links to Task._id
   role: 'user' | 'assistant',
   content: string,
   createdAt: Date
 }
 ```
 
-### Environment Configuration
+**Environment Model:**
 ```typescript
 Environment {
-  repository: string,                    // GitHub repo name
+  _id: ObjectId,
+  userId: string,                       // Owner GitHub user ID
+  name: string,                         // Display name
+  repository: string,                   // Repository name
   repositoryFullName: string,           // owner/repo format
   runtime: 'node' | 'python' | 'php',  // Primary runtime
-  environmentVariables: { key, value }[],
-  configurationScript?: string          // Pre-execution setup
+  environmentVariables: { key: string, value: string }[],
+  configurationScript?: string,         // Pre-execution setup commands
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
+
+**User Model:**
+```typescript
+User {
+  _id: ObjectId,
+  githubId: string,                     // GitHub user ID
+  username: string,                     // GitHub username
+  email?: string,
+  encryptedAnthropicKey?: string,       // Encrypted API key
+  encryptedClaudeOAuthToken?: string,   // Encrypted OAuth token
+  encryptedGeminiApiKey?: string,       // Encrypted API key
+  githubAppInstallations: string[],     // GitHub App installation IDs
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+## Development Patterns
+
+### Adding New API Endpoints
+1. Create endpoint file in `server/api/` following Nuxt convention
+2. Use `defineEventHandler()` for request handling
+3. Import utilities from `server/utils/` (auth, database, etc.)
+4. Follow error handling patterns from existing endpoints
+5. Add proper TypeScript types
+
+### Working with Containers
+- Use `ContainerManagerFactory` to get appropriate manager (Docker/Kubernetes)
+- Always handle container cleanup in error scenarios
+- Log container operations for debugging
+- Set proper resource limits and timeouts
+
+### Database Operations
+- Use Mongoose models from `server/models/`
+- Always validate user ownership for data access
+- Use transactions for multi-model operations
+- Encrypt sensitive data using `crypto.ts` utilities
+
+### Frontend Components
+- Follow Nuxt UI Pro component patterns
+- Use TypeScript for all component props
+- Implement proper loading and error states
+- Use composables for shared logic
+
+## Testing & Validation
+
+### Before Committing Changes
+```bash
+# Always run these commands before committing
+pnpm lint          # Check code style and potential issues
+pnpm typecheck     # Ensure TypeScript compilation
+pnpm build         # Verify production build works
+```
+
+### Manual Testing Checklist
+- [ ] Task creation and execution flow
+- [ ] Container cleanup after task completion
+- [ ] GitHub OAuth and App installation
+- [ ] Environment CRUD operations
+- [ ] Error handling and user feedback
 
 ## Common Issues and Solutions
 
 ### "No space left on device" Errors (Docker Mode)
-Docker containers accumulate and fill disk space. Run cleanup commands regularly.
+Docker containers accumulate and fill disk space. Run cleanup commands regularly:
+```bash
+# Check disk usage
+docker system df
+
+# Clean up old containers
+docker stop $(docker ps -q -f name=ccweb-task) && docker rm $(docker ps -aq -f name=ccweb-task)
+
+# Remove unused images
+docker image prune -f
+```
 
 ### Pod "ImagePullBackOff" Errors (Kubernetes Mode)
 - Ensure the container image is available in the cluster
 - Check image pull secrets if using private registries
 - Verify network connectivity from cluster to registry
+- Check pod events: `kubectl describe pod <pod_name>`
 
 ### Claude Command Failed (Exit Code 128)
 - Verify Claude Code is installed in container/pod
-- Check OAuth token validity
+- Check OAuth token validity in user settings
 - Ensure environment variables are properly set
 - For Kubernetes: verify secrets and config maps are mounted correctly
+- Check container/pod logs for detailed error messages
 
 ### Message Not Found in TaskMessageModel
 Ensure user messages are saved to `TaskMessageModel` when creating tasks in `server/api/tasks.post.ts`
+
+### Build Failures
+- Verify `NUXT_UI_PRO_LICENSE` environment variable is set
+- Check for TypeScript errors with `pnpm typecheck`
+- Ensure all dependencies are installed with `pnpm install`
+
+### Authentication Issues
+- Verify GitHub App configuration and permissions
+- Check OAuth callback URLs match your domain
+- Ensure session secrets are properly configured
+- Verify MongoDB connection for session storage
 
 ## Required Environment Variables
 
@@ -202,3 +352,54 @@ The `ccweb-task-runner:latest` image includes:
 - Git configuration and repository cloning capabilities
 
 Build with: `docker build -t ccweb-task-runner:latest server/utils/docker/`
+
+## Key Files Reference
+
+### Core Orchestration
+- `server/utils/task-container.ts` - Main task execution workflow orchestrator
+- `server/utils/claude-executor.ts` - Claude Code command execution in containers
+- `server/utils/container-setup.ts` - Container environment configuration
+- `server/utils/pull-request-creator.ts` - Git operations and PR creation
+
+### Container Management
+- `server/utils/container/container-manager-factory.ts` - Factory for Docker/Kubernetes managers
+- `server/utils/container/docker-adapter.ts` - Docker operations adapter
+- `server/utils/container/kubernetes-adapter.ts` - Kubernetes operations adapter
+- `server/utils/container/kubernetes/kubernetes-manager.ts` - Native kubectl operations
+
+### Authentication & GitHub
+- `server/utils/auth.ts` - Session and user authentication utilities
+- `server/utils/github-app.ts` - GitHub App integration
+- `server/api/auth/github.get.ts` - GitHub OAuth flow
+- `server/api/auth/github-app.get.ts` - GitHub App installation
+
+### Data & Encryption
+- `server/utils/database.ts` - MongoDB connection and configuration
+- `server/utils/crypto.ts` - API key encryption/decryption utilities
+- `server/models/` - Mongoose models for all data entities
+
+### Frontend Components
+- `app/components/TaskTable.vue` - Task list and status display
+- `app/components/ChatPrompt.vue` - Task creation interface
+- `app/pages/app/task/[id].vue` - Task detail and execution view
+- `app/pages/app/settings/` - Environment and user settings
+
+## Performance Considerations
+
+### Container Resource Management
+- Monitor container memory usage with `docker stats` or `kubectl top pods`
+- Set resource limits in container configurations
+- Implement automatic cleanup of completed containers/pods
+- Use container monitoring plugin: `server/plugins/container-monitor.ts`
+
+### Database Optimization
+- Index frequently queried fields (userId, taskId, environmentId)
+- Use pagination for large datasets (implemented in tasks API)
+- Consider archiving old completed tasks
+- Monitor MongoDB performance and connection pool usage
+
+### GitHub API Rate Limits
+- Implement proper rate limiting for GitHub API calls
+- Use GitHub App authentication for higher rate limits
+- Cache repository and branch information when possible
+- Handle rate limit responses gracefully with retries
