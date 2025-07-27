@@ -17,6 +17,18 @@ function formatCurrency(value: number): string {
 
 const { data: statsData, pending, error } = await useFetch('/api/dashboard/stats')
 
+const selectedPeriod = ref<'day' | 'week' | 'total'>('day')
+
+const periodOptions = [
+  { key: 'day' as const, label: 'Last Day', period: 'hourly' as const, days: 1 },
+  { key: 'week' as const, label: 'Last 7 Days', period: 'daily' as const, days: 7 },
+  { key: 'total' as const, label: 'Total', period: 'daily' as const, days: 30 }
+]
+
+const currentPeriodConfig = computed(() => 
+  periodOptions.find(p => p.key === selectedPeriod.value)!
+)
+
 const stats = computed<Stat[]>(() => {
   if (!statsData.value?.stats) return []
   
@@ -84,7 +96,24 @@ const stats = computed<Stat[]>(() => {
       </div>
       
       <div class="mt-8">
-        <LazyHomeChart />
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-semibold">Cost Analysis</h2>
+          <div class="flex gap-2">
+            <UButton
+              v-for="option in periodOptions"
+              :key="option.key"
+              :label="option.label"
+              :variant="selectedPeriod === option.key ? 'solid' : 'outline'"
+              :color="selectedPeriod === option.key ? 'primary' : 'neutral'"
+              size="sm"
+              @click="selectedPeriod = option.key"
+            />
+          </div>
+        </div>
+        <LazyHomeChart 
+          :period="currentPeriodConfig.period"
+          :days="currentPeriodConfig.days"
+        />
       </div>
     </div>
   </div>

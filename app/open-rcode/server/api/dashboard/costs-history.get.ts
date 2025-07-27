@@ -2,7 +2,7 @@ import { connectToDatabase } from '../../utils/database'
 import { UserModel } from '../../models/User'
 import { SessionModel } from '../../models/Session'
 import { UserCostModel } from '../../models/UserCost'
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths } from 'date-fns'
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, subHours } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -33,11 +33,33 @@ export default defineEventHandler(async (event) => {
     }
     
     const query = getQuery(event)
-    const period = query.period as 'daily' | 'weekly' | 'monthly' || 'daily'
+    const period = query.period as 'hourly' | 'daily' | 'weekly' | 'monthly' || 'daily'
     const days = parseInt(query.days as string) || 30
+    const detailed = query.detailed === 'true'
     
     let startDate: Date
     let endDate = new Date()
+    
+    // Si on veut le détail par requête, on ne groupe pas
+    if (detailed || period === 'hourly') {
+      startDate = subHours(endDate, days * 24)
+      
+      const costs = await UserCostModel.find({
+        userId: user.githubId,
+        createdAt: { $gte: startDate, $lte: endDate }
+      }).sort({ createdAt: 1 })
+      
+      return {
+        costs: costs.map(c => ({
+          date: c.createdAt,
+          amount: c.costUsd
+        })),
+        period,
+        startDate,
+        endDate
+      }
+    }
+    
     let groupBy: any
     
     switch (period) {

@@ -6,7 +6,7 @@ import { useElementSize } from '@vueuse/core'
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
 const props = defineProps<{
-  period?: 'daily' | 'weekly' | 'monthly'
+  period?: 'hourly' | 'daily' | 'weekly' | 'monthly'
   days?: number
 }>()
 
@@ -51,6 +51,7 @@ const formatNumber = (value: number) => {
 
 const formatDate = (date: Date): string => {
   const formats = {
+    hourly: 'HH:mm',
     daily: 'd MMM',
     weekly: 'd MMM',
     monthly: 'MMM yyyy'
