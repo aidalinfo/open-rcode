@@ -2,17 +2,10 @@ name: Build and Push Open-rcode Docker Image
 
 on:
   push:
-    paths:
-      - 'app/open-rcode/package.json'
-      - 'app/open-rcode/Dockerfile'
-      - 'app/open-rcode/**'
-    branches:
-      - main
-  pull_request:
-    paths:
-      - 'app/open-rcode/package.json'
-      - 'app/open-rcode/Dockerfile'
-      - 'app/open-rcode/**'
+      branches:
+        - main
+      paths:
+        - 'app/open-rcode/package.json'
 
 env:
   REGISTRY: ghcr.io
