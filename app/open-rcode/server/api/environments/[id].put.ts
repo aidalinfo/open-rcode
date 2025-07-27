@@ -1,37 +1,13 @@
 import { connectToDatabase } from '../../utils/database'
-import { UserModel } from '../../models/User'
-import { SessionModel } from '../../models/Session'
 import { EnvironmentModel } from '../../models/Environment'
+import { requireUserId } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
     
     const { id } = getRouterParams(event)
-    
-    const sessionToken = getCookie(event, 'session')
-    if (!sessionToken) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'No session found'
-      })
-    }
-    
-    const session = await SessionModel.findOne({ sessionToken })
-    if (!session || session.expires < new Date()) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Session expired'
-      })
-    }
-    
-    const user = await UserModel.findOne({ githubId: session.userId })
-    if (!user) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'User not found'
-      })
-    }
+    const userId = await requireUserId(event)
     
     const body = await readBody(event)
     
@@ -78,7 +54,7 @@ export default defineEventHandler(async (event) => {
     const environment = await EnvironmentModel.findOneAndUpdate(
       {
         _id: id,
-        userId: user.githubId
+        userId: userId
       },
       updateData,
       { new: true, lean: true }
