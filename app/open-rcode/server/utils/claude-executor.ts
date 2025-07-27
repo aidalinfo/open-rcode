@@ -4,6 +4,7 @@ import { EnvironmentModel } from '../models/Environment'
 import { PullRequestCreator } from './pull-request-creator'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { CountRequestModel } from '../models/CountRequest'
+import { UserCostModel } from '../models/UserCost'
 import { v4 as uuidv4 } from 'uuid'
 
 export class ClaudeExecutor {
@@ -420,13 +421,14 @@ export class ClaudeExecutor {
     return labels[provider as keyof typeof labels] || provider
   }
 
-  private parseClaudeJsonOutput(rawOutput: string): { toolCalls: any[], textMessages: string[], finalResult: string } {
+  private parseClaudeJsonOutput(rawOutput: string): { toolCalls: any[], textMessages: string[], finalResult: string, totalCostUsd?: number } {
     try {
       const lines = rawOutput.split('\n')
       let toolCalls: any[] = []
       let toolResults: Map<string, any> = new Map()
       let textMessages: string[] = []
       let finalResult = ''
+      let totalCostUsd: number | undefined
       
       for (const line of lines) {
         if (!line.trim() || line.trim().startsWith('[') && line.trim().endsWith(']')) continue
@@ -452,8 +454,13 @@ export class ClaudeExecutor {
                 toolResults.set(content.tool_use_id, content)
               }
             }
-          } else if (jsonData.type === 'result' && jsonData.result) {
-            finalResult = jsonData.result
+          } else if (jsonData.type === 'result') {
+            if (jsonData.result) {
+              finalResult = jsonData.result
+            }
+            if (jsonData.total_cost_usd) {
+              totalCostUsd = jsonData.total_cost_usd
+            }
           }
         } catch (parseError) {
           continue
@@ -469,7 +476,8 @@ export class ClaudeExecutor {
       return {
         toolCalls: toolCallsWithResults,
         textMessages,
-        finalResult
+        finalResult,
+        totalCostUsd
       }
       
     } catch (error) {
@@ -603,6 +611,23 @@ export class ClaudeExecutor {
     // Parser la sortie JSON
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
     const aiProviderLabel = this.getAiProviderLabel(aiProvider)
+    
+    // Créer un document UserCost si total_cost_usd est disponible
+    if (parsedOutput.totalCostUsd) {
+      try {
+        await UserCostModel.create({
+          environmentId: task.environmentId,
+          userId: task.userId,
+          taskId: task._id,
+          costUsd: parsedOutput.totalCostUsd,
+          model: model === 'claude-sonnet-4' ? 'sonnet' : model,
+          aiProvider: aiProvider
+        })
+        console.log(`UserCost created: $${parsedOutput.totalCostUsd} for task ${task._id}`)
+      } catch (costError) {
+        console.error('Error creating UserCost document:', costError)
+      }
+    }
     
     // Créer un message pour chaque tool call
     for (const toolCall of parsedOutput.toolCalls) {
