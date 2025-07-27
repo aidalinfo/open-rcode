@@ -394,7 +394,7 @@ export class ClaudeExecutor {
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🧹 **Nettoyage automatique:** Le conteneur Docker a été supprimé après l'exécution de la tâche.`
+          content: `🧹 **Nettoyage automatique:** Le pod a été supprimé après l'exécution de la tâche.`
         });
       } catch (cleanupError: any) {
         console.error(`Failed to cleanup container ${containerId}:`, cleanupError);
