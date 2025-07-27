@@ -49,7 +49,7 @@ const error = computed(() => route.query.error === 'auth_failed')
 // Vérifier si l'utilisateur est déjà connecté
 onMounted(async () => {
   try {
-    const { data } = await $fetch('/api/auth/verify')
+    const data = await $fetch('/api/auth/verify')
     if (data.valid) {
       await router.push('/app')
     }
