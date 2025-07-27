@@ -32,28 +32,50 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Récupérer les tâches de l'utilisateur avec l'environnement
+    // Récupérer les tâches de l'utilisateur
     const tasks = await TaskModel.find({ userId: user.githubId })
-      .populate('environmentId', 'name')
       .sort({ createdAt: -1 })
       .limit(50)
       .exec()
     
+    // Récupérer tous les environnements en une seule requête
+    const environmentIds = tasks.map(task => task.environmentId).filter(Boolean)
+    const environments = await EnvironmentModel.find({ _id: { $in: environmentIds } })
+    const environmentMap = new Map(environments.map(env => [env._id.toString(), env]))
+    
     // Formater les données pour le frontend
-    const formattedTasks = tasks.map(task => ({
-      _id: task._id,
-      name: task.name,
-      executed: task.executed,
-      merged: task.merged,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-      environment: task.environmentId ? {
-        name: task.environmentId.name
-      } : null,
-      pr: task.pr,
-      dockerId: task.dockerId,
-      error: task.error
-    }))
+    const formattedTasks = tasks.map(task => {
+      // Extraire le numéro de PR de l'URL si elle existe
+      let prData = null
+      if (task.pr) {
+        const prMatch = task.pr.match(/\/pull\/(\d+)/)
+        if (prMatch) {
+          prData = {
+            url: task.pr,
+            number: parseInt(prMatch[1])
+          }
+        }
+      }
+      
+      // Récupérer l'environnement depuis le map
+      const environment = task.environmentId ? environmentMap.get(task.environmentId) : null
+      
+      return {
+        _id: task._id,
+        name: task.name,
+        status: task.status,
+        executed: task.executed,
+        merged: task.merged,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        environment: environment ? {
+          name: environment.name
+        } : null,
+        pr: prData,
+        dockerId: task.dockerId,
+        error: task.error
+      }
+    })
     
     return {
       tasks: formattedTasks

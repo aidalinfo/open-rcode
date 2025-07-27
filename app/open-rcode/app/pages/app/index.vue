@@ -2,7 +2,9 @@
   <UDashboardPanel>
     <template #body>
       <UContainer>
-        <div class="py-8 space-y-6">
+        <AppSkeleton v-if="isInitialLoading" />
+        
+        <div v-else class="py-8 space-y-6">
           <ChatPrompt
             v-model:input="input"
             v-model:selectedEnvironment="selectedEnvironment"
@@ -47,6 +49,7 @@ const input = ref('')
 const loading = ref(false)
 const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
+const isInitialLoading = ref(true)
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -55,6 +58,8 @@ const fetchEnvironments = async () => {
     environments.value = data.environments
   } catch (error) {
     console.error('Erreur lors de la récupération des environnements:', error)
+  } finally {
+    isInitialLoading.value = false
   }
 }
 
@@ -75,13 +80,16 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
       method: 'POST'
     }).catch((error) => {
       console.error('Erreur lors de la création du conteneur en arrière-plan:', error)
-      // Optionnel: on pourrait utiliser WebSocket ou une notification pour informer l'utilisateur de l'échec
-      toast.add({
-        title: 'Erreur de conteneur',
-        description: 'La création de l\'environnement Docker a échoué en arrière-plan.',
-        color: 'error',
-        duration: 0
-      })
+      // Ne pas afficher de toast d'erreur si c'est juste un conflit (409)
+      // ou si la tâche a déjà un conteneur
+      if (error.statusCode !== 409) {
+        toast.add({
+          title: 'Erreur de conteneur',
+          description: 'La création de l\'environnement Docker a échoué en arrière-plan.',
+          color: 'error',
+          duration: 0
+        })
+      }
     })
   } catch (error) {
     console.error('Erreur lors de la redirection ou de l\'appel fetch:', error)

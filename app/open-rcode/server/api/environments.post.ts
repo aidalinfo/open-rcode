@@ -57,6 +57,14 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    // Validation du modèle si fourni
+    if (body.model && !['opus', 'sonnet'].includes(body.model)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'model must be one of: opus, sonnet'
+      })
+    }
+    
     // Créer l'environnement
     const environment = new EnvironmentModel({
       userId: user.githubId,
@@ -67,6 +75,7 @@ export default defineEventHandler(async (event) => {
       description: body.description,
       runtime: body.runtime,
       aiProvider: body.aiProvider || 'anthropic-api',
+      model: body.model || 'sonnet',
       defaultBranch: body.defaultBranch,
       environmentVariables: body.environmentVariables || [],
       configurationScript: body.configurationScript
@@ -84,6 +93,7 @@ export default defineEventHandler(async (event) => {
         description: environment.description,
         runtime: environment.runtime,
         aiProvider: environment.aiProvider,
+        model: environment.model,
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,

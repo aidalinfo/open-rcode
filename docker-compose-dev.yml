@@ -1,0 +1,41 @@
+services:
+  mongodb:
+    image: mongo:7-jammy
+    restart: always
+    volumes:
+      - db-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: openrcode
+    ports:
+      - "27017:27017"
+
+  open-rcode:
+    build:
+      context: ./app/open-rcode
+      dockerfile: Dockerfile
+      args:
+        - NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
+    volumes:
+      - /opt/kubeconfig/kubeconfig.yaml:/tmp/kubeconfig.yaml
+    environment:
+      NODE_ENV: production
+      GITHUB_APP_NAME: ${GITHUB_APP_NAME}
+      CONTAINER_MODE: "kubernetes"
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      KUBECONFIG: "/tmp/kubeconfig.yaml"
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      MONGODB_URI: ${MONGODB_URI}
+    ports:
+      - "3072:3000"
+    depends_on:
+      - mongodb
+volumes:
+  db-data:
+    driver: local

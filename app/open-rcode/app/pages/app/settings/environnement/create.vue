@@ -83,6 +83,22 @@
             </template>
           </UFormField>
 
+          <!-- Modèle IA -->
+          <UFormField label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
+            <USelectMenu
+              v-model="form.model"
+              :items="modelOptions"
+              placeholder="Sélectionnez un modèle"
+              size="lg"
+              class="w-full"
+            />
+            <template #help>
+              <p class="text-sm text-gray-500 mt-2">
+                {{ getModelDescription(form.model?.value || form.model) }}
+              </p>
+            </template>
+          </UFormField>
+
           <!-- Branche par défaut -->
           <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
             <USelectMenu
@@ -213,6 +229,7 @@ const form = ref({
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
   aiProvider: 'anthropic-api',
+  model: 'sonnet',
   defaultBranch: { label: 'main', value: 'main' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
@@ -229,6 +246,11 @@ const aiProviderOptions = [
   { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
   { label: 'Google Gemini CLI', value: 'gemini-cli' }
+]
+
+const modelOptions = [
+  { label: 'Claude Sonnet', value: 'sonnet' },
+  { label: 'Claude Opus', value: 'opus' }
 ]
 
 const repositoryOptions = computed(() => {
@@ -339,6 +361,14 @@ const getAiProviderDescription = (provider: string) => {
   return descriptions[provider as keyof typeof descriptions] || ''
 }
 
+const getModelDescription = (model: string) => {
+  const descriptions = {
+    'sonnet': 'Claude Sonnet - Modèle équilibré entre performance et vitesse (recommandé).',
+    'opus': 'Claude Opus - Modèle le plus puissant pour les tâches complexes.'
+  }
+  return descriptions[model as keyof typeof descriptions] || ''
+}
+
 
 const submitForm = async () => {
   isSubmitting.value = true
@@ -358,11 +388,13 @@ const submitForm = async () => {
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = typeof form.value.runtime === 'object' ? form.value.runtime.value : form.value.runtime
     const selectedAiProvider = typeof form.value.aiProvider === 'object' ? form.value.aiProvider.value : form.value.aiProvider
+    const selectedModel = typeof form.value.model === 'object' ? form.value.model.value : form.value.model
     
     console.log('FORM VALUES:')
     console.log('- form.value:', form.value)
     console.log('- selectedRuntime:', selectedRuntime, typeof selectedRuntime)
     console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+    console.log('- selectedModel:', selectedModel, typeof selectedModel)
     console.log('- form.value.aiProvider:', form.value.aiProvider)
     
     const selectedDefaultBranch = typeof form.value.defaultBranch === 'object' ? form.value.defaultBranch.value : form.value.defaultBranch
@@ -374,6 +406,7 @@ const submitForm = async () => {
       description: form.value.description,
       runtime: selectedRuntime,
       aiProvider: selectedAiProvider,
+      model: selectedModel,
       defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
       configurationScript: form.value.configurationScript
@@ -414,6 +447,7 @@ const resetForm = () => {
     description: '',
     runtime: { label: 'Node.js', value: 'node' },
     aiProvider: 'anthropic-api',
+    model: 'sonnet',
     defaultBranch: { label: 'main', value: 'main' },
     environmentVariables: [],
     configurationScript: ''

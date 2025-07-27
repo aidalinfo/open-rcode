@@ -3,6 +3,7 @@ import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { PullRequestCreator } from './pull-request-creator'
 import { TaskMessageModel } from '../models/TaskMessage'
+import { CountRequestModel } from '../models/CountRequest'
 import { v4 as uuidv4 } from 'uuid'
 
 export class ClaudeExecutor {
@@ -12,7 +13,7 @@ export class ClaudeExecutor {
     this.containerManager = containerManager
   }
 
-  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string): Promise<string> {
+  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
     const onOutput = (data: string) => {
       // Afficher la sortie Claude en temps réel
       const lines = data.split('\n').filter(line => line.trim())
@@ -27,13 +28,16 @@ export class ClaudeExecutor {
     let aiCommand = 'claude -p'
     let envSetup = ''
 
+    // Ajouter le paramètre --model si spécifié
+    const modelParam = model ? ` --model ${model}` : ''
+
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -41,7 +45,7 @@ export class ClaudeExecutor {
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
         break
       default:
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -81,18 +85,21 @@ export class ClaudeExecutor {
     return filteredOutput
   }
 
-  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string): Promise<string> {
+  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
     // Déterminer la commande à exécuter selon le provider
     let aiCommand = 'claude -p'
     let envSetup = ''
 
+    // Ajouter le paramètre --model si spécifié
+    const modelParam = model ? ` --model ${model}` : ''
+
     switch (aiProvider) {
       case 'anthropic-api':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
         break
       case 'claude-oauth':
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
@@ -101,7 +108,7 @@ export class ClaudeExecutor {
         break
       default:
         // Fallback pour la compatibilité
-        aiCommand = 'claude -p'
+        aiCommand = `claude${modelParam} -p`
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
 
@@ -262,7 +269,11 @@ export class ClaudeExecutor {
 
   async executeWorkflow(containerId: string, task: any): Promise<void> {
     const updateTaskStatus = async (status: string, error?: string) => {
-      await TaskModel.findByIdAndUpdate(task._id, { status, error: error || null });
+      await TaskModel.findByIdAndUpdate(task._id, { 
+        status, 
+        error: error || null,
+        updatedAt: new Date()
+      });
     };
 
     try {
@@ -277,6 +288,7 @@ export class ClaudeExecutor {
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
       console.log(`🔧 Using workspace directory: ${workspaceDir}`);
       const aiProvider = environment.aiProvider || 'anthropic-api';
+      const model = environment.model || 'sonnet';
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
         console.log('Executing configuration script');
@@ -307,15 +319,15 @@ export class ClaudeExecutor {
       const userMessage = await TaskMessageModel.findOne({ taskId: task._id, role: 'user' }).sort({ createdAt: 1 });
 
       if (userMessage) {
-        console.log(`Executing first AI command with user text (provider: ${aiProvider})`);
-        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider);
+        console.log(`Executing first AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        const firstOutput = await this.executeCommand(containerId, userMessage.content, workspaceDir, aiProvider, model);
         const aiProviderLabel = this.getAiProviderLabel(aiProvider);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
+          content: `🤖 **${aiProviderLabel} (${model}) - Exécution de la tâche:**\n\`\`\`\n${firstOutput}\n\`\`\``
         });
       }
 
@@ -323,13 +335,14 @@ export class ClaudeExecutor {
 
       const gitStatusBefore = await this.checkGitStatus(containerId, workspaceDir);
 
-      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider})`);
+      console.log(`Executing second AI command to summarize changes (provider: ${aiProvider}, model: ${model})`);
 
       const summaryOutput = await this.executeCommand(
         containerId,
         'Résume les modifications que tu viens de faire dans ce projet. Utilise git status et git diff pour voir les changements.',
         workspaceDir,
-        aiProvider
+        aiProvider,
+        model
       );
 
       const aiProviderLabel = this.getAiProviderLabel(aiProvider);
@@ -338,11 +351,20 @@ export class ClaudeExecutor {
         userId: task.userId,
         taskId: task._id,
         role: 'assistant',
-        content: `📋 **${aiProviderLabel} - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
+        content: `📋 **${aiProviderLabel} (${model}) - Résumé des modifications:**\n\`\`\`\n${summaryOutput}\n\`\`\``
       });
 
       const prCreator = new PullRequestCreator(this.containerManager);
       await prCreator.createFromChanges(containerId, task, summaryOutput);
+
+      // Créer un document CountRequest pour suivre l'utilisation
+      await CountRequestModel.create({
+        userId: task.userId,
+        environmentId: task.environmentId,
+        model: model,
+        taskId: task._id
+      });
+      console.log(`CountRequest created for task ${task._id}`);
 
       await updateTaskStatus('completed');
       console.log(`Claude workflow completed for task ${task._id}`);
@@ -358,11 +380,16 @@ export class ClaudeExecutor {
         content: `❌ **Erreur dans le workflow Claude:** ${error.message}`
       });
     } finally {
-      // Nettoyer le conteneur après l'exécution (succès ou échec)
-      console.log(`Cleaning up container for task ${task._id}`);
+      // Détecter si on utilise Kubernetes
+      const isKubernetes = this.containerManager.constructor.name === 'KubernetesAdapter';
+      const resourceType = isKubernetes ? 'pod' : 'conteneur';
+      const resourceTypeCapitalized = isKubernetes ? 'Pod' : 'Conteneur Docker';
+      
+      // Nettoyer le conteneur/pod après l'exécution (succès ou échec)
+      console.log(`Cleaning up ${resourceType} for task ${task._id}`);
       try {
         await this.containerManager.removeContainer(containerId, true);
-        console.log(`Container ${containerId} cleaned up successfully`);
+        console.log(`${resourceTypeCapitalized} ${containerId} cleaned up successfully`);
         
         // Supprimer la référence du conteneur de la tâche
         await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
@@ -372,16 +399,16 @@ export class ClaudeExecutor {
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🧹 **Nettoyage automatique:** Le conteneur Docker a été supprimé après l'exécution de la tâche.`
+          content: `🧹 **Nettoyage automatique:** Le ${resourceType} a été supprimé après l'exécution de la tâche.`
         });
       } catch (cleanupError: any) {
-        console.error(`Failed to cleanup container ${containerId}:`, cleanupError);
+        console.error(`Failed to cleanup ${resourceType} ${containerId}:`, cleanupError);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `⚠️ **Attention:** Échec du nettoyage automatique du conteneur. Le conteneur devra être supprimé manuellement.`
+          content: `⚠️ **Attention:** Échec du nettoyage automatique du ${resourceType}. Le ${resourceType} devra être supprimé manuellement.`
         });
       }
     }

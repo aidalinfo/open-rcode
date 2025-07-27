@@ -99,6 +99,24 @@
             </template>
           </UFormField>
 
+          <!-- Modèle IA -->
+          <UFormField label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
+            <USelectMenu
+              v-model="form.model"
+              :items="modelOptions"
+              placeholder="Sélectionnez un modèle"
+              value-attribute="value"
+              option-attribute="label"
+              size="lg"
+              class="w-full"
+            />
+            <template #help>
+              <p class="text-sm text-gray-500 mt-2">
+                {{ getModelDescription(form.model?.value) }}
+              </p>
+            </template>
+          </UFormField>
+
           <!-- Branche par défaut -->
           <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
             <USelectMenu
@@ -252,6 +270,7 @@ const form = ref({
   description: '',
   runtime: { label: 'Node.js', value: 'node' },
   aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
+  model: { label: 'Claude Sonnet', value: 'sonnet' },
   defaultBranch: { label: 'main', value: 'main' },
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
@@ -268,6 +287,11 @@ const aiProviderOptions = [
   { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
   { label: 'Google Gemini CLI', value: 'gemini-cli' }
+]
+
+const modelOptions = [
+  { label: 'Claude Sonnet', value: 'sonnet' },
+  { label: 'Claude Opus', value: 'opus' }
 ]
 
 const repositoryOptions = computed(() => {
@@ -344,6 +368,7 @@ const fetchEnvironment = async () => {
     console.log('- Full data:', data)
     console.log('- environment:', data.environment)
     console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
+    console.log('- model:', data.environment.model, typeof data.environment.model)
     console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
     console.log('- environmentVariables:', data.environment.environmentVariables)
     
@@ -366,6 +391,10 @@ const fetchEnvironment = async () => {
       aiProvider: {
         label: getAiProviderLabel(data.environment.aiProvider),
         value: data.environment.aiProvider
+      },
+      model: {
+        label: getModelLabel(data.environment.model || 'sonnet'),
+        value: data.environment.model || 'sonnet'
       },
       defaultBranch: {
         label: data.environment.defaultBranch || 'main',
@@ -409,6 +438,22 @@ const getAiProviderDescription = (provider: string) => {
   return descriptions[provider as keyof typeof descriptions] || ''
 }
 
+const getModelLabel = (model: string) => {
+  const labels = {
+    'sonnet': 'Claude Sonnet',
+    'opus': 'Claude Opus'
+  }
+  return labels[model as keyof typeof labels] || model
+}
+
+const getModelDescription = (model: string) => {
+  const descriptions = {
+    'sonnet': 'Claude Sonnet - Modèle équilibré entre performance et vitesse (recommandé).',
+    'opus': 'Claude Opus - Modèle le plus puissant pour les tâches complexes.'
+  }
+  return descriptions[model as keyof typeof descriptions] || ''
+}
+
 const addVariable = () => {
   form.value.environmentVariables.push({ key: '', value: '', description: '' })
 }
@@ -434,9 +479,11 @@ const submitForm = async () => {
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
+    const selectedModel = form.value.model?.value || form.value.model
     
     console.log('UPDATE FORM VALUES:')
     console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+    console.log('- selectedModel:', selectedModel, typeof selectedModel)
     console.log('- form.value.aiProvider:', form.value.aiProvider)
     
     const selectedDefaultBranch = form.value.defaultBranch?.value || form.value.defaultBranch
@@ -448,6 +495,7 @@ const submitForm = async () => {
       description: form.value.description,
       runtime: selectedRuntime,
       aiProvider: selectedAiProvider,
+      model: selectedModel,
       defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
       configurationScript: form.value.configurationScript
@@ -464,8 +512,8 @@ const submitForm = async () => {
       color: 'success'
     })
     
-    // Rediriger vers la page des environnements
-    router.push('/app/settings/environnement/create')
+    // Rediriger vers la page des paramètres
+    router.push('/app/settings')
     
   } catch (error) {
     console.error('Erreur lors de la mise à jour:', error)
@@ -496,8 +544,8 @@ const deleteEnvironment = async () => {
       color: 'success'
     })
     
-    // Rediriger vers la page des environnements
-    router.push('/app/settings/environnement/create')
+    // Rediriger vers la page des paramètres
+    router.push('/app/settings')
     
   } catch (error) {
     console.error('Erreur lors de la suppression:', error)
@@ -512,7 +560,7 @@ const deleteEnvironment = async () => {
 }
 
 const goBack = () => {
-  router.push('/app/settings/environnement/create')
+  router.push('/app/settings')
 }
 
 // Chargement initial

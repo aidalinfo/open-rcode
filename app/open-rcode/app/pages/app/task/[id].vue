@@ -1,7 +1,7 @@
 <template>
   <UDashboardPanel>
     <template #header>
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-center gap-4">
         <h1 class="text-xl font-semibold">
           {{ task ? `Tâche: ${task.name || task.id}` : 'Chargement...' }}
         </h1>
@@ -59,11 +59,13 @@
           >
             <template #content="{ message }">
               <div v-if="isPRLink(message)" class="pr-link-message">
-                <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                  <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
-                  <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request créée</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
+                <div class="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                  <div class="flex items-center gap-3">
+                    <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request créée</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
+                    </div>
                   </div>
                   <UButton
                     @click="openGitHubPR(message.content)"
@@ -73,6 +75,7 @@
                     variant="outline"
                     label="Ouvrir"
                     target="_blank"
+                    class="w-full sm:w-auto"
                   />
                 </div>
               </div>
