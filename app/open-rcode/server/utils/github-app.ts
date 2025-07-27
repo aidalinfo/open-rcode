@@ -37,7 +37,7 @@ export async function getInstallationRepositories(installationId: string) {
     headers: {
       'Authorization': `token ${installationToken}`,
       'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'ccweb-app'
+      'User-Agent': 'open-rcode-app'
     }
   })
   
@@ -59,7 +59,7 @@ export async function getRepositoryBranches(installationId: string, owner: strin
       headers: {
         'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'ccweb-app'
+        'User-Agent': 'open-rcode-app'
       }
     })
     

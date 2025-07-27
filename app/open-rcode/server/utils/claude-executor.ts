@@ -58,8 +58,8 @@ export class ClaudeExecutor {
       cd "${workdir || '/tmp/workspace'}"
       
       # Configuration Git
-      git config --global user.email "ccweb@example.com" || true
-      git config --global user.name "CCWeb Container" || true
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       
@@ -145,8 +145,8 @@ PROMPT_EOF
       cd "${workdir || '/tmp/workspace'}"
       
       # Configuration Git
-      git config --global user.email "ccweb@example.com" || true
-      git config --global user.name "CCWeb Container" || true
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       
@@ -200,8 +200,8 @@ PROMPT_EOF
       cd "${workdir || '/tmp/workspace'}"
       
       # Configuration Git
-      git config --global user.email "ccweb@example.com" || true
-      git config --global user.name "CCWeb Container" || true
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
@@ -273,8 +273,8 @@ PROMPT_EOF
       cd "${workdir || '/tmp/workspace'}"
       
       # Configuration Git
-      git config --global user.email "ccweb@example.com" || true
-      git config --global user.name "CCWeb Container" || true
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       
@@ -582,8 +582,8 @@ PROMPT_EOF
       cd "${workdir}"
       
       # Configuration Git
-      git config --global user.email "ccweb@example.com" || true
-      git config --global user.name "CCWeb Container" || true
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
       git config --global init.defaultBranch main || true
       git config --global --add safe.directory "${workdir}" || true
       
