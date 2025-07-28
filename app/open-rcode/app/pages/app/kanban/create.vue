@@ -11,9 +11,9 @@
         </UFormGroup>
 
         <UFormGroup label="Environnement" name="environmentId" class="mt-4" required>
-          <USelect 
+          <USelectMenu 
             v-model="state.environmentId" 
-            :options="environments"
+            :items="environments"
             option-attribute="label"
             value-attribute="value"
             placeholder="Sélectionner un environnement"
