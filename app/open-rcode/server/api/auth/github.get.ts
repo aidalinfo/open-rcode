@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     }>('https://api.github.com/user', {
       headers: {
         'Authorization': `token ${tokenResponse.access_token}`,
-        'User-Agent': 'ccweb-app'
+        'User-Agent': 'open-rcode-app'
       }
     })
     

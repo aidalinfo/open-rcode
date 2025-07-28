@@ -2,7 +2,7 @@
   "name": "open-rcode",
   "private": true,
   "type": "module",
-  "version": "0.0.1alpha",
+  "version": "0.0.2alpha",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -21,7 +21,9 @@
     "@nuxtjs/mdc": "0.17.2",
     "@octokit/auth-app": "^8.0.2",
     "@unhead/vue": "^2.0.12",
+    "@unovis/vue": "^1.5.2",
     "cron": "^4.3.2",
+    "date-fns": "^4.1.0",
     "dockerode": "^4.0.7",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",

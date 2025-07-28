@@ -3,7 +3,7 @@
     <template #header>
       <div class="flex items-center justify-center gap-4">
         <h1 class="text-xl font-semibold">
-          {{ task ? `Tâche: ${task.name || task.id}` : 'Chargement...' }}
+          {{ task ? `Task: ${task.name || task.id}` : 'Loading...' }}
         </h1>
         <UBadge v-if="task" :color="getStatusColor(task.status)" :label="getStatusLabel(task.status)" />
       </div>
@@ -14,7 +14,7 @@
         <div v-if="loading" class="flex-1 flex items-center justify-center">
           <div class="text-center">
             <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
-            <p class="mt-2">Chargement de la tâche...</p>
+            <p class="mt-2">Loading task...</p>
           </div>
         </div>
 
@@ -35,7 +35,7 @@
               },
               actions: [
                 {
-                  label: 'Copier',
+                  label: 'Copy',
                   icon: 'i-lucide-copy'
                 }
               ]
@@ -48,7 +48,7 @@
               },
               actions: [
                 {
-                  label: 'Copier',
+                  label: 'Copy',
                   icon: 'i-lucide-copy'
                 }
               ]
@@ -63,7 +63,7 @@
                   <div class="flex items-center gap-3">
                     <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
                     <div class="flex-1">
-                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request créée</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request created</p>
                       <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
                     </div>
                   </div>
@@ -73,7 +73,7 @@
                     size="sm"
                     color="neutral"
                     variant="outline"
-                    label="Ouvrir"
+                    label="Open"
                     target="_blank"
                     class="w-full sm:w-auto"
                   />
@@ -149,11 +149,11 @@ const getStatusColor = (status: string) => {
 
 const getStatusLabel = (status: string) => {
   switch (status) {
-    case 'completed': return 'Terminée'
-    case 'failed': return 'Échouée'
-    case 'running': return 'En cours'
-    case 'pending': return 'En attente'
-    default: return 'Inconnue'
+    case 'completed': return 'Completed'
+    case 'failed': return 'Failed'
+    case 'running': return 'Running'
+    case 'pending': return 'Pending'
+    default: return 'Unknown'
   }
 }
 
@@ -193,8 +193,8 @@ const fetchTaskAndMessages = async () => {
     }
 
   } catch (err) {
-    console.error('Erreur lors de la récupération des données:', err)
-    error.value = 'Impossible de charger les informations de la tâche.'
+    console.error('Error fetching data:', err)
+    error.value = 'Unable to load task information.'
     if (pollInterval) clearInterval(pollInterval)
   } finally {
     loading.value = false

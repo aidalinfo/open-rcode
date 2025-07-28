@@ -1,0 +1,49 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Image/VERSION'
+
+env:
+  REPO: open-rcoder-worker
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Read version from file
+      id: version
+      run: echo "VERSION=$(cat Image/VERSION | tr -d '\n')" >> $GITHUB_OUTPUT
+
+    - name: Login to Scaleway Container Registry
+      env:
+        SCW_SCRT_TK_PROD: ${{ secrets.SCW_SCRT_TK_PROD }}
+      run: docker login rg.fr-par.scw.cloud/aidalinfo-prod -u nologin -p "$SCW_SCRT_TK_PROD"
+        
+    - name: Check if version already exists
+      env:
+        SCW_SCRT_TK_PROD: ${{ secrets.SCW_SCRT_TK_PROD }}
+      run: |
+        if docker manifest inspect "rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:${{ steps.version.outputs.VERSION }}" > /dev/null 2>&1; then
+          echo "Version ${{ steps.version.outputs.VERSION }} already exists in registry"
+          exit 1
+        fi
+        
+    - name: Build Docker image with version tag
+      run: docker build Image --file Image/Dockerfile --tag "rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:${{ steps.version.outputs.VERSION }}"
+        
+    - name: Build Docker image with latest tag
+      run: docker build Image --file Image/Dockerfile --tag "rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:latest"
+        
+    - name: Push version tag
+      run: docker push "rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:${{ steps.version.outputs.VERSION }}"
+        
+    - name: Push latest tag
+      run: docker push "rg.fr-par.scw.cloud/aidalinfo-prod/${REPO,,}:latest"

@@ -41,7 +41,7 @@ export class PullRequestCreator {
         return
       }
 
-      const branchName = `ccweb-task-${task._id}-${Date.now()}`
+      const branchName = `open-rcode-task-${task._id}-${Date.now()}`
       
       await this.createBranchAndCommit(containerId, workspaceDir, branchName, task, summary)
       
@@ -141,7 +141,7 @@ feat: ${task.title || 'Automated task completion'}
 
 ${summary.replace(/'/g, "'")}
 
-🤖 Generated with CCWeb automation
+🤖 Generated with open-rcode automation
 EOF
 )"
     `
@@ -240,7 +240,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
         base: baseBranch,
         body: `${body}
 
-🤖 This PR was created automatically by CCWeb after executing a Claude-powered task.`,
+🤖 This PR was created automatically by open-rcode after executing a Claude-powered task.`,
         maintainer_can_modify: true
       })
     })

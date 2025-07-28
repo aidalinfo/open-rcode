@@ -5,10 +5,10 @@
         <template #header>
           <div class="text-center">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-              Se connecter
+              Sign In
             </h2>
             <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Utilisez votre compte GitHub pour vous connecter
+              Use your GitHub account to sign in
             </p>
           </div>
         </template>
@@ -18,8 +18,8 @@
             v-if="error"
             color="error"
             variant="soft"
-            title="Erreur de connexion"
-            description="Une erreur s'est produite lors de la connexion. Veuillez réessayer."
+            title="Login Error"
+            description="An error occurred during login. Please try again."
           />
 
           <UButton
@@ -32,7 +32,7 @@
             <template #leading>
               <UIcon name="i-simple-icons-github" class="w-5 h-5" />
             </template>
-            Se connecter avec GitHub
+            Sign in with GitHub
           </UButton>
         </div>
       </UCard>

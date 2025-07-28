@@ -3,28 +3,28 @@
     <div class="py-8 space-y-8">
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Environnements
+          Environments
         </h1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
-          Gérez vos environnements de déploiement
+          Manage your deployment environments
         </p>
       </div>
 
-      <!-- Formulaire de création -->
+      <!-- Creation form -->
       <UCard>
         <template #header>
           <h2 class="text-xl font-semibold">
-            {{ isEditing ? 'Modifier l\'environnement' : 'Créer un nouvel environnement' }}
+            {{ isEditing ? 'Edit environment' : 'Create a new environment' }}
           </h2>
         </template>
 
         <UForm :state="form" @submit="submitForm" class="space-y-12">
-          <!-- Sélection du repository -->
+          <!-- Repository selection -->
           <UFormField label="Repository" name="repository" required class="mt-8">
             <USelectMenu
               v-model="form.selectedRepository"
               :items="repositoryOptions"
-              placeholder="Sélectionnez un repository"
+              placeholder="Select a repository"
               :loading="loadingRepositories"
               value-attribute="value"
               option-attribute="label"
@@ -33,8 +33,8 @@
             />
           </UFormField>
 
-          <!-- Nom de l'environnement -->
-          <UFormField label="Nom" name="name" required class="mt-10">
+          <!-- Environment name -->
+          <UFormField label="Name" name="name" required class="mt-10">
             <UInput
               v-model="form.name"
               placeholder="ex: Production, Staging, Development"
@@ -47,7 +47,7 @@
           <UFormField label="Description" name="description" class="mt-10">
             <UTextarea
               v-model="form.description"
-              placeholder="Description de l'environnement"
+              placeholder="Environment description"
               :rows="3"
               size="lg"
               class="w-full"
@@ -55,11 +55,11 @@
           </UFormField>
 
           <!-- Runtime -->
-          <UFormField label="Runtime d'exécution" name="runtime" required class="mt-10">
+          <UFormField label="Runtime" name="runtime" required class="mt-10">
             <USelectMenu
               v-model="form.runtime"
               :items="runtimeOptions"
-              placeholder="Sélectionnez un runtime"
+              placeholder="Select a runtime"
               value-attribute="value"
               option-attribute="label"
               size="lg"
@@ -67,12 +67,12 @@
             />
           </UFormField>
 
-          <!-- Provider IA -->
-          <UFormField label="Provider d'Intelligence Artificielle" name="aiProvider" required class="mt-10">
+          <!-- AI Provider -->
+          <UFormField label="Artificial Intelligence Provider" name="aiProvider" required class="mt-10">
             <USelectMenu
               v-model="form.aiProvider"
               :items="aiProviderOptions"
-              placeholder="Sélectionnez un provider IA"
+              placeholder="Select an AI provider"
               size="lg"
               class="w-full"
             />
@@ -83,12 +83,12 @@
             </template>
           </UFormField>
 
-          <!-- Modèle IA -->
-          <UFormField label="Modèle d'Intelligence Artificielle" name="model" required class="mt-10">
+          <!-- AI Model -->
+          <UFormField v-if="canSelectModel" label="Artificial Intelligence Model" name="model" required class="mt-10">
             <USelectMenu
               v-model="form.model"
               :items="modelOptions"
-              placeholder="Sélectionnez un modèle"
+              placeholder="Select a model"
               size="lg"
               class="w-full"
             />
@@ -99,12 +99,12 @@
             </template>
           </UFormField>
 
-          <!-- Branche par défaut -->
-          <UFormField label="Branche par défaut" name="defaultBranch" required class="mt-10">
+          <!-- Default branch -->
+          <UFormField label="Default branch" name="defaultBranch" required class="mt-10">
             <USelectMenu
               v-model="form.defaultBranch"
               :items="branchOptions"
-              placeholder="Sélectionnez une branche"
+              placeholder="Select a branch"
               :loading="loadingBranches"
               value-attribute="value"
               option-attribute="label"
@@ -114,16 +114,16 @@
             />
             <template #help>
               <p class="text-sm text-gray-500 mt-2">
-                Cette branche sera utilisée pour le clonage du repository et la création des pull requests.
+                This branch will be used for repository cloning and pull request creation.
               </p>
             </template>
           </UFormField>
 
-          <!-- Variables d'environnement -->
+          <!-- Environment variables -->
           <div class="space-y-6 mt-10">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-                Variables de l'environnement
+                Environment variables
               </h3>
               <UButton
                 @click="addVariable"
@@ -133,7 +133,7 @@
                 <template #leading>
                   <UIcon name="i-heroicons-plus" />
                 </template>
-                Ajouter
+                Add
               </UButton>
             </div>
             
@@ -146,7 +146,7 @@
                 <div class="flex-1">
                   <UInput
                     v-model="variable.key"
-                    placeholder="Clé (ex: NODE_ENV)"
+                    placeholder="Key (e.g.: NODE_ENV)"
                     size="lg"
                     class="w-full"
                   />
@@ -154,7 +154,7 @@
                 <div class="flex-1">
                   <UInput
                     v-model="variable.value"
-                    placeholder="Valeur (ex: production)"
+                    placeholder="Value (e.g.: production)"
                     size="lg"
                     class="w-full"
                   />
@@ -172,31 +172,31 @@
             </div>
           </div>
 
-          <!-- Script de configuration -->
-          <UFormField label="Script de configuration" name="configurationScript" class="mt-10">
+          <!-- Configuration script -->
+          <UFormField label="Configuration script" name="configurationScript" class="mt-10">
             <UTextarea
               v-model="form.configurationScript"
-              placeholder="ex: npm install && npm run build"
+              placeholder="e.g.: npm install && npm run build"
               :rows="4"
               size="lg"
               class="w-full"
             />
           </UFormField>
 
-          <!-- Boutons d'action -->
+          <!-- Action buttons -->
           <div class="flex justify-end gap-3 mt-12">
             <UButton
               v-if="isEditing"
               @click="cancelEdit"
               variant="ghost"
             >
-              Annuler
+              Cancel
             </UButton>
             <UButton
               type="submit"
               :loading="isSubmitting"
             >
-              {{ isEditing ? 'Modifier' : 'Créer' }}
+              {{ isEditing ? 'Edit' : 'Create' }}
             </UButton>
           </div>
         </UForm>
@@ -209,7 +209,7 @@
 <script setup lang="ts">
 const toast = useToast()
 
-// États réactifs
+// Reactive states
 const isEditing = ref(false)
 const editingId = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -217,12 +217,12 @@ const loadingRepositories = ref(false)
 const loadingEnvironments = ref(false)
 const loadingBranches = ref(false)
 
-// Données
+// Data
 const repositories = ref<any[]>([])
 const environments = ref<any[]>([])
 const branches = ref<any[]>([])
 
-// Formulaire
+// Form
 const form = ref({
   selectedRepository: { label: 'Please select a repository', value: '', description: '' },
   name: '',
@@ -257,7 +257,7 @@ const repositoryOptions = computed(() => {
   return repositories.value.map((repo: any) => ({
     label: repo.full_name,
     value: repo.full_name,
-    description: repo.description || 'Aucune description'
+    description: repo.description || 'No description'
   }))
 })
 
@@ -272,7 +272,12 @@ const selectedRepository = computed(() => {
   return form.value.selectedRepository?.value || form.value.selectedRepository
 })
 
-// Méthodes
+const canSelectModel = computed(() => {
+  const provider = form.value.aiProvider?.value || form.value.aiProvider
+  return provider === 'anthropic-api' || provider === 'claude-oauth'
+})
+
+// Methods
 const fetchRepositories = async () => {
   loadingRepositories.value = true
   try {
@@ -280,8 +285,8 @@ const fetchRepositories = async () => {
     repositories.value = data.repositories
   } catch (error) {
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de récupérer les repositories',
+      title: 'Error',
+      description: 'Unable to fetch repositories',
       color: 'error'
     })
   } finally {
@@ -299,7 +304,7 @@ const fetchBranches = async (repositoryFullName: string) => {
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
     
-    // Sélectionner automatiquement la branche 'main' ou 'master' par défaut
+    // Automatically select 'main' or 'master' branch by default
     const defaultBranch = branches.value.find((branch: any) => 
       branch.name === 'main' || branch.name === 'master'
     )
@@ -316,10 +321,10 @@ const fetchBranches = async (repositoryFullName: string) => {
       }
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des branches:', error)
+    console.error('Error fetching branches:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de récupérer les branches du repository',
+      title: 'Error',
+      description: 'Unable to fetch repository branches',
       color: 'error'
     })
     branches.value = []
@@ -328,14 +333,14 @@ const fetchBranches = async (repositoryFullName: string) => {
   }
 }
 
-// Watcher pour détecter les changements de repository
+// Watcher to detect repository changes
 watch(() => form.value.selectedRepository, (newValue) => {
   const repoValue = newValue?.value || newValue
   if (repoValue && !form.value.name) {
     form.value.name = 'Production'
   }
   
-  // Récupérer les branches du repository sélectionné
+  // Fetch branches for selected repository
   if (repoValue && typeof repoValue === 'string') {
     fetchBranches(repoValue)
   } else {
@@ -354,17 +359,17 @@ const removeVariable = (index: number) => {
 
 const getAiProviderDescription = (provider: string) => {
   const descriptions = {
-    'anthropic-api': 'Utilise votre clé API Anthropic pour appeler Claude directement via API.',
-    'claude-oauth': 'Utilise votre token OAuth pour Claude Code CLI (recommandé pour les fonctionnalités avancées).',
-    'gemini-cli': 'Utilise votre clé API Google pour appeler Gemini via CLI.'
+    'anthropic-api': 'Uses your Anthropic API key to call Claude directly via API.',
+    'claude-oauth': 'Uses your OAuth token for Claude Code CLI (recommended for advanced features).',
+    'gemini-cli': 'Uses your Google API key to call Gemini via CLI.'
   }
   return descriptions[provider as keyof typeof descriptions] || ''
 }
 
 const getModelDescription = (model: string) => {
   const descriptions = {
-    'sonnet': 'Claude Sonnet - Modèle équilibré entre performance et vitesse (recommandé).',
-    'opus': 'Claude Opus - Modèle le plus puissant pour les tâches complexes.'
+    'sonnet': 'Claude Sonnet - Balanced model between performance and speed (recommended).',
+    'opus': 'Claude Opus - Most powerful model for complex tasks.'
   }
   return descriptions[model as keyof typeof descriptions] || ''
 }
@@ -378,8 +383,8 @@ const submitForm = async () => {
     
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un repository',
+        title: 'Error',
+        description: 'Please select a repository',
         color: 'error'
       })
       return
@@ -388,7 +393,7 @@ const submitForm = async () => {
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = typeof form.value.runtime === 'object' ? form.value.runtime.value : form.value.runtime
     const selectedAiProvider = typeof form.value.aiProvider === 'object' ? form.value.aiProvider.value : form.value.aiProvider
-    const selectedModel = typeof form.value.model === 'object' ? form.value.model.value : form.value.model
+    const selectedModel = canSelectModel.value ? (typeof form.value.model === 'object' ? form.value.model.value : form.value.model) : null
     
     console.log('FORM VALUES:')
     console.log('- form.value:', form.value)
@@ -418,20 +423,20 @@ const submitForm = async () => {
     })
     
     toast.add({
-      title: 'Succès',
-      description: 'Environnement créé avec succès',
+      title: 'Success',
+      description: 'Environment created successfully',
       color: 'success'
     })
 
     resetForm()
     
-    // Rediriger vers la page des paramètres
+    // Redirect to settings page
     await navigateTo('/app/settings')
   } catch (error) {
-    console.error('Erreur lors de la soumission du formulaire:', error)
+    console.error('Error submitting form:', error)
     toast.add({
-      title: 'Erreur',
-      description: 'Impossible de sauvegarder l\'environnement',
+      title: 'Error',
+      description: 'Unable to save environment',
       color: 'error'
     })
   } finally {
@@ -456,7 +461,7 @@ const resetForm = () => {
 }
 
 
-// Chargement initial
+// Initial loading
 onMounted(() => {
   fetchRepositories()
 })
