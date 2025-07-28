@@ -209,7 +209,7 @@ export class KubernetesManager {
         restartPolicy: options.restartPolicy || 'Never',
         containers: [{
           name: 'main',
-          image: 'rg.fr-par.scw.cloud/aidalinfo-public/ccweb:latest',
+          image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest',
           workingDir: options.workdir,
           env: options.environment ? Object.entries(options.environment).map(
             ([name, value]) => ({ name, value })
@@ -237,7 +237,7 @@ export class KubernetesManager {
       const namespace = manifest.metadata.namespace
       
       console.log(`☸️ Creating Kubernetes pod: ${podName} in namespace: ${namespace}`)
-      console.log(`📦 Using image: rg.fr-par.scw.cloud/aidalinfo-public/ccweb:latest`)
+      console.log(`📦 Using image: ghcr.io/aidalinfo/open-rcoder-worker:latest`)
       
       // Appliquer le manifest
       try {

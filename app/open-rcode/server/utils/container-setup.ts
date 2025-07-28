@@ -105,7 +105,7 @@ export class ContainerSetup {
     }
 
     const containerId = await this.containerManager.createContainer({
-      image: 'ccweb-task-runner:latest',
+      image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest',
       name: containerName,
       workdir: workspaceDir,
       environment: envVars,
@@ -211,7 +211,7 @@ export class ContainerSetup {
     })
     
     if (images.length === 0) {
-      if (imageName === 'ccweb-task-runner:latest') {
+      if (imageName === 'ghcr.io/aidalinfo/open-rcoder-worker:latest') {
         await this.buildCustomDockerImage()
       } else {
         const stream = await this.docker.getDockerInstance().pull(imageName)
