@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
+const isAuthenticated = ref(false)
 
 useHead({
   meta: [
@@ -26,11 +27,22 @@ useSeoMeta({
   twitterCard: 'summary_large_image'
 })
 
+// Vérifier si l'utilisateur est connecté
+onMounted(async () => {
+  try {
+    const data = await $fetch('/api/auth/verify')
+    isAuthenticated.value = data.valid
+  } catch (error) {
+    isAuthenticated.value = false
+  }
+})
+
 const items = computed(() => [{
   label: 'Dashboard',
   to: '/app/dashboard',
   icon: 'i-heroicons-chart-bar',
-  active: route.path.startsWith('/app/dashboard')
+  active: route.path.startsWith('/app/dashboard'),
+  disabled: !isAuthenticated.value
 }, {
   label: 'Kanban',
   to: '/app/kanban',
@@ -41,7 +53,8 @@ const items = computed(() => [{
   label: 'Settings',
   to: '/app/settings',
   icon: 'i-heroicons-cog-6-tooth',
-  active: route.path.startsWith('/app/settings')
+  active: route.path.startsWith('/app/settings'),
+  disabled: !isAuthenticated.value
 }])
 </script>
 
