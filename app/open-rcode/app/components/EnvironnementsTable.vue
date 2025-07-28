@@ -29,12 +29,15 @@
       </p>
     </div>
 
-    <UTable
+    <CustomTable
       v-else
       :data="environments"
       :columns="columns"
-      :loading="loading"
-      class="w-full"
+      :total="total"
+      :pagination="pagination"
+      :show-refresh="true"
+      @refresh="handleRefresh"
+      @update:page="handlePageUpdate"
     >
       <template #name-cell="{ row }">
         <div class="flex items-center gap-3">
@@ -103,7 +106,7 @@
           </UButton>
         </div>
       </template>
-    </UTable>
+    </CustomTable>
   </UCard>
 </template>
 
@@ -124,16 +127,45 @@ interface Environment {
 }
 
 // Props
-defineProps<{
+const props = defineProps<{
   environments: Environment[]
   loading: boolean
+  total?: number
+  page?: number
+  limit?: number
 }>()
 
 // Emits
 const emit = defineEmits<{
   refresh: []
   delete: [id: string]
+  'update:page': [page: number]
 }>()
+
+// Reactive state
+const pagination = ref({
+  page: props.page || 1,
+  limit: props.limit || 10
+})
+
+// Watch for prop changes
+watch(() => props.page, (newPage) => {
+  if (newPage) pagination.value.page = newPage
+})
+
+watch(() => props.limit, (newLimit) => {
+  if (newLimit) pagination.value.limit = newLimit
+})
+
+// Methods
+const handleRefresh = () => {
+  emit('refresh')
+}
+
+const handlePageUpdate = (page: number) => {
+  pagination.value.page = page
+  emit('update:page', page)
+}
 
 // Table configuration
 const columns = [
