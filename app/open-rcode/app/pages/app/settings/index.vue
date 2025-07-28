@@ -284,7 +284,11 @@
       <EnvironnementsTable 
         :environments="environments" 
         :loading="loading"
+        :total="totalEnvironments"
+        :page="currentPage"
+        :limit="pageLimit"
         @refresh="fetchEnvironments"
+        @update:page="handlePageChange"
       />
     </div>
   </UContainer>
@@ -310,13 +314,22 @@ const geminiApiKeyInput = ref('')
 const savingApiKey = ref(false)
 const savingOAuthToken = ref(false)
 const savingGeminiKey = ref(false)
+const totalEnvironments = ref(0)
+const currentPage = ref(1)
+const pageLimit = ref(10)
 
 // Méthodes
 const fetchEnvironments = async () => {
   loading.value = true
   try {
-    const data = await $fetch('/api/environments')
+    const data = await $fetch('/api/environments', {
+      query: {
+        page: currentPage.value,
+        limit: pageLimit.value
+      }
+    })
     environments.value = data.environments || []
+    totalEnvironments.value = data.total || 0
   } catch (error) {
     console.error('Error fetching environments:', error)
     toast.add({
@@ -568,6 +581,10 @@ const resetGeminiApiKey = async () => {
   }
 }
 
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  fetchEnvironments()
+}
 
 // Initial loading
 onMounted(async () => {
