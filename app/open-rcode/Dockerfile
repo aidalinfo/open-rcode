@@ -28,7 +28,7 @@ RUN NODE_OPTIONS="--max_old_space_size=8192"  pnpm run build
 FROM node:lts-alpine AS runner
 
 # Add container metadata labels
-LABEL org.opencontainers.image.source=https://github.com/Killian-Aidalinfo/ccweb
+LABEL org.opencontainers.image.source=https://github.com/aidalinfo/open-rcode
 LABEL org.opencontainers.image.description="Open-rcode - AI-assisted development platform"
 LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.title="Open-rcode"
