@@ -192,6 +192,11 @@ const fetchTaskAndMessages = async () => {
       if (pollInterval) clearInterval(pollInterval)
     }
 
+    // Scroll to bottom after messages update
+    nextTick(() => {
+      window.scrollTo(0, document.body.scrollHeight)
+    })
+
   } catch (err) {
     if (import.meta.dev) console.error('Error fetching data:', err)
     error.value = 'Unable to load task information.'
@@ -204,11 +209,6 @@ const fetchTaskAndMessages = async () => {
 onMounted(() => {
   fetchTaskAndMessages()
   pollInterval = setInterval(fetchTaskAndMessages, 3000) // Poll every 3 seconds
-  
-  // Scroll to bottom of page
-  nextTick(() => {
-    window.scrollTo(0, document.body.scrollHeight)
-  })
 })
 
 onUnmounted(() => {
