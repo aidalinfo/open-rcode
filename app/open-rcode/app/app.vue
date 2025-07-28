@@ -35,7 +35,8 @@ const items = computed(() => [{
   label: 'Kanban',
   to: '/app/kanban',
   icon: 'i-heroicons-view-columns',
-  active: route.path.startsWith('/app/kanban')
+  active: route.path.startsWith('/app/kanban'),
+  disabled: true
 }, {
   label: 'Settings',
   to: '/app/settings',
