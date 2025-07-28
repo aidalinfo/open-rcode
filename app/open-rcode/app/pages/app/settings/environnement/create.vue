@@ -321,7 +321,7 @@ const fetchBranches = async (repositoryFullName: string) => {
       }
     }
   } catch (error) {
-    console.error('Error fetching branches:', error)
+    if (import.meta.dev) console.error('Error fetching branches:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to fetch repository branches',
@@ -379,7 +379,7 @@ const submitForm = async () => {
   isSubmitting.value = true
   try {
     const selectedRepo = form.value.selectedRepository?.value || form.value.selectedRepository
-    console.log('selectedRepository:', selectedRepo, typeof selectedRepo)
+    if (import.meta.dev) console.log('selectedRepository:', selectedRepo, typeof selectedRepo)
     
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
@@ -395,12 +395,14 @@ const submitForm = async () => {
     const selectedAiProvider = typeof form.value.aiProvider === 'object' ? form.value.aiProvider.value : form.value.aiProvider
     const selectedModel = canSelectModel.value ? (typeof form.value.model === 'object' ? form.value.model.value : form.value.model) : null
     
-    console.log('FORM VALUES:')
-    console.log('- form.value:', form.value)
-    console.log('- selectedRuntime:', selectedRuntime, typeof selectedRuntime)
-    console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
-    console.log('- selectedModel:', selectedModel, typeof selectedModel)
-    console.log('- form.value.aiProvider:', form.value.aiProvider)
+    if (import.meta.dev) {
+      console.log('FORM VALUES:')
+      console.log('- form.value:', form.value)
+      console.log('- selectedRuntime:', selectedRuntime, typeof selectedRuntime)
+      console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+      console.log('- selectedModel:', selectedModel, typeof selectedModel)
+      console.log('- form.value.aiProvider:', form.value.aiProvider)
+    }
     
     const selectedDefaultBranch = typeof form.value.defaultBranch === 'object' ? form.value.defaultBranch.value : form.value.defaultBranch
     
@@ -433,7 +435,7 @@ const submitForm = async () => {
     // Redirect to settings page
     await navigateTo('/app/settings')
   } catch (error) {
-    console.error('Error submitting form:', error)
+    if (import.meta.dev) console.error('Error submitting form:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to save environment',

@@ -97,7 +97,7 @@ const handleSubmit = async () => {
     // Clear input after emitting event
     localInput.value = ''
   } catch (error) {
-    console.error('Error creating task:', error)
+    if (import.meta.dev) console.error('Error creating task:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to create task',

@@ -331,7 +331,7 @@ const fetchEnvironments = async () => {
     environments.value = data.environments || []
     totalEnvironments.value = data.total || 0
   } catch (error) {
-    console.error('Error fetching environments:', error)
+    if (import.meta.dev) console.error('Error fetching environments:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to fetch environments',
@@ -364,7 +364,7 @@ const checkAnthropicKey = async () => {
     const data = await $fetch('/api/user/anthropic-key')
     hasAnthropicKey.value = data.hasApiKey
   } catch (error) {
-    console.error('Error checking API key:', error)
+    if (import.meta.dev) console.error('Error checking API key:', error)
   }
 }
 
@@ -373,7 +373,7 @@ const checkClaudeOAuthToken = async () => {
     const data = await $fetch('/api/user/claude-oauth-token')
     hasClaudeOAuth.value = data.hasToken
   } catch (error) {
-    console.error('Error checking OAuth token:', error)
+    if (import.meta.dev) console.error('Error checking OAuth token:', error)
   }
 }
 
@@ -382,7 +382,7 @@ const checkGeminiApiKey = async () => {
     const data = await $fetch('/api/user/gemini-api-key')
     hasGeminiKey.value = data.hasApiKey
   } catch (error) {
-    console.error('Error checking Gemini API key:', error)
+    if (import.meta.dev) console.error('Error checking Gemini API key:', error)
   }
 }
 
