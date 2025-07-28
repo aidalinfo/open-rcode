@@ -345,7 +345,7 @@ const fetchBranches = async (repositoryFullName: string) => {
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
   } catch (error) {
-    console.error('Error fetching branches:', error)
+    if (import.meta.dev) console.error('Error fetching branches:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to fetch repository branches',
@@ -369,13 +369,15 @@ const fetchEnvironment = async () => {
     const data = await $fetch(`/api/environments/${environmentId.value}`)
     currentEnvironment.value = data.environment
     
-    console.log('ENVIRONMENT DATA RECEIVED:')
-    console.log('- Full data:', data)
-    console.log('- environment:', data.environment)
-    console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
-    console.log('- model:', data.environment.model, typeof data.environment.model)
-    console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
-    console.log('- environmentVariables:', data.environment.environmentVariables)
+    if (import.meta.dev) {
+      console.log('ENVIRONMENT DATA RECEIVED:')
+      console.log('- Full data:', data)
+      console.log('- environment:', data.environment)
+      console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
+      console.log('- model:', data.environment.model, typeof data.environment.model)
+      console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
+      console.log('- environmentVariables:', data.environment.environmentVariables)
+    }
     
     // Fetch repository branches
     await fetchBranches(data.environment.repositoryFullName)
@@ -409,7 +411,7 @@ const fetchEnvironment = async () => {
       configurationScript: data.environment.configurationScript
     }
   } catch (error) {
-    console.error('Error loading environment:', error)
+    if (import.meta.dev) console.error('Error loading environment:', error)
     loadError.value = 'Unable to load environment'
   } finally {
     isLoadingEnvironment.value = false
@@ -486,10 +488,12 @@ const submitForm = async () => {
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
     const selectedModel = canSelectModel.value ? (form.value.model?.value || form.value.model) : null
     
-    console.log('UPDATE FORM VALUES:')
-    console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
-    console.log('- selectedModel:', selectedModel, typeof selectedModel)
-    console.log('- form.value.aiProvider:', form.value.aiProvider)
+    if (import.meta.dev) {
+      console.log('UPDATE FORM VALUES:')
+      console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
+      console.log('- selectedModel:', selectedModel, typeof selectedModel)
+      console.log('- form.value.aiProvider:', form.value.aiProvider)
+    }
     
     const selectedDefaultBranch = form.value.defaultBranch?.value || form.value.defaultBranch
     
@@ -521,7 +525,7 @@ const submitForm = async () => {
     router.push('/app/settings')
     
   } catch (error) {
-    console.error('Error updating environment:', error)
+    if (import.meta.dev) console.error('Error updating environment:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to update environment',
@@ -553,7 +557,7 @@ const deleteEnvironment = async () => {
     router.push('/app/settings')
     
   } catch (error) {
-    console.error('Error deleting environment:', error)
+    if (import.meta.dev) console.error('Error deleting environment:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to delete environment',

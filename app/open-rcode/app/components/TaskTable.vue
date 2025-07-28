@@ -147,19 +147,19 @@ const columns = computed((): TableColumn<Task>[] => [
 const fetchTasks = async () => {
   loading.value = true
   try {
-    console.log('FETCHING TASKS...')
+    if (import.meta.dev) console.log('FETCHING TASKS...')
     const data = await $fetch('/api/tasks', {
       query: {
         page: pagination.value.page,
         limit: pagination.value.limit
       }
     })
-    console.log('TASKS DATA RECEIVED:', data)
+    if (import.meta.dev) console.log('TASKS DATA RECEIVED:', data)
     tasks.value = data.tasks || []
     total.value = data.total || 0
-    console.log('TASKS STORED:', tasks.value)
+    if (import.meta.dev) console.log('TASKS STORED:', tasks.value)
   } catch (error) {
-    console.error('Error fetching tasks:', error)
+    if (import.meta.dev) console.error('Error fetching tasks:', error)
   } finally {
     loading.value = false
   }

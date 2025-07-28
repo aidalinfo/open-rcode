@@ -55,7 +55,7 @@ onMounted(async () => {
     }
   } catch (error) {
     // L'utilisateur n'est pas connecté, rester sur la page de login
-    console.error('Session verification failed:', error)
+    if (import.meta.dev) console.error('Session verification failed:', error)
   }
 })
 
