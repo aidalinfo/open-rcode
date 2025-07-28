@@ -59,21 +59,21 @@ export class ContainerSetup {
     // Si aucun provider spécifié ou si le token requis n'est pas disponible,
     // utiliser le premier token disponible
     if (aiProvider === 'auto' || !this.isTokenAvailable(user, aiProvider)) {
-      console.log(`Auto-detecting AI provider for user ${task.userId}`)
+      if (process.dev) console.log(`Auto-detecting AI provider for user ${task.userId}`)
       
       // Priorité : claude-oauth > anthropic-api > gemini-cli
       if (user.claudeOAuthToken) {
         aiProvider = 'claude-oauth'
         requiredToken = decrypt(user.claudeOAuthToken)
-        console.log(`✓ Using Claude OAuth token`)
+        if (process.dev) console.log(`✓ Using Claude OAuth token`)
       } else if (user.anthropicKey) {
         aiProvider = 'anthropic-api'
         requiredToken = decrypt(user.anthropicKey)
-        console.log(`✓ Using Anthropic API key`)
+        if (process.dev) console.log(`✓ Using Anthropic API key`)
       } else if (user.geminiApiKey) {
         aiProvider = 'gemini-cli'
         requiredToken = decrypt(user.geminiApiKey)
-        console.log(`✓ Using Gemini API key`)
+        if (process.dev) console.log(`✓ Using Gemini API key`)
       } else {
         throw new Error(`User ${task.userId} has not configured any AI provider tokens. Please configure at least one of: Anthropic API key, Claude OAuth token, or Gemini API key.`)
       }
@@ -178,7 +178,7 @@ export class ContainerSetup {
   }
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
-    console.log(`Waiting for container ${containerId} to be ready...`)
+    if (process.dev) console.log(`Waiting for container ${containerId} to be ready...`)
     
     const startTime = Date.now()
     const checkInterval = 5000
@@ -188,21 +188,21 @@ export class ContainerSetup {
         const logs = await this.containerManager.getContainerLogs(containerId, 50)
         
         if (logs.includes('Environment ready') || logs.includes('Dropping you into a bash shell')) {
-          console.log(`Container ${containerId} is ready!`)
+          if (process.dev) console.log(`Container ${containerId} is ready!`)
           await new Promise(resolve => setTimeout(resolve, 5000))
           return
         }
         
-        console.log(`Container still setting up... (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`)
+        if (process.dev) console.log(`Container still setting up... (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
         
       } catch (error: any) {
-        console.warn(`Error checking container readiness: ${error.message}`)
+        if (process.dev) console.warn(`Error checking container readiness: ${error.message}`)
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
     }
     
-    console.warn(`Container ${containerId} setup timeout after ${maxWaitTime / 1000}s, proceeding anyway...`)
+    if (process.dev) console.warn(`Container ${containerId} setup timeout after ${maxWaitTime / 1000}s, proceeding anyway...`)
   }
 
   private async ensureDockerImage(imageName: string): Promise<void> {

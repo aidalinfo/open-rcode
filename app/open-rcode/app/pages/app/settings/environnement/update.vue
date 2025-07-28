@@ -345,7 +345,7 @@ const fetchBranches = async (repositoryFullName: string) => {
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
   } catch (error) {
-    console.error('Error fetching branches:', error)
+    if (import.meta.dev) console.error('Error fetching branches:', error)
     toast.add({
       title: 'Error',
       description: 'Unable to fetch repository branches',
@@ -369,13 +369,15 @@ const fetchEnvironment = async () => {
     const data = await $fetch(`/api/environments/${environmentId.value}`)
     currentEnvironment.value = data.environment
     
-    console.log('ENVIRONMENT DATA RECEIVED:')
-    console.log('- Full data:', data)
-    console.log('- environment:', data.environment)
-    console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
-    console.log('- model:', data.environment.model, typeof data.environment.model)
-    console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
-    console.log('- environmentVariables:', data.environment.environmentVariables)
+    if (import.meta.dev) {
+      console.log('ENVIRONMENT DATA RECEIVED:')
+      console.log('- Full data:', data)
+      console.log('- environment:', data.environment)
+      console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
+      console.log('- model:', data.environment.model, typeof data.environment.model)
+      console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
+      console.log('- environmentVariables:', data.environment.environmentVariables)
+    }
     
     // Fetch repository branches
     await fetchBranches(data.environment.repositoryFullName)

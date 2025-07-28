@@ -26,7 +26,7 @@ export class RepositoryCloner {
     const workspaceDir = customWorkspaceDir || `/tmp/workspace-${Date.now()}/${environment.repository || 'ccweb'}`
     const defaultBranch = environment.defaultBranch || 'main'
 
-    console.log(`Cloning repository ${environment.repositoryFullName} (branch: ${defaultBranch}) with GitHub App token in container`)
+    if (process.dev) console.log(`Cloning repository ${environment.repositoryFullName} (branch: ${defaultBranch}) with GitHub App token in container`)
     
     const cloneScript = `
       mkdir -p "${workspaceDir}"
@@ -45,7 +45,7 @@ export class RepositoryCloner {
       throw new Error(`Git clone failed with exit code ${result.exitCode}: ${result.stderr}`)
     }
 
-    console.log(`Repository cloned successfully in container at ${workspaceDir}/repo`)
+    if (process.dev) console.log(`Repository cloned successfully in container at ${workspaceDir}/repo`)
 
     await this.configureGitInContainer(user, containerId, `${workspaceDir}/repo`)
   }
@@ -65,7 +65,7 @@ export class RepositoryCloner {
         }
       }
       catch (error) {
-        console.warn(`Error checking installation ${installationId}:`, error)
+        if (process.dev) console.warn(`Error checking installation ${installationId}:`, error)
         continue
       }
     }

@@ -12,9 +12,9 @@ export const connectToDatabase = async () => {
     
     await mongoose.connect(mongoUri)
     isConnected = true
-    console.log('Connected to MongoDB')
+    if (process.dev) console.log('Connected to MongoDB')
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error)
+    if (process.dev) console.error('Error connecting to MongoDB:', error)
     throw error
   }
 }
@@ -27,9 +27,9 @@ export const disconnectFromDatabase = async () => {
   try {
     await mongoose.disconnect()
     isConnected = false
-    console.log('Disconnected from MongoDB')
+    if (process.dev) console.log('Disconnected from MongoDB')
   } catch (error) {
-    console.error('Error disconnecting from MongoDB:', error)
+    if (process.dev) console.error('Error disconnecting from MongoDB:', error)
     throw error
   }
 }

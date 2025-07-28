@@ -5,9 +5,11 @@ export async function generateInstallationToken(installationId: string): Promise
   const appId = process.env.GITHUB_APP_ID
   const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
   
-  console.log('App ID:', appId)
-  console.log('Private key exists:', !!privateKey)
-  console.log('Installation ID:', installationId)
+  if (process.dev) {
+    console.log('App ID:', appId)
+    console.log('Private key exists:', !!privateKey)
+    console.log('Installation ID:', installationId)
+  }
   
   if (!appId || !privateKey) {
     throw new Error('GitHub App credentials not configured')
@@ -21,10 +23,10 @@ export async function generateInstallationToken(installationId: string): Promise
     })
     
     const installationAuthentication = await auth({ type: 'installation' })
-    console.log('Token generated successfully')
+    if (process.dev) console.log('Token generated successfully')
     return installationAuthentication.token
   } catch (error) {
-    console.error('Error generating installation token:', error)
+    if (process.dev) console.error('Error generating installation token:', error)
     throw error
   }
 }

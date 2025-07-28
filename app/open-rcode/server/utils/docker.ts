@@ -134,7 +134,7 @@ export class DockerManager {
       await this.docker.ping()
       return true
     } catch (error) {
-      console.error('Docker is not available:', error)
+      if (process.dev) console.error('Docker is not available:', error)
       return false
     }
   }
@@ -223,11 +223,11 @@ export class DockerManager {
       await container.start()
       
       const containerInfo = await container.inspect()
-      console.log(`Container created and started: ${containerInfo.Id}`)
+      if (process.dev) console.log(`Container created and started: ${containerInfo.Id}`)
       
       return containerInfo.Id
     } catch (error) {
-      console.error('Error creating container:', error)
+      if (process.dev) console.error('Error creating container:', error)
       throw new Error(`Failed to create container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -299,7 +299,7 @@ export class DockerManager {
 
       return { stdout, stderr, exitCode }
     } catch (error) {
-      console.error('Error executing command in container:', error)
+      if (process.dev) console.error('Error executing command in container:', error)
       throw new Error(`Failed to execute command: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -311,9 +311,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.stop({ t: timeout })
-      console.log(`Container stopped: ${containerId}`)
+      if (process.dev) console.log(`Container stopped: ${containerId}`)
     } catch (error) {
-      console.error('Error stopping container:', error)
+      if (process.dev) console.error('Error stopping container:', error)
       throw new Error(`Failed to stop container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -325,9 +325,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.remove({ force })
-      console.log(`Container removed: ${containerId}`)
+      if (process.dev) console.log(`Container removed: ${containerId}`)
     } catch (error) {
-      console.error('Error removing container:', error)
+      if (process.dev) console.error('Error removing container:', error)
       throw new Error(`Failed to remove container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -354,7 +354,7 @@ export class DockerManager {
         labels: data.Config.Labels
       }
     } catch (error) {
-      console.error('Error getting container info:', error)
+      if (process.dev) console.error('Error getting container info:', error)
       return null
     }
   }
@@ -386,7 +386,7 @@ export class DockerManager {
         labels: container.Labels
       }))
     } catch (error) {
-      console.error('Error listing containers:', error)
+      if (process.dev) console.error('Error listing containers:', error)
       return []
     }
   }
@@ -406,7 +406,7 @@ export class DockerManager {
       
       return stream.toString()
     } catch (error) {
-      console.error('Error getting container logs:', error)
+      if (process.dev) console.error('Error getting container logs:', error)
       throw new Error(`Failed to get container logs: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -431,9 +431,9 @@ export class DockerManager {
       pack.finalize()
       
       await container.putArchive(pack, { path: destPath })
-      console.log(`Files copied to container: ${sourcePath} -> ${destPath}`)
+      if (process.dev) console.log(`Files copied to container: ${sourcePath} -> ${destPath}`)
     } catch (error) {
-      console.error('Error copying files to container:', error)
+      if (process.dev) console.error('Error copying files to container:', error)
       throw new Error(`Failed to copy files to container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -445,9 +445,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.restart({ t: timeout })
-      console.log(`Container restarted: ${containerId}`)
+      if (process.dev) console.log(`Container restarted: ${containerId}`)
     } catch (error) {
-      console.error('Error restarting container:', error)
+      if (process.dev) console.error('Error restarting container:', error)
       throw new Error(`Failed to restart container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -466,14 +466,14 @@ export class DockerManager {
           await this.removeContainer(container.id, true)
           cleanedCount++
         } catch (error) {
-          console.error(`Failed to remove container ${container.id}:`, error)
+          if (process.dev) console.error(`Failed to remove container ${container.id}:`, error)
         }
       }
       
-      console.log(`Cleaned up ${cleanedCount} containers`)
+      if (process.dev) console.log(`Cleaned up ${cleanedCount} containers`)
       return cleanedCount
     } catch (error) {
-      console.error('Error cleaning up containers:', error)
+      if (process.dev) console.error('Error cleaning up containers:', error)
       return 0
     }
   }

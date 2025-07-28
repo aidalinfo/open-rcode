@@ -23,9 +23,9 @@ export class ContainerCleanup {
       task.dockerId = null
       await task.save()
 
-      console.log(`Cleaned up container and files for task ${taskId}`)
+      if (process.dev) console.log(`Cleaned up container and files for task ${taskId}`)
     } catch (error) {
-      console.error(`Error cleaning up task container for ${taskId}:`, error)
+      if (process.dev) console.error(`Error cleaning up task container for ${taskId}:`, error)
     }
   }
 
@@ -34,7 +34,7 @@ export class ContainerCleanup {
       await this.containerManager.stopContainer(containerId)
       await this.containerManager.removeContainer(containerId, true)
     } catch (error) {
-      console.warn(`Container ${containerId} may have already been removed`)
+      if (process.dev) console.warn(`Container ${containerId} may have already been removed`)
     }
   }
 
@@ -48,7 +48,7 @@ export class ContainerCleanup {
       
       await execAsync(`rm -rf ${hostWorkspaceDir}`)
     } catch (error) {
-      console.warn(`Failed to cleanup workspace directory: ${hostWorkspaceDir}`)
+      if (process.dev) console.warn(`Failed to cleanup workspace directory: ${hostWorkspaceDir}`)
     }
   }
 }

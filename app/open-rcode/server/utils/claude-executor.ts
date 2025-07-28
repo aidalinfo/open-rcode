@@ -25,7 +25,7 @@ export class ClaudeExecutor {
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
+          if (process.dev) console.log(`🤖 Claude: ${line.trim()}`)
         }
       })
     }
@@ -37,7 +37,7 @@ export class ClaudeExecutor {
     // Ajouter le paramètre --model si spécifié
     const modelParam = model ? ` --model ${model}` : ''
 
-    console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
+    if (process.dev) console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
 
     switch (aiProvider) {
       case 'anthropic-api':
@@ -194,7 +194,7 @@ PROMPT_EOF
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim()) {
-          console.log(`📋 Config: ${line.trim()}`)
+          if (process.dev) console.log(`📋 Config: ${line.trim()}`)
         }
       })
     }
@@ -219,11 +219,11 @@ PROMPT_EOF
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
 
     if (result.exitCode !== 0) {
-      console.error(`❌ Configuration script failed:`, result.stderr)
+      if (process.dev) console.error(`❌ Configuration script failed:`, result.stderr)
       throw new Error(`Configuration script failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    console.log(`✅ Configuration script completed successfully`)
+    if (process.dev) console.log(`✅ Configuration script completed successfully`)
     return result.stdout
   }
 
@@ -296,11 +296,11 @@ PROMPT_EOF
     })
 
     if (result.exitCode !== 0) {
-      console.error(`❌ Configuration script failed:`, result.stderr)
+      if (process.dev) console.error(`❌ Configuration script failed:`, result.stderr)
       throw new Error(`Configuration script failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    console.log(`✅ Configuration script output:`, result.stdout.substring(0, 500) + (result.stdout.length > 500 ? '...' : ''))
+    if (process.dev) console.log(`✅ Configuration script output:`, result.stdout.substring(0, 500) + (result.stdout.length > 500 ? '...' : ''))
     return result.stdout
   }
 
@@ -315,7 +315,7 @@ PROMPT_EOF
 
     try {
       await updateTaskStatus('running');
-      console.log(`Starting Claude workflow for task ${task._id}`);
+      if (process.dev) console.log(`Starting Claude workflow for task ${task._id}`);
 
       const environment = await EnvironmentModel.findById(task.environmentId);
       if (!environment) {
@@ -323,12 +323,12 @@ PROMPT_EOF
       }
 
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
-      console.log(`🔧 Using workspace directory: ${workspaceDir}`);
+      if (process.dev) console.log(`🔧 Using workspace directory: ${workspaceDir}`);
       const aiProvider = environment.aiProvider || 'anthropic-api';
       const model = environment.model || 'sonnet';
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
-        console.log('Executing configuration script');
+        if (process.dev) console.log('Executing configuration script');
         try {
           const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir);
           await TaskMessageModel.create({
@@ -338,9 +338,9 @@ PROMPT_EOF
             role: 'assistant',
             content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``
           });
-          console.log('Configuration script completed successfully');
+          if (process.dev) console.log('Configuration script completed successfully');
         } catch (configError: any) {
-          console.error('Configuration script failed:', configError);
+          if (process.dev) console.error('Configuration script failed:', configError);
           await TaskMessageModel.create({
             id: uuidv4(),
             userId: task.userId,
@@ -358,7 +358,7 @@ PROMPT_EOF
       let finalResult = 'Tâche terminée'
       
       if (userMessage) {
-        console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        if (process.dev) console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model})`);
         // Créer le message initial avant de commencer l'exécution
         await TaskMessageModel.create({
           id: uuidv4(),
@@ -381,13 +381,13 @@ PROMPT_EOF
         model: model,
         taskId: task._id
       });
-      console.log(`CountRequest created for task ${task._id}`);
+      if (process.dev) console.log(`CountRequest created for task ${task._id}`);
 
       await updateTaskStatus('completed');
-      console.log(`Claude workflow completed for task ${task._id}`);
+      if (process.dev) console.log(`Claude workflow completed for task ${task._id}`);
 
     } catch (error: any) {
-      console.error(`Error in Claude workflow for task ${task._id}:`, error);
+      if (process.dev) console.error(`Error in Claude workflow for task ${task._id}:`, error);
       await updateTaskStatus('failed', error.message);
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -403,10 +403,10 @@ PROMPT_EOF
       const resourceTypeCapitalized = isKubernetes ? 'Pod' : 'Conteneur Docker';
       
       // Nettoyer le conteneur/pod après l'exécution (succès ou échec)
-      console.log(`Cleaning up ${resourceType} for task ${task._id}`);
+      if (process.dev) console.log(`Cleaning up ${resourceType} for task ${task._id}`);
       try {
         await this.containerManager.removeContainer(containerId, true);
-        console.log(`${resourceTypeCapitalized} ${containerId} cleaned up successfully`);
+        if (process.dev) console.log(`${resourceTypeCapitalized} ${containerId} cleaned up successfully`);
         
         // Supprimer la référence du conteneur de la tâche
         await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
@@ -419,7 +419,7 @@ PROMPT_EOF
           content: `🧹 **Nettoyage automatique:** Le ${resourceType} a été supprimé après l'exécution de la tâche.`
         });
       } catch (cleanupError: any) {
-        console.error(`Failed to cleanup ${resourceType} ${containerId}:`, cleanupError);
+        if (process.dev) console.error(`Failed to cleanup ${resourceType} ${containerId}:`, cleanupError);
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
@@ -501,7 +501,7 @@ PROMPT_EOF
       }
       
     } catch (error) {
-      console.error('Error parsing Claude JSON output:', error)
+      if (process.dev) console.error('Error parsing Claude JSON output:', error)
       return {
         toolCalls: [],
         textMessages: [],
@@ -599,7 +599,7 @@ PROMPT_EOF
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
+          if (process.dev) console.log(`🤖 Claude: ${line.trim()}`)
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
@@ -630,7 +630,7 @@ PROMPT_EOF
                     content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
                   })
                   
-                  console.log(`💾 Tool call saved in real-time: ${content.name}`)
+                  if (process.dev) console.log(`💾 Tool call saved in real-time: ${content.name}`)
                 }
               }
             }
@@ -690,9 +690,9 @@ PROMPT_EOF
           model: model === 'claude-sonnet-4' ? 'sonnet' : model,
           aiProvider: aiProvider
         })
-        console.log(`UserCost created: $${parsedOutput.totalCostUsd} for task ${task._id}`)
+        if (process.dev) console.log(`UserCost created: $${parsedOutput.totalCostUsd} for task ${task._id}`)
       } catch (costError) {
-        console.error('Error creating UserCost document:', costError)
+        if (process.dev) console.error('Error creating UserCost document:', costError)
       }
     }
     

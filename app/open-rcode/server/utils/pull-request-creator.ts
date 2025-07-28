@@ -15,7 +15,7 @@ export class PullRequestCreator {
 
   async createFromChanges(containerId: string, task: any, summary: string): Promise<void> {
     try {
-      console.log(`Creating pull request for task ${task._id}`)
+      if (process.dev) console.log(`Creating pull request for task ${task._id}`)
       
       const environment = await EnvironmentModel.findById(task.environmentId)
       if (!environment) {
@@ -91,10 +91,10 @@ Les modifications ont été poussées et une Pull Request a été créée automa
         updatedAt: new Date()
       })
       
-      console.log(`Pull request created successfully for task ${task._id}`)
+      if (process.dev) console.log(`Pull request created successfully for task ${task._id}`)
       
     } catch (error) {
-      console.error(`Error creating pull request for task ${task._id}:`, error)
+      if (process.dev) console.error(`Error creating pull request for task ${task._id}:`, error)
       
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -171,7 +171,7 @@ EOF
           return await generateInstallationToken(installationId)
         }
       } catch (error) {
-        console.warn(`Error checking installation ${installationId}:`, error)
+        if (process.dev) console.warn(`Error checking installation ${installationId}:`, error)
         continue
       }
     }
@@ -251,7 +251,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
     }
     
     const prData = await response.json()
-    console.log(`Pull request created: ${prData.html_url}`)
+    if (process.dev) console.log(`Pull request created: ${prData.html_url}`)
     return prData.html_url
   }
 }
