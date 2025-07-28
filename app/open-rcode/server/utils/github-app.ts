@@ -32,18 +32,34 @@ export async function generateInstallationToken(installationId: string): Promise
 export async function getInstallationRepositories(installationId: string) {
   const installationToken = await generateInstallationToken(installationId)
   
-  // Récupérer les repositories de l'installation (organisations + utilisateur)
-  const installationResponse = await $fetch(`https://api.github.com/installation/repositories`, {
-    headers: {
-      'Authorization': `token ${installationToken}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'open-rcode-app'
-    }
-  })
+  let allRepositories: any[] = []
+  let page = 1
+  let hasMore = true
+  let totalCount = 0
+  
+  // Récupérer tous les repositories avec pagination
+  while (hasMore) {
+    const installationResponse = await $fetch(`https://api.github.com/installation/repositories?per_page=100&page=${page}`, {
+      headers: {
+        'Authorization': `token ${installationToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'open-rcode-app'
+      }
+    })
+    
+    allRepositories = allRepositories.concat(installationResponse.repositories)
+    totalCount = installationResponse.total_count
+    
+    // Vérifier s'il y a d'autres pages
+    hasMore = allRepositories.length < totalCount
+    page++
+  }
+  
+  console.log(`Fetched ${allRepositories.length} repositories out of ${totalCount} for installation ${installationId}`)
   
   return {
-    repositories: installationResponse.repositories,
-    total_count: installationResponse.total_count
+    repositories: allRepositories,
+    total_count: totalCount
   }
 }
 
