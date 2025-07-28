@@ -63,7 +63,7 @@ const items = computed(() => [{
         <UColorModeButton />
 
         <UButton
-          to="https://github.com/nuxt-ui-pro/starter"
+          to="https://github.com/aidalinfo/open-rcode"
           target="_blank"
           icon="i-simple-icons-github"
           aria-label="GitHub"
@@ -96,7 +96,7 @@ const items = computed(() => [{
 
       <template #right>
         <UButton
-          to="https://github.com/nuxt-ui-pro/starter"
+          to="https://github.com/aidalinfo/open-rcode"
           target="_blank"
           icon="i-simple-icons-github"
           aria-label="GitHub"
