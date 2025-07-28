@@ -10,58 +10,14 @@
           <UInput v-model="state.name" placeholder="Nom du kanban" />
         </UFormGroup>
 
-        <UFormGroup label="Description" name="description" class="mt-4">
-          <UTextarea v-model="state.description" placeholder="Description du kanban" rows="4" />
-        </UFormGroup>
-
-        <UFormGroup label="Colonnes" name="columns" class="mt-4" required>
-          <div class="space-y-2">
-            <div v-for="(column, index) in state.columns" :key="index" class="flex gap-2">
-              <UInput 
-                v-model="column.name" 
-                placeholder="Nom de la colonne"
-                class="flex-1"
-              />
-              <UInput 
-                v-model="column.order" 
-                type="number"
-                placeholder="Ordre"
-                class="w-24"
-              />
-              <UButton 
-                icon="i-heroicons-trash" 
-                color="red" 
-                variant="soft"
-                @click="removeColumn(index)"
-                :disabled="state.columns.length <= 1"
-              />
-            </div>
-            <UButton 
-              icon="i-heroicons-plus" 
-              color="gray" 
-              variant="soft"
-              @click="addColumn"
-              block
-            >
-              Ajouter une colonne
-            </UButton>
-          </div>
-        </UFormGroup>
-
-        <UFormGroup label="Couleur" name="color" class="mt-4">
-          <UInput 
-            v-model="state.color" 
-            type="color"
-            class="w-24"
-          />
-        </UFormGroup>
-
-        <UFormGroup label="Statut" name="status" class="mt-4">
+        <UFormGroup label="Environnement" name="environmentId" class="mt-4" required>
           <USelect 
-            v-model="state.status" 
-            :options="statusOptions"
+            v-model="state.environmentId" 
+            :options="environments"
             option-attribute="label"
             value-attribute="value"
+            placeholder="Sélectionner un environnement"
+            :loading="loadingEnvironments"
           />
         </UFormGroup>
 
@@ -87,44 +43,45 @@ const toast = useToast()
 
 const schema = z.object({
   name: z.string().min(1, 'Le nom est requis'),
-  description: z.string().optional(),
-  columns: z.array(z.object({
-    name: z.string().min(1, 'Le nom de la colonne est requis'),
-    order: z.number().int().min(0)
-  })).min(1, 'Au moins une colonne est requise'),
-  color: z.string().optional(),
-  status: z.enum(['active', 'archived']).default('active')
+  environmentId: z.string().min(1, 'L\'environnement est requis')
 })
 
 type Schema = z.output<typeof schema>
 
 const state = reactive<Schema>({
   name: '',
-  description: '',
-  columns: [
-    { name: 'À faire', order: 0 },
-    { name: 'En cours', order: 1 },
-    { name: 'Terminé', order: 2 }
-  ],
-  color: '#3b82f6',
-  status: 'active'
+  environmentId: ''
 })
 
-const statusOptions = [
-  { label: 'Actif', value: 'active' },
-  { label: 'Archivé', value: 'archived' }
-]
-
 const loading = ref(false)
+const loadingEnvironments = ref(false)
+const environments = ref<Array<{ label: string; value: string }>>([])
 
-const addColumn = () => {
-  const maxOrder = Math.max(...state.columns.map(c => c.order), -1)
-  state.columns.push({ name: '', order: maxOrder + 1 })
+// Charger les environnements
+const loadEnvironments = async () => {
+  loadingEnvironments.value = true
+  
+  try {
+    const response = await $fetch('/api/environments')
+    environments.value = response.environments.map((env: any) => ({
+      label: `${env.name} (${env.repositoryFullName})`,
+      value: env.id
+    }))
+  } catch (error) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de charger les environnements',
+      color: 'red'
+    })
+  } finally {
+    loadingEnvironments.value = false
+  }
 }
 
-const removeColumn = (index: number) => {
-  state.columns.splice(index, 1)
-}
+// Charger les environnements au montage
+onMounted(() => {
+  loadEnvironments()
+})
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   loading.value = true
