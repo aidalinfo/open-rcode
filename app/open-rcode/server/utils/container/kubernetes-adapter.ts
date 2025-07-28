@@ -19,7 +19,7 @@ export class KubernetesAdapter extends BaseContainerManager {
 
   async createContainer(options: BaseContainerOptions): Promise<string> {
     const kubernetesOptions = {
-      image: options.image, // L'image sera forcée à rg.fr-par.scw.cloud/aidalinfo-public/ccweb:latest dans KubernetesManager
+      image: options.image, // L'image sera forcée à ghcr.io/aidalinfo/open-rcoder-worker:latest dans KubernetesManager
       name: options.name,
       workdir: options.workdir,
       environment: options.environment,
