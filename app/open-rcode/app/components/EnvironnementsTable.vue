@@ -37,6 +37,7 @@
       :total="total"
       show-refresh
       show-pagination
+      :show-column-toggle="false"
       @refresh="handleRefresh"
       @update:page="handlePageUpdate"
     />

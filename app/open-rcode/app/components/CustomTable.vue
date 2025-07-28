@@ -125,12 +125,19 @@ const hiddenColumns = ref<Set<string>>(new Set())
 
 const visibleColumns = computed(() => {
   return props.columns.filter(column => {
-    const key = column.accessorKey || column.id
+    const key = column.id || column.accessorKey
     return key && !hiddenColumns.value.has(key)
   })
 })
 
 const paginatedData = computed(() => {
+  // Si on a un total défini, cela signifie qu'on utilise la pagination côté serveur
+  // Dans ce cas, ne pas faire de pagination côté client
+  if (props.total) {
+    return props.data
+  }
+  
+  // Sinon, faire la pagination côté client (comportement original)
   if (!props.pagination || !props.showPagination) {
     return props.data
   }
@@ -143,11 +150,11 @@ const paginatedData = computed(() => {
 
 const columnToggleItems = computed(() => {
   return props.columns.map((column) => ({
-    label: upperFirst(column.accessorKey || column.id || ''),
+    label: upperFirst(column.header || column.id || column.accessorKey || ''),
     type: 'checkbox' as const,
-    checked: isColumnVisible(column.accessorKey || column.id || ''),
+    checked: isColumnVisible(column.id || column.accessorKey || ''),
     onUpdateChecked() {
-      toggleColumnVisibility(column.accessorKey || column.id || '')
+      toggleColumnVisibility(column.id || column.accessorKey || '')
     },
     onSelect(e?: Event) { 
       e?.preventDefault() 

@@ -20,72 +20,29 @@
       </p>
     </div>
 
-    <UTable
+    <CustomTable
       v-else
       :data="tasks"
       :columns="columns"
-      :loading="loading"
-      class="w-full"
-    >
-      <template #name-cell="{ row }">
-        <div class="font-medium text-gray-900 dark:text-white truncate max-w-xs">
-          {{ row.original.name }}
-        </div>
-      </template>
-
-      <template #status-cell="{ row }">
-        <UBadge
-          :color="getStatusColor(row.original)"
-          :variant="row.original.status === 'completed' || row.original.status === 'failed' ? 'solid' : 'soft'"
-          size="xs"
-        >
-          {{ getStatusText(row.original) }}
-        </UBadge>
-      </template>
-
-      <template #environment-cell="{ row }">
-        <div class="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
-          {{ row.original.environment?.name || 'N/A' }}
-        </div>
-      </template>
-
-      <template #createdAt-cell="{ row }">
-        <div class="text-sm text-gray-600 dark:text-gray-400">
-          {{ formatDate(row.original.createdAt) }}
-        </div>
-      </template>
-
-      <template #pr-cell="{ row }">
-        <div v-if="row.original.pr">
-          <UButton
-            :to="row.original.pr.url"
-            target="_blank"
-            size="xs"
-            variant="ghost"
-            icon="i-heroicons-arrow-top-right-on-square"
-          >
-            PR #{{ row.original.pr.number }}
-          </UButton>
-        </div>
-        <div v-else class="text-sm text-gray-400">
-          -
-        </div>
-      </template>
-
-      <template #actions-cell="{ row }">
-        <UButton
-          size="xs"
-          variant="ghost"
-          icon="i-lucide-eye"
-          @click="viewTask(row.original._id)"
-        />
-      </template>
-    </UTable>
+      :pagination="pagination"
+      :total="total"
+      show-refresh
+      show-pagination
+      :show-column-toggle="false"
+      @refresh="fetchTasks"
+      @update:page="handlePageUpdate"
+    />
   </UCard>
 </template>
 
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
+import type { TableColumn } from '#ui/types'
+import type { Row } from '@tanstack/vue-table'
+
 const router = useRouter()
+const UButton = resolveComponent('UButton')
+const UBadge = resolveComponent('UBadge')
 
 interface Task {
   _id: string
@@ -107,51 +64,110 @@ interface Task {
 // Reactive states
 const tasks = ref<Task[]>([])
 const loading = ref(false)
+const total = ref(0)
+const pagination = ref({
+  page: 1,
+  limit: 10
+})
 
 // Table configuration
-const columns = [
+const columns = computed((): TableColumn<Task>[] => [
   {
     id: 'actions',
-    header: ''
+    header: '',
+    cell: ({ row }: { row: Row<Task> }) => {
+      return h(UButton, {
+        size: 'xs',
+        variant: 'ghost',
+        icon: 'i-lucide-eye',
+        onClick: () => viewTask(row.original._id)
+      })
+    }
   },
   {
     id: 'name',
-    header: 'Task'
+    accessorKey: 'name',
+    header: 'Task',
+    cell: ({ row }: { row: Row<Task> }) => {
+      return h('div', { class: 'font-medium text-gray-900 dark:text-white truncate max-w-xs' }, 
+        row.original.name
+      )
+    }
   },
   {
     id: 'status',
-    header: 'Status'
+    accessorKey: 'status',
+    header: 'Status',
+    cell: ({ row }: { row: Row<Task> }) => {
+      return h(UBadge, {
+        color: getStatusColor(row.original),
+        variant: row.original.status === 'completed' || row.original.status === 'failed' ? 'solid' : 'soft',
+        size: 'xs'
+      }, () => getStatusText(row.original))
+    }
   },
   {
     id: 'environment',
-    header: 'Environment'
+    header: 'Environment',
+    cell: ({ row }: { row: Row<Task> }) => {
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' }, 
+        row.original.environment?.name || 'N/A'
+      )
+    }
   },
   {
     id: 'createdAt',
-    header: 'Created on'
+    accessorKey: 'createdAt',
+    header: 'Created on',
+    cell: ({ row }: { row: Row<Task> }) => {
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+        formatDate(row.original.createdAt)
+      )
+    }
   },
   {
     id: 'pr',
-    header: 'Pull Request'
+    header: 'Pull Request',
+    cell: ({ row }: { row: Row<Task> }) => {
+      if (row.original.pr) {
+        return h(UButton, {
+          to: row.original.pr.url,
+          target: '_blank',
+          size: 'xs',
+          variant: 'ghost',
+          icon: 'i-heroicons-arrow-top-right-on-square'
+        }, () => `PR #${row.original.pr.number}`)
+      }
+      return h('div', { class: 'text-sm text-gray-400' }, '-')
+    }
   }
-]
+])
 
 // Methods
 const fetchTasks = async () => {
   loading.value = true
   try {
     console.log('FETCHING TASKS...')
-    const data = await $fetch('/api/tasks')
+    const data = await $fetch('/api/tasks', {
+      query: {
+        page: pagination.value.page,
+        limit: pagination.value.limit
+      }
+    })
     console.log('TASKS DATA RECEIVED:', data)
-    console.log('- tasks array:', data.tasks)
-    console.log('- tasks length:', data.tasks?.length || 0)
     tasks.value = data.tasks || []
+    total.value = data.total || 0
     console.log('TASKS STORED:', tasks.value)
   } catch (error) {
     console.error('Error fetching tasks:', error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageUpdate = (page: number) => {
+  pagination.value.page = page
+  fetchTasks()
 }
 
 const viewTask = (taskId: string) => {
