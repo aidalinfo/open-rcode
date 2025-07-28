@@ -32,6 +32,11 @@ const items = computed(() => [{
   icon: 'i-heroicons-chart-bar',
   active: route.path.startsWith('/app/dashboard')
 }, {
+  label: 'Kanban',
+  to: '/app/kanban',
+  icon: 'i-heroicons-view-columns',
+  active: route.path.startsWith('/app/kanban')
+}, {
   label: 'Settings',
   to: '/app/settings',
   icon: 'i-heroicons-cog-6-tooth',
