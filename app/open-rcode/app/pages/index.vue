@@ -41,6 +41,9 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: 'no-connected',
+})
 const route = useRoute()
 const router = useRouter()
 const isLoading = ref(false)

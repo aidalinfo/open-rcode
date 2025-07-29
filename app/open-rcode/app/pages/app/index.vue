@@ -41,7 +41,7 @@ const toast = useToast()
 const router = useRouter()
 
 definePageMeta({
-  middleware: 'auth'
+  middleware: 'auth',
 })
 
 // États réactifs

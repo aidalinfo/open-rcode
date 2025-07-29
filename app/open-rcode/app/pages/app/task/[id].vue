@@ -204,11 +204,6 @@ const fetchTaskAndMessages = async () => {
 onMounted(() => {
   fetchTaskAndMessages()
   pollInterval = setInterval(fetchTaskAndMessages, 3000) // Poll every 3 seconds
-  
-  // Scroll to bottom of page
-  nextTick(() => {
-    window.scrollTo(0, document.body.scrollHeight)
-  })
 })
 
 onUnmounted(() => {
