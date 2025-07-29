@@ -41,6 +41,9 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: 'no-connected',
+})
 const route = useRoute()
 const isLoading = ref(false)
 const error = computed(() => route.query.error === 'auth_failed')

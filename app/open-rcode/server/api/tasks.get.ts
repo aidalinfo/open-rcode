@@ -32,10 +32,20 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Récupérer les tâches de l'utilisateur
+    // Récupérer les paramètres de pagination
+    const query = getQuery(event)
+    const page = parseInt(query.page as string) || 1
+    const limit = parseInt(query.limit as string) || 10
+    const skip = (page - 1) * limit
+    
+    // Récupérer le nombre total de tâches pour la pagination
+    const total = await TaskModel.countDocuments({ userId: user.githubId })
+    
+    // Récupérer les tâches de l'utilisateur avec pagination
     const tasks = await TaskModel.find({ userId: user.githubId })
       .sort({ createdAt: -1 })
-      .limit(50)
+      .skip(skip)
+      .limit(limit)
       .exec()
     
     // Récupérer tous les environnements en une seule requête
@@ -78,7 +88,11 @@ export default defineEventHandler(async (event) => {
     })
     
     return {
-      tasks: formattedTasks
+      tasks: formattedTasks,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     }
   } catch (error) {
     console.error('Error fetching tasks:', error)

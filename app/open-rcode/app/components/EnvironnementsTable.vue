@@ -29,86 +29,30 @@
       </p>
     </div>
 
-    <UTable
+    <CustomTable
       v-else
       :data="environments"
       :columns="columns"
-      :loading="loading"
-      class="w-full"
-    >
-      <template #name-cell="{ row }">
-        <div class="flex items-center gap-3">
-          <div class="font-medium text-gray-900 dark:text-white">
-            {{ row.original.name }}
-          </div>
-          <UBadge :color="getRuntimeColor(row.original.runtime)" size="xs">
-            {{ row.original.runtime }}
-          </UBadge>
-        </div>
-      </template>
-
-      <template #repository-cell="{ row }">
-        <div class="text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs">
-          {{ row.original.repositoryFullName }}
-        </div>
-      </template>
-
-      <template #defaultBranch-cell="{ row }">
-        <UBadge variant="soft" size="xs" color="neutral">
-          {{ row.original.defaultBranch || 'main' }}
-        </UBadge>
-      </template>
-
-      <template #aiProvider-cell="{ row }">
-        <div class="flex items-center gap-2">
-          <UIcon 
-            :name="getAiProviderIcon(row.original.aiProvider)" 
-            :class="getAiProviderColor(row.original.aiProvider)"
-            class="w-4 h-4"
-          />
-          <span class="text-sm">{{ getAiProviderLabel(row.original.aiProvider) }}</span>
-        </div>
-      </template>
-
-      <template #variables-cell="{ row }">
-        <div class="text-sm text-gray-600 dark:text-gray-400">
-          {{ row.original.environmentVariables?.length || 0 }} variable{{ (row.original.environmentVariables?.length || 0) > 1 ? 's' : '' }}
-        </div>
-      </template>
-
-      <template #createdAt-cell="{ row }">
-        <div class="text-sm text-gray-600 dark:text-gray-400">
-          {{ formatDate(row.original.createdAt) }}
-        </div>
-      </template>
-
-      <template #actions-cell="{ row }">
-        <div class="flex items-center gap-2">
-          <UButton
-            :to="`/app/settings/environnement/update?edit=${row.original.id}`"
-            variant="ghost"
-            size="xs"
-            icon="i-heroicons-pencil-square"
-          >
-            Edit
-          </UButton>
-          <UButton
-            @click="deleteEnvironment(row.original.id)"
-            color="error"
-            variant="ghost"
-            size="xs"
-            icon="i-heroicons-trash"
-          >
-            Delete
-          </UButton>
-        </div>
-      </template>
-    </UTable>
+      :pagination="pagination"
+      :total="total"
+      show-refresh
+      show-pagination
+      :show-column-toggle="false"
+      @refresh="handleRefresh"
+      @update:page="handlePageUpdate"
+    />
   </UCard>
 </template>
 
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
+import type { TableColumn } from '#ui/types'
+import type { Row } from '@tanstack/vue-table'
+
 const toast = useToast()
+const UButton = resolveComponent('UButton')
+const UBadge = resolveComponent('UBadge')
+const UIcon = resolveComponent('UIcon')
 
 interface Environment {
   id: string
@@ -124,48 +68,135 @@ interface Environment {
 }
 
 // Props
-defineProps<{
+const props = defineProps<{
   environments: Environment[]
   loading: boolean
+  total?: number
+  page?: number
+  limit?: number
 }>()
 
 // Emits
 const emit = defineEmits<{
   refresh: []
   delete: [id: string]
+  'update:page': [page: number]
 }>()
 
+// Reactive state
+const pagination = ref({
+  page: props.page || 1,
+  limit: props.limit || 10
+})
+
+// Watch for prop changes
+watch(() => props.page, (newPage) => {
+  if (newPage) pagination.value.page = newPage
+})
+
+watch(() => props.limit, (newLimit) => {
+  if (newLimit) pagination.value.limit = newLimit
+})
+
+// Methods
+const handleRefresh = () => {
+  emit('refresh')
+}
+
+const handlePageUpdate = (page: number) => {
+  pagination.value.page = page
+  emit('update:page', page)
+}
+
 // Table configuration
-const columns = [
+const columns = computed((): TableColumn<Environment>[] => [
   {
-    id: 'name',
-    header: 'Name'
+    accessorKey: 'name',
+    header: 'Name',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h('div', { class: 'flex items-center gap-3' }, [
+        h('div', { class: 'font-medium text-gray-900 dark:text-white' }, row.original.name),
+        h(UBadge, {
+          color: getRuntimeColor(row.original.runtime),
+          size: 'xs'
+        }, () => row.original.runtime)
+      ])
+    }
   },
   {
-    id: 'repository',
-    header: 'Repository'
+    accessorKey: 'repositoryFullName',
+    header: 'Repository',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' }, 
+        row.original.repositoryFullName
+      )
+    }
   },
   {
-    id: 'defaultBranch',
-    header: 'Branch'
+    accessorKey: 'defaultBranch',
+    header: 'Branch',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h(UBadge, {
+        variant: 'soft',
+        size: 'xs',
+        color: 'neutral'
+      }, () => row.original.defaultBranch || 'main')
+    }
   },
   {
-    id: 'aiProvider',
-    header: 'AI Provider'
+    accessorKey: 'aiProvider',
+    header: 'AI Provider',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h(UIcon, {
+          name: getAiProviderIcon(row.original.aiProvider),
+          class: `w-4 h-4 ${getAiProviderColor(row.original.aiProvider)}`
+        }),
+        h('span', { class: 'text-sm' }, getAiProviderLabel(row.original.aiProvider))
+      ])
+    }
   },
   {
     id: 'variables',
-    header: 'Variables'
+    header: 'Variables',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      const count = row.original.environmentVariables?.length || 0
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+        `${count} variable${count > 1 ? 's' : ''}`
+      )
+    }
   },
   {
-    id: 'createdAt',
-    header: 'Created on'
+    accessorKey: 'createdAt',
+    header: 'Created on',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+        formatDate(row.original.createdAt)
+      )
+    }
   },
   {
     id: 'actions',
-    header: 'Actions'
+    header: 'Actions',
+    cell: ({ row }: { row: Row<Environment> }) => {
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h(UButton, {
+          to: `/app/settings/environnement/update?edit=${row.original.id}`,
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-heroicons-pencil-square'
+        }, () => 'Edit'),
+        h(UButton, {
+          onClick: () => deleteEnvironment(row.original.id),
+          color: 'error',
+          variant: 'ghost',
+          size: 'xs',
+          icon: 'i-heroicons-trash'
+        }, () => 'Delete')
+      ])
+    }
   }
-]
+])
 
 // Methods
 const deleteEnvironment = async (id: string) => {

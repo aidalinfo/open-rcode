@@ -193,7 +193,7 @@ const fetchTaskAndMessages = async () => {
     }
 
   } catch (err) {
-    console.error('Error fetching data:', err)
+    if (import.meta.dev) console.error('Error fetching data:', err)
     error.value = 'Unable to load task information.'
     if (pollInterval) clearInterval(pollInterval)
   } finally {

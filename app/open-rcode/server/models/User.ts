@@ -1,5 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose'
 
+export enum UserRole {
+  BASIC = 'basic',
+  PREMIUM = 'premium',
+  ADMIN = 'admin'
+}
+
 export interface User {
   githubId: string;
   username: string;
@@ -13,6 +19,7 @@ export interface User {
   anthropicKey?: string;
   claudeOAuthToken?: string;
   geminiApiKey?: string;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +39,11 @@ const userSchema = new Schema<UserDocument>({
   anthropicKey: { type: String },
   claudeOAuthToken: { type: String },
   geminiApiKey: { type: String },
+  role: { 
+    type: String, 
+    enum: Object.values(UserRole),
+    default: process.env.BASE_ROLE || UserRole.BASIC 
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

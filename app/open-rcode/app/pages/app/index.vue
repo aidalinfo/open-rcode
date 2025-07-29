@@ -41,7 +41,7 @@ const toast = useToast()
 const router = useRouter()
 
 definePageMeta({
-  middleware: 'auth'
+  middleware: 'auth',
 })
 
 // États réactifs
@@ -57,7 +57,7 @@ const fetchEnvironments = async () => {
     const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
   } catch (error) {
-    console.error('Error fetching environments:', error)
+    if (import.meta.dev) console.error('Error fetching environments:', error)
   } finally {
     isInitialLoading.value = false
   }
@@ -79,7 +79,7 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
     $fetch(`/api/tasks/${data.task.id}/container`, {
       method: 'POST'
     }).catch((error) => {
-      console.error('Error creating container in background:', error)
+      if (import.meta.dev) console.error('Error creating container in background:', error)
       // Don't show error toast if it's just a conflict (409)
       // or if the task already has a container
       if (error.statusCode !== 409) {
@@ -92,7 +92,7 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
       }
     })
   } catch (error) {
-    console.error('Error during redirect or fetch call:', error)
+    if (import.meta.dev) console.error('Error during redirect or fetch call:', error)
     toast.add({ title: 'Error', description: 'An error occurred.', color: 'error' })
     loading.value = false
   }

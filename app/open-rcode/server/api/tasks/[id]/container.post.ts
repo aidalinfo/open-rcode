@@ -40,27 +40,41 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    const result = await createTaskContainer({
-      taskId,
-      runtimeVersion: environment.runtime,
-      additionalEnvVars: environment.environmentVariables.reduce((acc: Record<string, string>, v: any) => {
-        acc[v.key] = v.value
-        return acc
-      }, {} as Record<string, string>)
-    })
+    // Lance la création du container en arrière-plan
+    setImmediate(async () => {
+      try {
+        await createTaskContainer({
+          taskId,
+          runtimeVersion: environment.runtime,
+          additionalEnvVars: environment.environmentVariables.reduce((acc: Record<string, string>, v: any) => {
+            acc[v.key] = v.value
+            return acc
+          }, {} as Record<string, string>)
+        })
 
-    await TaskMessageModel.create({
-      id: uuidv4(),
-      userId: task.userId,
-      taskId,
-      role: 'assistant',
-      content: `Container created successfully for task`
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId,
+          role: 'assistant',
+          content: `Container created successfully for task`
+        })
+      } catch (error) {
+        console.error('Background container creation failed:', error)
+        // Optionnel: créer un message d'erreur
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId,
+          role: 'assistant',
+          content: `Container creation failed: ${error instanceof Error ? error.message : String(error)}`
+        })
+      }
     })
 
     return {
       success: true,
-      container: result,
-      message: 'Container created successfully for task'
+      message: 'Container creation started in background'
     }
   } catch (error: any) {
     console.error('Error creating task container:', error)

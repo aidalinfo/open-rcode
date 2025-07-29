@@ -33,6 +33,9 @@ export default defineEventHandler(async (event) => {
     
     const query = getQuery(event)
     const repository = query.repository as string
+    const page = parseInt(query.page as string) || 1
+    const limit = parseInt(query.limit as string) || 10
+    const skip = (page - 1) * limit
     
     // Construire le filtre
     const filter: any = { userId: user.githubId }
@@ -40,8 +43,14 @@ export default defineEventHandler(async (event) => {
       filter.repositoryFullName = repository
     }
     
+    // Compter le total d'éléments
+    const total = await EnvironmentModel.countDocuments(filter)
+    
+    // Récupérer les environnements avec pagination
     const environments = await EnvironmentModel.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean()
     
     return {
@@ -61,7 +70,10 @@ export default defineEventHandler(async (event) => {
         createdAt: env.createdAt,
         updatedAt: env.updatedAt
       })),
-      total_count: environments.length
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
     }
   } catch (error) {
     console.error('Error fetching environments:', error)
