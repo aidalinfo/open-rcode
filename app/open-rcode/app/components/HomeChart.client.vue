@@ -20,11 +20,15 @@ type DataRecord = {
 
 const { width } = useElementSize(cardRef)
 
-const { data: costsData, pending } = await useFetch('/api/dashboard/costs-history', {
+const { data: costsData, pending, refresh } = await useFetch('/api/dashboard/costs-history', {
   query: {
     period: currentPeriod,
     days: currentDays
   }
+})
+
+watch([currentPeriod, currentDays], () => {
+  refresh()
 })
 
 const data = computed<DataRecord[]>(() => {
