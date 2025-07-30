@@ -188,6 +188,7 @@ KUBERNETES_CONTEXT=my-context      # Optionnel
 # Admin (optionnel)
 ADMIN_GOOGLE_API_KEY=AIza...       # Pour suggestions Gemini automatiques
 BASE_ROLE=basic                    # Rôle par défaut des nouveaux users
+HEALTH_CHECK_TIMEOUT=180000        # Timeout en ms pour les health checks (défaut: 180000 = 3 min)
 
 # UI Pro (REQUIS pour le build)
 NUXT_UI_PRO_LICENSE=xxxx-xxxx-xxxx-xxxx

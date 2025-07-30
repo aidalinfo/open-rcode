@@ -177,13 +177,14 @@ export class ContainerSetup {
     await cloner.cloneInContainer(task, environment, containerId, workspaceDir)
   }
 
-  private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
-    logger.info({ containerId, maxWaitTime }, 'Waiting for container to be ready')
+  private async waitForContainerReady(containerId: string, maxWaitTime?: number): Promise<void> {
+    const timeout = maxWaitTime || parseInt(process.env.HEALTH_CHECK_TIMEOUT || '180000', 10)
+    logger.info({ containerId, timeout }, 'Waiting for container to be ready')
     
     const startTime = Date.now()
     const checkInterval = 5000
     
-    while (Date.now() - startTime < maxWaitTime) {
+    while (Date.now() - startTime < timeout) {
       try {
         const logs = await this.containerManager.getContainerLogs(containerId, 50)
         
@@ -202,7 +203,7 @@ export class ContainerSetup {
       }
     }
     
-    logger.warn({ containerId, timeoutSeconds: maxWaitTime / 1000 }, 'Container setup timeout, proceeding anyway')
+    logger.warn({ containerId, timeoutSeconds: timeout / 1000 }, 'Container setup timeout, proceeding anyway')
   }
 
   private async ensureDockerImage(imageName: string): Promise<void> {

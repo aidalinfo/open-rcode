@@ -264,11 +264,12 @@ export class KubernetesManager {
     }
   }
 
-  private async waitForPodReady(podName: string, namespace: string, timeout: number = 900): Promise<void> {
+  private async waitForPodReady(podName: string, namespace: string, timeout?: number): Promise<void> {
+    const waitTimeout = timeout || parseInt(process.env.HEALTH_CHECK_TIMEOUT || '900000', 10) / 1000
     const startTime = Date.now()
     let lastStatus = ''
     
-    while (Date.now() - startTime < timeout * 1000) {
+    while (Date.now() - startTime < waitTimeout * 1000) {
       try {
         const podInfo = await this.getPodInfo(podName, namespace)
         if (podInfo) {
@@ -294,8 +295,8 @@ export class KubernetesManager {
       }
     }
     
-    this.logger.error({ podName, timeout }, '⏰ Timeout: Pod did not become ready')
-    throw new Error(`Pod ${podName} did not become ready within ${timeout} seconds`)
+    this.logger.error({ podName, timeout: waitTimeout }, '⏰ Timeout: Pod did not become ready')
+    throw new Error(`Pod ${podName} did not become ready within ${waitTimeout} seconds`)
   }
 
   async executeInPodWithStreaming(options: KubernetesExecuteOptions, onOutput?: (data: string) => void): Promise<ExecuteResult> {
