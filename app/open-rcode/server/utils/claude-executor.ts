@@ -469,6 +469,7 @@ PROMPT_EOF
     
     let planContent = ''
     let isInPlanMode = false
+    let totalCostUsd: number | undefined
     
     const onPlanOutput = (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
@@ -494,6 +495,12 @@ PROMPT_EOF
                   console.log('📄 Plan capturé depuis ExitPlanMode')
                 }
               }
+            }
+            
+            // Capturer le total_cost_usd du result
+            if (jsonData.type === 'result' && jsonData.total_cost_usd) {
+              totalCostUsd = jsonData.total_cost_usd
+              console.log(`💰 Coût total du mode plan: $${totalCostUsd}`)
             }
           } catch (parseError) {
             // Ignorer les erreurs de parsing
@@ -548,6 +555,11 @@ PROMPT_EOF
               }
             }
           }
+          // Capturer aussi le total_cost_usd depuis la sortie complète
+          if (jsonData.type === 'result' && jsonData.total_cost_usd && !totalCostUsd) {
+            totalCostUsd = jsonData.total_cost_usd
+            console.log(`💰 Coût total du mode plan (depuis la sortie): $${totalCostUsd}`)
+          }
         } catch (e) {
           // Ignorer
         }
@@ -559,7 +571,7 @@ PROMPT_EOF
       return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
-    // Si on a un task, sauvegarder le plan
+    // Si on a un task, sauvegarder le plan et le coût
     if (task) {
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -568,6 +580,23 @@ PROMPT_EOF
         role: 'assistant',
         content: `📋 **Plan d'exécution:**\n\n${planContent}`
       })
+      
+      // Sauvegarder le coût du mode plan si disponible
+      if (totalCostUsd) {
+        try {
+          await UserCostModel.create({
+            environmentId: task.environmentId,
+            userId: task.userId,
+            taskId: task._id,
+            costUsd: totalCostUsd,
+            model: model === 'claude-sonnet-4' ? 'sonnet' : model || 'sonnet',
+            aiProvider: aiProvider || 'anthropic-api'
+          })
+          console.log(`💰 UserCost du mode plan sauvegardé: $${totalCostUsd} pour la tâche ${task._id}`)
+        } catch (costError) {
+          console.error('Erreur lors de la création du document UserCost pour le mode plan:', costError)
+        }
+      }
     }
     
     // Phase 2: Exécuter le plan
