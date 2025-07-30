@@ -13,9 +13,14 @@
       <!-- AI Tokens -->
       <UCard>
         <template #header>
-          <h2 class="text-xl font-semibold">
-            Artificial Intelligence Tokens
-          </h2>
+          <div class="space-y-2">
+            <h2 class="text-xl font-semibold">
+              AI access
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Toutes les clés sont chiffrées en base de données
+            </p>
+          </div>
         </template>
 
         <div v-if="loadingAITokens" class="space-y-6">
