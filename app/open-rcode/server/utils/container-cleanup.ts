@@ -1,9 +1,11 @@
 import { DockerManager } from './docker'
 import { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
+import { createLogger } from './logger'
 
 export class ContainerCleanup {
   private containerManager: BaseContainerManager
+  private logger = createLogger('ContainerCleanup')
 
   constructor(containerManager: BaseContainerManager) {
     this.containerManager = containerManager
@@ -23,9 +25,9 @@ export class ContainerCleanup {
       task.dockerId = null
       await task.save()
 
-      console.log(`Cleaned up container and files for task ${taskId}`)
+      this.logger.info({ taskId }, 'Cleaned up container and files for task')
     } catch (error) {
-      console.error(`Error cleaning up task container for ${taskId}:`, error)
+      this.logger.error({ taskId, error }, 'Error cleaning up task container')
     }
   }
 
@@ -34,7 +36,7 @@ export class ContainerCleanup {
       await this.containerManager.stopContainer(containerId)
       await this.containerManager.removeContainer(containerId, true)
     } catch (error) {
-      console.warn(`Container ${containerId} may have already been removed`)
+      this.logger.warn({ containerId }, 'Container may have already been removed')
     }
   }
 
@@ -48,7 +50,7 @@ export class ContainerCleanup {
       
       await execAsync(`rm -rf ${hostWorkspaceDir}`)
     } catch (error) {
-      console.warn(`Failed to cleanup workspace directory: ${hostWorkspaceDir}`)
+      this.logger.warn({ directory: hostWorkspaceDir }, 'Failed to cleanup workspace directory')
     }
   }
 }
