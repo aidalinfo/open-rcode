@@ -63,8 +63,7 @@ export class ClaudeExecutor {
         envSetup = `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
         break
       default:
-        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
 
     const script = `
@@ -839,7 +838,7 @@ PROMPT_EOF
       case 'admin-gemini':
         return `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
       default:
-        return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
   }
 
@@ -856,7 +855,7 @@ PROMPT_EOF
       case 'admin-gemini':
         return `gemini${modelParam} -p`
       default:
-        return `claude --verbose --output-format stream-json${modelParam} -p`
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
   }
 }
