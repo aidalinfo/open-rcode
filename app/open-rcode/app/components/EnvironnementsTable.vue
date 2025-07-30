@@ -40,7 +40,93 @@
       :show-column-toggle="false"
       @refresh="handleRefresh"
       @update:page="handlePageUpdate"
-    />
+    >
+      <!-- Template personnalisé pour les cartes -->
+      <template #card-template="{ item }">
+        <div class="space-y-4">
+          <!-- En-tête avec nom et runtime -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1">
+              <h4 class="font-medium text-gray-900 dark:text-white">
+                {{ item.name }}
+              </h4>
+              <p v-if="item.description" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {{ item.description }}
+              </p>
+            </div>
+            <UBadge
+              :color="getRuntimeColor(item.runtime)"
+              size="xs"
+            >
+              {{ item.runtime }}
+            </UBadge>
+          </div>
+
+          <!-- Informations -->
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-git-branch" class="w-4 h-4 text-gray-400" />
+              <span class="text-gray-600 dark:text-gray-400">
+                {{ item.repositoryFullName }}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-git-commit" class="w-4 h-4 text-gray-400" />
+              <UBadge variant="soft" size="xs" color="neutral">
+                {{ item.defaultBranch || 'main' }}
+              </UBadge>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon 
+                :name="getAiProviderIcon(item.aiProvider)" 
+                :class="`w-4 h-4 ${getAiProviderColor(item.aiProvider)}`" 
+              />
+              <span class="text-gray-600 dark:text-gray-400">
+                {{ getAiProviderLabel(item.aiProvider) }}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-variable" class="w-4 h-4 text-gray-400" />
+              <span class="text-gray-600 dark:text-gray-400">
+                {{ item.environmentVariables?.length || 0 }} variable{{ (item.environmentVariables?.length || 0) > 1 ? 's' : '' }}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+              <span class="text-gray-600 dark:text-gray-400">
+                {{ formatDate(item.createdAt) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <UButton
+              :to="`/app/settings/environnement/update?edit=${item.id}`"
+              variant="soft"
+              size="sm"
+              icon="i-lucide-pencil"
+              class="flex-1"
+            >
+              Edit
+            </UButton>
+            <UButton
+              color="red"
+              variant="soft"
+              size="sm"
+              icon="i-lucide-trash"
+              @click="deleteEnvironment(item.id)"
+            >
+              Delete
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </CustomTable>
   </UCard>
 </template>
 
