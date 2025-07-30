@@ -58,7 +58,10 @@
             class="flex-1"
           >
             <template #content="{ message }">
-              <div v-if="isPRLink(message)" class="pr-link-message">
+              <div v-if="message.type === 'tool-group'" class="tool-group-message">
+                <ToolMessageTree :tools="message.tools" />
+              </div>
+              <div v-else-if="isPRLink(message)" class="pr-link-message">
                 <div class="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                   <div class="flex items-center gap-3">
                     <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
@@ -111,15 +114,80 @@ const chatStatus = computed(() => {
   return 'ready'
 })
 
+// Helper to detect tool messages
+const isToolMessage = (content: string) => {
+  return typeof content === 'string' && (content.includes('🔧') || content.includes('⚙️'))
+}
+
+// Helper to parse tool message
+const parseToolMessage = (content: string) => {
+  const toolMatch = content.match(/🔧\s*(\w+)/)
+  const toolName = toolMatch ? toolMatch[1] : 'Unknown'
+  
+  // Extract parameters
+  const paramsMatch = content.match(/Parameters:?\s*```(?:json)?\s*([\s\S]*?)```/i)
+  const params = paramsMatch ? JSON.parse(paramsMatch[1]) : {}
+  
+  // Extract result
+  const resultMatch = content.match(/Result:?\s*([\s\S]*?)(?=\n\n|$)/i)
+  const result = resultMatch ? resultMatch[1].trim() : undefined
+  
+  // Check for error
+  const errorMatch = content.match(/Error:?\s*([\s\S]*?)(?=\n\n|$)/i)
+  const error = errorMatch ? errorMatch[1].trim() : undefined
+  
+  return { name: toolName, params, result, error }
+}
+
 // Format messages for UChatMessages component
 const formattedMessages = computed(() => {
-  return messages.value.map((message, index) => ({
-    id: message._id || index,
-    role: message.role,
-    content: message.content,
-    timestamp: message.timestamp || new Date(),
-    type: message.type
-  }))
+  const result = []
+  let toolGroup = []
+  
+  for (let i = 0; i < messages.value.length; i++) {
+    const message = messages.value[i]
+    
+    if (message.role === 'assistant' && isToolMessage(message.content)) {
+      // Accumulate tool messages
+      toolGroup.push(parseToolMessage(message.content))
+    } else {
+      // If we have accumulated tools, add them as a group
+      if (toolGroup.length > 0) {
+        result.push({
+          id: `tool-group-${i}`,
+          role: 'assistant',
+          content: '', // Will be handled by custom template
+          timestamp: messages.value[i - 1]?.timestamp || new Date(),
+          type: 'tool-group',
+          tools: [...toolGroup]
+        })
+        toolGroup = []
+      }
+      
+      // Add the regular message
+      result.push({
+        id: message._id || i,
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp || new Date(),
+        type: message.type
+      })
+    }
+  }
+  
+  // Handle any remaining tool messages
+  if (toolGroup.length > 0) {
+    result.push({
+      id: `tool-group-final`,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      type: 'tool-group',
+      tools: toolGroup
+    })
+  }
+  
+  return result
 })
 
 // Helper function to detect PR links
