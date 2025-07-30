@@ -1,6 +1,7 @@
 import { UserModel } from '../models/User'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
 import type { BaseContainerManager } from './container/base-container-manager'
+import { logger } from './logger'
 
 export class RepositoryCloner {
   private containerManager: BaseContainerManager
@@ -26,7 +27,12 @@ export class RepositoryCloner {
     const workspaceDir = customWorkspaceDir || `/tmp/workspace-${Date.now()}/${environment.repository || 'ccweb'}`
     const defaultBranch = environment.defaultBranch || 'main'
 
-    console.log(`Cloning repository ${environment.repositoryFullName} (branch: ${defaultBranch}) with GitHub App token in container`)
+    logger.info({
+      repository: environment.repositoryFullName,
+      branch: defaultBranch,
+      containerId,
+      workspaceDir
+    }, 'Cloning repository with GitHub App token in container')
     
     const cloneScript = `
       mkdir -p "${workspaceDir}"
@@ -45,7 +51,11 @@ export class RepositoryCloner {
       throw new Error(`Git clone failed with exit code ${result.exitCode}: ${result.stderr}`)
     }
 
-    console.log(`Repository cloned successfully in container at ${workspaceDir}/repo`)
+    logger.info({
+      repository: environment.repositoryFullName,
+      containerId,
+      path: `${workspaceDir}/repo`
+    }, 'Repository cloned successfully in container')
 
     await this.configureGitInContainer(user, containerId, `${workspaceDir}/repo`)
   }
@@ -65,7 +75,7 @@ export class RepositoryCloner {
         }
       }
       catch (error) {
-        console.warn(`Error checking installation ${installationId}:`, error)
+        logger.warn({ error, installationId }, 'Error checking installation')
         continue
       }
     }
