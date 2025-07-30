@@ -243,6 +243,7 @@ const runtimeOptions = [
 ]
 
 const aiProviderOptions = [
+  { label: 'Détection automatique', value: 'auto' },
   { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
   { label: 'Google Gemini CLI', value: 'gemini-cli' }
@@ -359,6 +360,7 @@ const removeVariable = (index: number) => {
 
 const getAiProviderDescription = (provider: string) => {
   const descriptions = {
+    'auto': 'Automatically detects and uses the first available token (Priority: OAuth > API > Gemini).',
     'anthropic-api': 'Uses your Anthropic API key to call Claude directly via API.',
     'claude-oauth': 'Uses your OAuth token for Claude Code CLI (recommended for advanced features).',
     'gemini-cli': 'Uses your Google API key to call Gemini via CLI.'

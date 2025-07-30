@@ -56,38 +56,53 @@ export class ContainerSetup {
     let aiProvider = environment.aiProvider || 'auto'
     let requiredToken: string | null = null
 
-    // Si aucun provider spécifié ou si le token requis n'est pas disponible,
-    // utiliser le premier token disponible
-    if (aiProvider === 'auto' || !this.isTokenAvailable(user, aiProvider)) {
+    // Si 'auto' est sélectionné, utiliser l'auto-détection
+    if (aiProvider === 'auto') {
       console.log(`Auto-detecting AI provider for user ${task.userId}`)
       
       // Priorité : claude-oauth > anthropic-api > gemini-cli
       if (user.claudeOAuthToken) {
         aiProvider = 'claude-oauth'
         requiredToken = decrypt(user.claudeOAuthToken)
-        console.log(`✓ Using Claude OAuth token`)
+        console.log(`✓ Auto-detected: Using Claude OAuth token`)
       } else if (user.anthropicKey) {
         aiProvider = 'anthropic-api'
         requiredToken = decrypt(user.anthropicKey)
-        console.log(`✓ Using Anthropic API key`)
+        console.log(`✓ Auto-detected: Using Anthropic API key`)
       } else if (user.geminiApiKey) {
         aiProvider = 'gemini-cli'
         requiredToken = decrypt(user.geminiApiKey)
-        console.log(`✓ Using Gemini API key`)
+        console.log(`✓ Auto-detected: Using Gemini API key`)
       } else {
         throw new Error(`User ${task.userId} has not configured any AI provider tokens. Please configure at least one of: Anthropic API key, Claude OAuth token, or Gemini API key.`)
       }
     } else {
-      // Utiliser le provider spécifié
+      // Un provider spécifique a été choisi, vérifier si le token est disponible
+      console.log(`Using specified AI provider: ${aiProvider}`)
+      
+      if (!this.isTokenAvailable(user, aiProvider)) {
+        const providerName = {
+          'anthropic-api': 'Anthropic API key',
+          'claude-oauth': 'Claude OAuth token',
+          'gemini-cli': 'Gemini API key'
+        }[aiProvider] || aiProvider
+        
+        throw new Error(`The selected AI provider "${providerName}" is not configured for user ${task.userId}. Please configure the required token in your settings or select "auto" for automatic detection.`)
+      }
+      
+      // Le provider est spécifié et le token est disponible
       switch (aiProvider) {
         case 'anthropic-api':
           requiredToken = decrypt(user.anthropicKey!)
+          console.log(`✓ Using specified Anthropic API provider`)
           break
         case 'claude-oauth':
           requiredToken = decrypt(user.claudeOAuthToken!)
+          console.log(`✓ Using specified Claude OAuth provider`)
           break
         case 'gemini-cli':
           requiredToken = decrypt(user.geminiApiKey!)
+          console.log(`✓ Using specified Gemini provider`)
           break
         default:
           throw new Error(`Unsupported AI provider: ${aiProvider}`)
