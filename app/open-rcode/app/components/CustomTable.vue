@@ -63,9 +63,6 @@
       <template v-if="$slots.expanded" #expanded="{ row }">
         <slot name="expanded" :row="row" />
       </template>
-
-      <!-- Slots pour les colonnes personnalisées -->
-      <slot />
     </UTable>
 
     <!-- Vue Cartes -->
@@ -99,14 +96,15 @@
                 {{ column.header || column.id || column.accessorKey }}:
               </span>
               <span class="text-sm flex-1">
-                <slot 
-                  v-if="$slots[column.id || column.accessorKey || '']" 
-                  :name="column.id || column.accessorKey || ''"
-                  :row="item"
-                />
-                <span v-else>
+                <template v-if="$slots[column.id || column.accessorKey]">
+                  <slot 
+                    :name="column.id || column.accessorKey"
+                    :row="item"
+                  />
+                </template>
+                <template v-else>
                   {{ getItemValue(item, column) }}
-                </span>
+                </template>
               </span>
             </div>
           </div>
