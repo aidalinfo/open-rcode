@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "nuxt": "^4.0.0",
+    "pino": "^9.7.0",
     "tailwindcss": "^4.1.11",
     "tar-fs": "^3.1.0"
   },
