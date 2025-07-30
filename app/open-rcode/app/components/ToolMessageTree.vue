@@ -134,6 +134,9 @@ const treeItems = computed(() => {
 </script>
 
 <style scoped>
+@import "tailwindcss";
+@reference "tailwindcss/utilities.css";
+
 .tool-message-tree {
   @apply rounded-lg border bg-gray-50 dark:bg-gray-800 p-3;
 }
