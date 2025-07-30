@@ -2,6 +2,7 @@ import { connectToDatabase } from '../../../../utils/database'
 import { UserModel } from '../../../../models/User'
 import { SessionModel } from '../../../../models/Session'
 import { getRepositoryBranches } from '../../../../utils/github-app'
+import { logger } from '../../../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -45,10 +46,10 @@ export default defineEventHandler(async (event) => {
     for (const installationId of user.githubAppInstallationIds) {
       try {
         branches = await getRepositoryBranches(installationId, owner, repo)
-        console.log(`Found ${branches.length} branches for ${owner}/${repo} with installation ${installationId}`)
+        logger.info({ branchCount: branches.length, owner, repo, installationId }, 'Found branches for repository')
         break // Si on trouve, on arrête
       } catch (error) {
-        console.log(`Installation ${installationId} doesn't have access to ${owner}/${repo}`)
+        logger.debug({ installationId, owner, repo }, 'Installation does not have access to repository')
         continue
       }
     }
@@ -72,7 +73,7 @@ export default defineEventHandler(async (event) => {
       total_count: branches.length
     }
   } catch (error) {
-    console.error('Error fetching branches:', error)
+    logger.error({ error }, 'Error fetching branches')
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to fetch branches'
