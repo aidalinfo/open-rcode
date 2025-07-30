@@ -20,9 +20,9 @@ const { data: statsData, pending, error } = await useFetch('/api/dashboard/stats
 const selectedPeriod = ref<'day' | 'week' | 'total'>('day')
 
 const periodOptions = [
-  { key: 'day' as const, label: 'Last Day', period: 'hourly' as const, days: 1 },
-  { key: 'week' as const, label: 'Last 7 Days', period: 'daily' as const, days: 7 },
-  { key: 'total' as const, label: 'Total', period: 'daily' as const, days: 30 }
+  { key: 'day' as const, label: '24h', period: 'hourly' as const, days: 1 },
+  { key: 'week' as const, label: '7 Jours', period: 'daily' as const, days: 7 },
+  { key: 'total' as const, label: 'Total', period: 'daily' as const, days: 365 }
 ]
 
 const currentPeriodConfig = computed(() => 

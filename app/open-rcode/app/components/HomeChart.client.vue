@@ -95,7 +95,7 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
           {{ formatNumber(total) }}
         </p>
         <p class="text-xs text-muted mt-1">
-          Last {{ currentDays }} days
+          {{ currentDays === 1 ? 'Dernières 24 heures' : currentDays === 365 ? 'Toutes les données' : `${currentDays} derniers jours` }}
         </p>
       </div>
     </template>
