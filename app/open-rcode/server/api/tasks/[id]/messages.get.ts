@@ -1,5 +1,6 @@
 import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
+import { logger } from '../../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
     return { messages }
   } catch (error) {
-    console.error('Error fetching messages:', error)
+    logger.error({ error, taskId }, 'Error fetching messages')
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal Server Error'

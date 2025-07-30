@@ -5,6 +5,7 @@ import { TaskModel } from '../models/Task'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { EnvironmentModel } from '../models/Environment'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from '../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -103,7 +104,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error: any) {
-    console.error('Error creating task:', error)
+    logger.error({ error, userId: session?.userId }, 'Error creating task')
     
     // Si c'est une erreur de validation Mongoose
     if (error.name === 'ValidationError') {

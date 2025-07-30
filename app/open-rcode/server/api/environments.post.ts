@@ -2,6 +2,7 @@ import { connectToDatabase } from '../utils/database'
 import { UserModel } from '../models/User'
 import { SessionModel } from '../models/Session'
 import { EnvironmentModel } from '../models/Environment'
+import { logger } from '../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -32,7 +33,7 @@ export default defineEventHandler(async (event) => {
     }
     
     const body = await readBody(event)
-    console.log('Environment POST body:', body)
+    logger.debug({ body, userId: user.githubId }, 'Environment POST body')
     
     // Validation des données
     if (!body.organization || !body.repository || !body.name || !body.runtime || !body.defaultBranch) {
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error) {
-    console.error('Error creating environment:', error)
+    logger.error({ error, userId: user?.githubId }, 'Error creating environment')
     
     // Si c'est une erreur de validation Mongoose
     if (error.name === 'ValidationError') {

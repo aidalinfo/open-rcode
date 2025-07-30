@@ -3,6 +3,7 @@ import { UserModel } from '../models/User'
 import { SessionModel } from '../models/Session'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
+import { logger } from '../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -96,7 +97,7 @@ export default defineEventHandler(async (event) => {
       totalPages: Math.ceil(total / limit)
     }
   } catch (error) {
-    console.error('Error fetching tasks:', error)
+    logger.error({ error, userId: session?.userId }, 'Error fetching tasks')
     
     // Si c'est une erreur createError (déjà formatée)
     if (error.statusCode) {

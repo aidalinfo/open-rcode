@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { logger } from './logger'
 
 let isConnected = false
 
@@ -12,9 +13,9 @@ export const connectToDatabase = async () => {
     
     await mongoose.connect(mongoUri)
     isConnected = true
-    console.log('Connected to MongoDB')
+    logger.info({ mongoUri: mongoUri.replace(/:\/\/[^@]+@/, '://***@') }, 'Connected to MongoDB')
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error)
+    logger.error({ error }, 'Error connecting to MongoDB')
     throw error
   }
 }
@@ -27,9 +28,9 @@ export const disconnectFromDatabase = async () => {
   try {
     await mongoose.disconnect()
     isConnected = false
-    console.log('Disconnected from MongoDB')
+    logger.info('Disconnected from MongoDB')
   } catch (error) {
-    console.error('Error disconnecting from MongoDB:', error)
+    logger.error({ error }, 'Error disconnecting from MongoDB')
     throw error
   }
 }
