@@ -14,7 +14,12 @@ export class ClaudeExecutor {
     this.containerManager = containerManager
   }
 
-  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
+  async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
+    // Si nous sommes en mode plan avec Claude, utiliser executePlanCommand
+    if (planMode && aiProvider !== 'gemini-cli' && aiProvider !== 'admin-gemini') {
+      return this.executePlanCommand(containerId, prompt, workdir, aiProvider, model, task)
+    }
+    
     // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
     if (task) {
       return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
@@ -38,6 +43,7 @@ export class ClaudeExecutor {
     const modelParam = model ? ` --model ${model}` : ''
 
     console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
+    console.log(`🔍 Debug: ADMIN_GOOGLE_API_KEY='${process.env.ADMIN_GOOGLE_API_KEY}'`)
 
     switch (aiProvider) {
       case 'anthropic-api':
@@ -49,8 +55,12 @@ export class ClaudeExecutor {
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
-        aiCommand = 'gemini -p'
+        aiCommand = `gemini${modelParam} -p`
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+        break
+      case 'admin-gemini':
+        aiCommand = `gemini${modelParam} -p`
+        envSetup = `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
         break
       default:
         aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
@@ -93,7 +103,12 @@ PROMPT_EOF
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Parser la sortie JSON pour extraire les tool calls et les formater
+    // Si c'est Gemini, retourner la sortie brute sans parsing JSON
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
+      return filteredOutput
+    }
+    
+    // Pour Claude, parser la sortie JSON pour extraire les tool calls et les formater
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
     
     // Combiner pour le retour (pour compatibilité)
@@ -117,75 +132,6 @@ PROMPT_EOF
     }
     
     return formattedParts.length > 0 ? formattedParts.join('\n\n') : filteredOutput
-  }
-
-  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
-    // Déterminer la commande à exécuter selon le provider
-    let aiCommand = 'claude --output-format stream-json -p'
-    let envSetup = ''
-
-    // Ajouter le paramètre --model si spécifié
-    const modelParam = model ? ` --model ${model}` : ''
-
-    switch (aiProvider) {
-      case 'anthropic-api':
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
-        break
-      case 'claude-oauth':
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
-        break
-      case 'gemini-cli':
-        aiCommand = 'gemini -p'
-        envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
-        break
-      default:
-        // Fallback pour la compatibilité
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
-    }
-
-    const script = `
-      cd "${workdir || '/tmp/workspace'}"
-      
-      # Configuration Git
-      git config --global user.email "open-rcode@example.com" || true
-      git config --global user.name "open-rcode Container" || true
-      git config --global init.defaultBranch main || true
-      git config --global --add safe.directory "${workdir}" || true
-      
-      # Charger l'environnement Node et npm global (compatible sh/bash)
-      [ -f /root/.nvm/nvm.sh ] && . /root/.nvm/nvm.sh || true
-      [ -f /etc/profile ] && . /etc/profile || true
-      
-      # Vérifier que Claude est installé
-      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
-      
-      ${envSetup}
-      ${aiCommand} "$(cat <<'PROMPT_EOF'
-${prompt}
-PROMPT_EOF
-)"
-    `
-
-    const result = await this.containerManager.executeInContainer({
-      containerId,
-      command: ['sh', '-c', script],
-      user: 'root',
-      environment: { 'HOME': '/root' }
-    })
-
-    if (result.exitCode !== 0) {
-      throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
-    }
-
-    // Filtrer le chemin indésirable du début de la sortie
-    let filteredOutput = result.stdout
-    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
-    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
-    
-    return filteredOutput
   }
 
   async executeConfigurationScript(containerId: string, configScript: string, workdir?: string): Promise<string> {
@@ -358,17 +304,22 @@ PROMPT_EOF
       let finalResult = 'Tâche terminée'
       
       if (userMessage) {
-        console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model})`);
+        console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model}, planMode: ${task.planMode})`);
         // Créer le message initial avant de commencer l'exécution
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🚀 **Démarrage de l'exécution avec ${this.getAiProviderLabel(aiProvider)} (${model})...**`
+          content: `🚀 **Démarrage de l'exécution avec ${this.getAiProviderLabel(aiProvider)} (${model})${task.planMode ? ' en mode plan' : ''}...**`
         });
         
-        finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
+        // Si planMode est activé et que c'est Claude, utiliser executePlanCommand
+        if (task.planMode && aiProvider !== 'gemini-cli' && aiProvider !== 'admin-gemini') {
+          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task);
+        } else {
+          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
+        }
       }
 
       const prCreator = new PullRequestCreator(this.containerManager);
@@ -436,7 +387,8 @@ PROMPT_EOF
     const labels = {
       'anthropic-api': 'Claude API',
       'claude-oauth': 'Claude Code',
-      'gemini-cli': 'Gemini'
+      'gemini-cli': 'Gemini',
+      'admin-gemini': 'Gemini Admin'
     }
     return labels[provider as keyof typeof labels] || provider
   }
@@ -508,6 +460,122 @@ PROMPT_EOF
         finalResult: rawOutput
       }
     }
+  }
+
+  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
+    console.log('🎯 Exécution en mode plan...')
+    
+    const envSetup = this.getEnvSetup(aiProvider || 'anthropic-api')
+    const modelParam = model ? ` --model ${model}` : ''
+    
+    let planContent = ''
+    let isInPlanMode = false
+    
+    const onPlanOutput = (data: string) => {
+      const lines = data.split('\n').filter(line => line.trim())
+      lines.forEach(line => {
+        if (line.trim()) {
+          console.log(`📋 Plan: ${line.trim()}`)
+          
+          // Essayer de parser le JSON pour détecter le mode plan et extraire le contenu
+          try {
+            const jsonData = JSON.parse(line.trim())
+            
+            // Détecter si on est en mode plan
+            if (jsonData.type === 'system' && jsonData.permissionMode === 'plan') {
+              isInPlanMode = true
+              console.log('✅ Mode plan activé')
+            }
+            
+            // Capturer le contenu du plan depuis ExitPlanMode
+            if (jsonData.type === 'assistant' && jsonData.message?.content) {
+              for (const content of jsonData.message.content) {
+                if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
+                  planContent = content.input.plan
+                  console.log('📄 Plan capturé depuis ExitPlanMode')
+                }
+              }
+            }
+          } catch (parseError) {
+            // Ignorer les erreurs de parsing
+          }
+        }
+      })
+    }
+    
+    // Phase 1: Exécuter en mode plan
+    const planScript = `
+      mkdir -p "${workdir || '/tmp/workspace'}"
+      cd "${workdir || '/tmp/workspace'}"
+      
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      
+      ${envSetup}
+      claude --verbose --output-format stream-json --permission-mode plan${modelParam} -p "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
+    `
+    
+    console.log('🚀 Exécution de la commande en mode plan...')
+    const planResult = await this.executeWithStreamingBash(containerId, planScript, onPlanOutput)
+    
+    if (planResult.exitCode !== 0) {
+      console.error('❌ Échec du mode plan:', planResult.stderr)
+      // En cas d'échec, fallback sur le mode normal
+      console.log('↩️ Fallback sur le mode normal...')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
+    }
+    
+    // Si pas de plan capturé, essayer de le parser depuis la sortie
+    if (!planContent && planResult.stdout) {
+      const lines = planResult.stdout.split('\n')
+      for (const line of lines) {
+        try {
+          const jsonData = JSON.parse(line.trim())
+          if (jsonData.type === 'assistant' && jsonData.message?.content) {
+            for (const content of jsonData.message.content) {
+              if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
+                planContent = content.input.plan
+                break
+              }
+            }
+          }
+        } catch (e) {
+          // Ignorer
+        }
+      }
+    }
+    
+    if (!planContent) {
+      console.log('⚠️ Aucun plan trouvé, exécution directe du prompt...')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
+    }
+    
+    // Si on a un task, sauvegarder le plan
+    if (task) {
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `📋 **Plan d'exécution:**\n\n${planContent}`
+      })
+    }
+    
+    // Phase 2: Exécuter le plan
+    console.log('🏃 Exécution du plan...')
+    const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
+    
+    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution du plan')
   }
 
   private formatToolCall(toolCall: any): string {
@@ -599,12 +667,18 @@ PROMPT_EOF
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
+          console.log(`🤖 ${(aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') ? 'Gemini' : 'Claude'}: ${line.trim()}`)
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
           
-          // Essayer de parser les lignes JSON complètes
+          // Pour Gemini, sauvegarder la sortie brute au fur et à mesure
+          if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
+            // Ne pas essayer de parser JSON pour Gemini
+            continue
+          }
+          
+          // Pour Claude, essayer de parser les lignes JSON complètes
           try {
             const jsonData = JSON.parse(line.trim())
             
@@ -659,6 +733,7 @@ PROMPT_EOF
       
       # Vérifier que Claude est installé
       which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      which gemini || (echo "Gemini not found in PATH. Installing..." && npm install -g @google/gemini-cli)
       
       ${this.getEnvSetup(aiProvider)}
       ${this.getAiCommand(aiProvider, model)} "$(cat <<'PROMPT_EOF'
@@ -676,7 +751,24 @@ PROMPT_EOF
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Parser la sortie JSON complète pour les éléments finaux
+    // Si c'est Gemini, gérer différemment
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
+      // Créer un message avec la sortie brute de Gemini
+      if (filteredOutput.trim()) {
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${filteredOutput}`
+        })
+      }
+      
+      // Retourner la sortie pour la création de PR
+      return filteredOutput || 'Tâche terminée'
+    }
+    
+    // Pour Claude, parser la sortie JSON complète pour les éléments finaux
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
     
     // Créer un document UserCost si total_cost_usd est disponible
@@ -744,6 +836,8 @@ PROMPT_EOF
         return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
       case 'gemini-cli':
         return 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+      case 'admin-gemini':
+        return `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
       default:
         return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
@@ -758,7 +852,9 @@ PROMPT_EOF
       case 'claude-oauth':
         return `claude --verbose --output-format stream-json${modelParam} -p`
       case 'gemini-cli':
-        return 'gemini -p'
+        return `gemini${modelParam} -p`
+      case 'admin-gemini':
+        return `gemini${modelParam} -p`
       default:
         return `claude --verbose --output-format stream-json${modelParam} -p`
     }

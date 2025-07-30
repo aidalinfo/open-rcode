@@ -43,10 +43,24 @@ export class TaskContainerManager {
   async createTaskContainer(options: TaskContainerOptions): Promise<ContainerSetupResult> {
     await connectToDatabase()
 
+    // Créer un message initial pour indiquer que la création du conteneur commence
+    const task = await TaskModel.findById(options.taskId)
+    if (task) {
+      const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Pod Kubernetes' : 'Conteneur Docker'
+      const icon = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? '☸️' : '🐳'
+      
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `${icon} Création du ${containerType.toLowerCase()} en cours...`
+      })
+    }
+
     const result = await this.containerSetup.setupContainer(options)
 
     // Mettre à jour la tâche avec l'ID du conteneur
-    const task = await TaskModel.findById(options.taskId)
     if (task) {
       task.dockerId = result.containerId
       const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Pod Kubernetes' : 'Conteneur Docker'
@@ -73,8 +87,8 @@ export class TaskContainerManager {
   /**
    * Exécute une commande Claude dans le conteneur
    */
-  async executeClaudeCommand(containerId: string, prompt: string, workdir?: string): Promise<string> {
-    return this.claudeExecutor.executeCommand(containerId, prompt, workdir)
+  async executeClaudeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
+    return this.claudeExecutor.executeCommand(containerId, prompt, workdir, aiProvider, model, task, planMode)
   }
 
   /**

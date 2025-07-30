@@ -3,7 +3,19 @@ import jwt from 'jsonwebtoken'
 
 export async function generateInstallationToken(installationId: string): Promise<string> {
   const appId = process.env.GITHUB_APP_ID
-  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
+  const privateKeyPath = process.env.GITHUB_APP_PRIVATE_KEY_PATH
+  let privateKey = process.env.GITHUB_APP_PRIVATE_KEY
+  
+  // If GITHUB_APP_PRIVATE_KEY_PATH exists, read the key from file
+  if (privateKeyPath && !privateKey) {
+    const fs = await import('fs')
+    try {
+      privateKey = fs.readFileSync(privateKeyPath, 'utf8')
+    } catch (error) {
+      console.error('Error reading private key from path:', error)
+      throw new Error(`Failed to read GitHub App private key from path: ${privateKeyPath}`)
+    }
+  }
   
   console.log('App ID:', appId)
   console.log('Private key exists:', !!privateKey)

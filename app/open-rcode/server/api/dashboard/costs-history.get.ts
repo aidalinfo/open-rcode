@@ -41,8 +41,8 @@ export default defineEventHandler(async (event) => {
     let endDate = new Date()
     
     // Si on veut le détail par requête, on ne groupe pas
-    if (detailed || period === 'hourly') {
-      startDate = subHours(endDate, days * 24)
+    if (detailed) {
+      startDate = subDays(endDate, days)
       
       const costs = await UserCostModel.find({
         userId: user.githubId,
@@ -63,6 +63,15 @@ export default defineEventHandler(async (event) => {
     let groupBy: any
     
     switch (period) {
+      case 'hourly':
+        startDate = subDays(endDate, days)
+        groupBy = {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          day: { $dayOfMonth: '$createdAt' },
+          hour: { $hour: '$createdAt' }
+        }
+        break
       case 'daily':
         startDate = subDays(endDate, days)
         groupBy = {
