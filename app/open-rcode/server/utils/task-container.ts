@@ -87,8 +87,8 @@ export class TaskContainerManager {
   /**
    * Exécute une commande Claude dans le conteneur
    */
-  async executeClaudeCommand(containerId: string, prompt: string, workdir?: string): Promise<string> {
-    return this.claudeExecutor.executeCommand(containerId, prompt, workdir)
+  async executeClaudeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
+    return this.claudeExecutor.executeCommand(containerId, prompt, workdir, aiProvider, model, task, planMode)
   }
 
   /**
