@@ -66,8 +66,8 @@ Contexte de la tâche: ${task.title || 'Automated task completion'}`
           containerId, 
           geminiPrompt, 
           workspaceDir, 
-          'gemini-cli',
-          'gemini-1.5-flash'
+          'admin-gemini',
+          'gemini-2.5-flash'
         )
         
         // Nettoyer la réponse de Gemini

@@ -38,6 +38,7 @@ export class ClaudeExecutor {
     const modelParam = model ? ` --model ${model}` : ''
 
     console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
+    console.log(`🔍 Debug: ADMIN_GOOGLE_API_KEY='${process.env.ADMIN_GOOGLE_API_KEY}'`)
 
     switch (aiProvider) {
       case 'anthropic-api':
@@ -49,8 +50,12 @@ export class ClaudeExecutor {
         envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
         break
       case 'gemini-cli':
-        aiCommand = 'gemini -p'
+        aiCommand = `gemini${modelParam} -p`
         envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+        break
+      case 'admin-gemini':
+        aiCommand = `gemini${modelParam} -p`
+        envSetup = `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
         break
       default:
         aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
@@ -94,7 +99,7 @@ PROMPT_EOF
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
     // Si c'est Gemini, retourner la sortie brute sans parsing JSON
-    if (aiProvider === 'gemini-cli') {
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
       return filteredOutput
     }
     
@@ -122,75 +127,6 @@ PROMPT_EOF
     }
     
     return formattedParts.length > 0 ? formattedParts.join('\n\n') : filteredOutput
-  }
-
-  async executeCommandOld(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string): Promise<string> {
-    // Déterminer la commande à exécuter selon le provider
-    let aiCommand = 'claude --output-format stream-json -p'
-    let envSetup = ''
-
-    // Ajouter le paramètre --model si spécifié
-    const modelParam = model ? ` --model ${model}` : ''
-
-    switch (aiProvider) {
-      case 'anthropic-api':
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
-        break
-      case 'claude-oauth':
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
-        break
-      case 'gemini-cli':
-        aiCommand = 'gemini -p'
-        envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
-        break
-      default:
-        // Fallback pour la compatibilité
-        aiCommand = `claude${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
-    }
-
-    const script = `
-      cd "${workdir || '/tmp/workspace'}"
-      
-      # Configuration Git
-      git config --global user.email "open-rcode@example.com" || true
-      git config --global user.name "open-rcode Container" || true
-      git config --global init.defaultBranch main || true
-      git config --global --add safe.directory "${workdir}" || true
-      
-      # Charger l'environnement Node et npm global (compatible sh/bash)
-      [ -f /root/.nvm/nvm.sh ] && . /root/.nvm/nvm.sh || true
-      [ -f /etc/profile ] && . /etc/profile || true
-      
-      # Vérifier que Claude est installé
-      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
-      
-      ${envSetup}
-      ${aiCommand} "$(cat <<'PROMPT_EOF'
-${prompt}
-PROMPT_EOF
-)"
-    `
-
-    const result = await this.containerManager.executeInContainer({
-      containerId,
-      command: ['sh', '-c', script],
-      user: 'root',
-      environment: { 'HOME': '/root' }
-    })
-
-    if (result.exitCode !== 0) {
-      throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
-    }
-
-    // Filtrer le chemin indésirable du début de la sortie
-    let filteredOutput = result.stdout
-    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
-    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
-    
-    return filteredOutput
   }
 
   async executeConfigurationScript(containerId: string, configScript: string, workdir?: string): Promise<string> {
@@ -441,7 +377,8 @@ PROMPT_EOF
     const labels = {
       'anthropic-api': 'Claude API',
       'claude-oauth': 'Claude Code',
-      'gemini-cli': 'Gemini'
+      'gemini-cli': 'Gemini',
+      'admin-gemini': 'Gemini Admin'
     }
     return labels[provider as keyof typeof labels] || provider
   }
@@ -604,13 +541,13 @@ PROMPT_EOF
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 ${aiProvider === 'gemini-cli' ? 'Gemini' : 'Claude'}: ${line.trim()}`)
+          console.log(`🤖 ${(aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') ? 'Gemini' : 'Claude'}: ${line.trim()}`)
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
           
           // Pour Gemini, sauvegarder la sortie brute au fur et à mesure
-          if (aiProvider === 'gemini-cli') {
+          if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
             // Ne pas essayer de parser JSON pour Gemini
             continue
           }
@@ -689,7 +626,7 @@ PROMPT_EOF
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
     // Si c'est Gemini, gérer différemment
-    if (aiProvider === 'gemini-cli') {
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
       // Créer un message avec la sortie brute de Gemini
       if (filteredOutput.trim()) {
         await TaskMessageModel.create({
@@ -773,6 +710,8 @@ PROMPT_EOF
         return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
       case 'gemini-cli':
         return 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+      case 'admin-gemini':
+        return `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
       default:
         return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
     }
@@ -787,7 +726,9 @@ PROMPT_EOF
       case 'claude-oauth':
         return `claude --verbose --output-format stream-json${modelParam} -p`
       case 'gemini-cli':
-        return 'gemini -p'
+        return `gemini${modelParam} -p`
+      case 'admin-gemini':
+        return `gemini${modelParam} -p`
       default:
         return `claude --verbose --output-format stream-json${modelParam} -p`
     }
