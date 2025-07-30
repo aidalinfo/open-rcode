@@ -1,6 +1,7 @@
 import Docker from 'dockerode'
 import crypto from 'crypto'
 import type { ExecuteResult } from './container/base-container-manager'
+import { createLogger } from './logger'
 
 export interface DockerContainerOptions {
   image: string
@@ -50,6 +51,7 @@ export interface DockerConnectionOptions {
 
 export class DockerManager {
   private docker: Docker
+  private logger = createLogger('DockerManager')
 
   constructor(options?: DockerConnectionOptions) {
     // Initialise Docker avec les options personnalisées ou par défaut
@@ -134,7 +136,7 @@ export class DockerManager {
       await this.docker.ping()
       return true
     } catch (error) {
-      console.error('Docker is not available:', error)
+      this.logger.error({ error }, 'Docker is not available')
       return false
     }
   }
@@ -223,11 +225,11 @@ export class DockerManager {
       await container.start()
       
       const containerInfo = await container.inspect()
-      console.log(`Container created and started: ${containerInfo.Id}`)
+      this.logger.info({ containerId: containerInfo.Id }, 'Container created and started')
       
       return containerInfo.Id
     } catch (error) {
-      console.error('Error creating container:', error)
+      this.logger.error({ error }, 'Error creating container')
       throw new Error(`Failed to create container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -299,7 +301,7 @@ export class DockerManager {
 
       return { stdout, stderr, exitCode }
     } catch (error) {
-      console.error('Error executing command in container:', error)
+      this.logger.error({ error, containerId: options.containerId }, 'Error executing command in container')
       throw new Error(`Failed to execute command: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -311,9 +313,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.stop({ t: timeout })
-      console.log(`Container stopped: ${containerId}`)
+      this.logger.info({ containerId }, 'Container stopped')
     } catch (error) {
-      console.error('Error stopping container:', error)
+      this.logger.error({ error, containerId }, 'Error stopping container')
       throw new Error(`Failed to stop container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -325,9 +327,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.remove({ force })
-      console.log(`Container removed: ${containerId}`)
+      this.logger.info({ containerId }, 'Container removed')
     } catch (error) {
-      console.error('Error removing container:', error)
+      this.logger.error({ error, containerId }, 'Error removing container')
       throw new Error(`Failed to remove container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -354,7 +356,7 @@ export class DockerManager {
         labels: data.Config.Labels
       }
     } catch (error) {
-      console.error('Error getting container info:', error)
+      this.logger.debug({ error, containerId }, 'Error getting container info')
       return null
     }
   }
@@ -386,7 +388,7 @@ export class DockerManager {
         labels: container.Labels
       }))
     } catch (error) {
-      console.error('Error listing containers:', error)
+      this.logger.error({ error }, 'Error listing containers')
       return []
     }
   }
@@ -406,7 +408,7 @@ export class DockerManager {
       
       return stream.toString()
     } catch (error) {
-      console.error('Error getting container logs:', error)
+      this.logger.error({ error, containerId }, 'Error getting container logs')
       throw new Error(`Failed to get container logs: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -431,9 +433,9 @@ export class DockerManager {
       pack.finalize()
       
       await container.putArchive(pack, { path: destPath })
-      console.log(`Files copied to container: ${sourcePath} -> ${destPath}`)
+      this.logger.debug({ sourcePath, destPath, containerId }, 'Files copied to container')
     } catch (error) {
-      console.error('Error copying files to container:', error)
+      this.logger.error({ error, containerId }, 'Error copying files to container')
       throw new Error(`Failed to copy files to container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -445,9 +447,9 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       await container.restart({ t: timeout })
-      console.log(`Container restarted: ${containerId}`)
+      this.logger.info({ containerId }, 'Container restarted')
     } catch (error) {
-      console.error('Error restarting container:', error)
+      this.logger.error({ error, containerId }, 'Error restarting container')
       throw new Error(`Failed to restart container: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -466,14 +468,14 @@ export class DockerManager {
           await this.removeContainer(container.id, true)
           cleanedCount++
         } catch (error) {
-          console.error(`Failed to remove container ${container.id}:`, error)
+          this.logger.warn({ containerId: container.id, error }, 'Failed to remove container during cleanup')
         }
       }
       
-      console.log(`Cleaned up ${cleanedCount} containers`)
+      this.logger.info({ cleanedCount }, 'Cleaned up containers')
       return cleanedCount
     } catch (error) {
-      console.error('Error cleaning up containers:', error)
+      this.logger.error({ error }, 'Error cleaning up containers')
       return 0
     }
   }
