@@ -21,9 +21,18 @@
         @click="handleRefresh"
       />
 
+      <!-- Bouton de basculement vue table/cartes -->
+      <UButton
+        :icon="viewMode === 'table' ? 'i-lucide-layout-grid' : 'i-lucide-layout-list'"
+        :label="viewMode === 'table' ? 'Vue cartes' : 'Vue table'"
+        color="neutral"
+        variant="outline"
+        @click="toggleViewMode"
+      />
+
       <!-- Sélecteur de colonnes -->
       <UDropdownMenu
-        v-if="showColumnToggle"
+        v-if="showColumnToggle && viewMode === 'table'"
         :items="columnToggleItems"
         :content="{ align: 'end' }"
       >
@@ -40,8 +49,9 @@
       <slot name="toolbar-end" />
     </div>
 
-    <!-- Table -->
+    <!-- Vue Table -->
     <UTable 
+      v-if="viewMode === 'table'"
       ref="table" 
       :data="paginatedData" 
       :columns="visibleColumns" 
@@ -57,6 +67,57 @@
       <!-- Slots pour les colonnes personnalisées -->
       <slot />
     </UTable>
+
+    <!-- Vue Cartes -->
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <UCard
+        v-for="(item, index) in paginatedData"
+        :key="index"
+        class="cursor-pointer hover:shadow-lg transition-shadow"
+        @click="handleRowClick(item)"
+      >
+        <!-- Slot personnalisé pour le contenu de la carte -->
+        <slot v-if="$slots['card-template']" name="card-template" :item="item" :columns="visibleColumns" />
+        
+        <!-- Template par défaut -->
+        <template v-else>
+          <!-- Header de la carte (première colonne visible) -->
+          <template v-if="visibleColumns.length > 0" #header>
+            <h3 class="text-lg font-semibold truncate">
+              {{ getItemValue(item, visibleColumns[0]) }}
+            </h3>
+          </template>
+
+          <!-- Contenu de la carte -->
+          <div class="space-y-2">
+            <div
+              v-for="(column, colIndex) in visibleColumns.slice(1)"
+              :key="colIndex"
+              class="flex items-start gap-2"
+            >
+              <span class="text-sm text-gray-500 font-medium min-w-[120px]">
+                {{ column.header || column.id || column.accessorKey }}:
+              </span>
+              <span class="text-sm flex-1">
+                <slot 
+                  v-if="$slots[column.id || column.accessorKey || '']" 
+                  :name="column.id || column.accessorKey || ''"
+                  :row="item"
+                />
+                <span v-else>
+                  {{ getItemValue(item, column) }}
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Footer avec actions si nécessaire -->
+          <template v-if="$slots['card-actions']" #footer>
+            <slot name="card-actions" :item="item" />
+          </template>
+        </template>
+      </UCard>
+    </div>
 
     <!-- Footer -->
     <div class="flex items-center justify-between">
@@ -80,7 +141,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { upperFirst } from 'lodash-es'
+import { upperFirst, get } from 'lodash-es'
 
 interface Column {
   id?: string
@@ -104,6 +165,7 @@ interface Props {
   showColumnToggle?: boolean
   sticky?: boolean
   tableClass?: string
+  defaultViewMode?: 'table' | 'card'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -111,7 +173,8 @@ const props = withDefaults(defineProps<Props>(), {
   showRefresh: true,
   showColumnToggle: true,
   sticky: true,
-  tableClass: ''
+  tableClass: '',
+  defaultViewMode: 'table'
 })
 
 const emit = defineEmits<{
@@ -122,6 +185,7 @@ const emit = defineEmits<{
 
 const table = ref()
 const hiddenColumns = ref<Set<string>>(new Set())
+const viewMode = ref<'table' | 'card'>(props.defaultViewMode)
 
 const visibleColumns = computed(() => {
   return props.columns.filter(column => {
@@ -184,5 +248,17 @@ function handlePageUpdate(page: number) {
 
 function handleRowClick(row: any) {
   emit('row-click', row)
+}
+
+function toggleViewMode() {
+  viewMode.value = viewMode.value === 'table' ? 'card' : 'table'
+}
+
+function getItemValue(item: any, column: Column): any {
+  const key = column.accessorKey || column.id
+  if (!key) return ''
+  
+  // Support des chemins imbriqués (ex: 'user.name')
+  return get(item, key, '')
 }
 </script>
