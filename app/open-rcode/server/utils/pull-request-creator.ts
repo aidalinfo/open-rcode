@@ -5,6 +5,7 @@ import { TaskModel } from '../models/Task'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
 import { v4 as uuidv4 } from 'uuid'
+import { ClaudeExecutor } from './claude-executor'
 
 export class PullRequestCreator {
   private containerManager: BaseContainerManager
@@ -45,6 +46,52 @@ export class PullRequestCreator {
       
       await this.createBranchAndCommit(containerId, workspaceDir, branchName, task, summary)
       
+      // Obtenir le git diff des changements
+      const gitDiff = await this.getGitDiff(containerId, workspaceDir, environment.defaultBranch || 'main')
+      
+      // Demander à Gemini de suggérer un titre pour la PR
+      let prTitle = task.title || 'Automated Task Completion'
+      
+      // Toujours utiliser Gemini pour suggérer un titre basé sur le diff
+      const claudeExecutor = new ClaudeExecutor(this.containerManager)
+      const geminiPrompt = `Basé sur les modifications suivantes (git diff), suggère un titre concis et descriptif pour une pull request (maximum 72 caractères). Réponds uniquement avec le titre, sans explication ni formatage supplémentaire.
+
+Git diff:
+${gitDiff}
+
+Contexte de la tâche: ${task.title || 'Automated task completion'}`
+      
+      try {
+        const titleSuggestion = await claudeExecutor.executeCommand(
+          containerId, 
+          geminiPrompt, 
+          workspaceDir, 
+          'gemini-cli',
+          'gemini-1.5-flash'
+        )
+        
+        // Nettoyer la réponse de Gemini
+        prTitle = this.extractTitleFromGeminiResponse(titleSuggestion)
+        
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **Titre suggéré par Gemini:** ${prTitle}`
+        })
+      } catch (error) {
+        console.error('Erreur lors de la suggestion du titre par Gemini:', error)
+        // Continuer avec le titre par défaut en cas d'erreur
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `⚠️ **Impossible d'obtenir un titre suggéré par Gemini, utilisation du titre par défaut**`
+        })
+      }
+      
       const githubToken = await this.getGitHubToken(user, environment.repositoryFullName)
       
       if (!githubToken) {
@@ -57,7 +104,7 @@ export class PullRequestCreator {
       const prUrl = await this.createGitHubPullRequest(
         environment.repositoryFullName,
         branchName,
-        task.title || 'Automated Task Completion',
+        prTitle,
         summary,
         githubToken,
         environment.defaultBranch || 'main'
@@ -121,6 +168,34 @@ Les modifications ont été poussées et une Pull Request a été créée automa
     
     const porcelainOutput = result.stdout.trim()
     return !!porcelainOutput
+  }
+
+  private async getGitDiff(containerId: string, workspaceDir: string, baseBranch: string): Promise<string> {
+    const script = `
+      cd "${workspaceDir}"
+      git config --global --add safe.directory "${workspaceDir}" || true
+      # Obtenir le diff complet des changements
+      git diff HEAD --no-color || true
+    `
+    
+    const result = await this.containerManager.executeInContainer({
+      containerId,
+      command: ['bash', '-c', script],
+      user: 'root'
+    })
+    
+    if (result.exitCode !== 0) {
+      console.error(`Git diff failed with exit code ${result.exitCode}: ${result.stderr}`)
+      return ''
+    }
+    
+    // Limiter la taille du diff pour éviter des prompts trop longs
+    const maxDiffLength = 5000
+    if (result.stdout.length > maxDiffLength) {
+      return result.stdout.substring(0, maxDiffLength) + '\n... (diff tronqué)'
+    }
+    
+    return result.stdout
   }
 
   private async createBranchAndCommit(
@@ -253,5 +328,40 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
     const prData = await response.json()
     console.log(`Pull request created: ${prData.html_url}`)
     return prData.html_url
+  }
+
+  private extractTitleFromGeminiResponse(response: string): string {
+    // Nettoyer la réponse de Gemini
+    let cleanedResponse = response.trim()
+    
+    // Enlever les éventuels marqueurs de formatage
+    cleanedResponse = cleanedResponse.replace(/^#+\s*/g, '') // Enlever les headers markdown
+    cleanedResponse = cleanedResponse.replace(/^\*+\s*/g, '') // Enlever les bullets
+    cleanedResponse = cleanedResponse.replace(/^-+\s*/g, '') // Enlever les tirets
+    cleanedResponse = cleanedResponse.replace(/^["'`]+|["'`]+$/g, '') // Enlever les guillemets
+    
+    // Si la réponse contient plusieurs lignes, prendre seulement la première
+    const lines = cleanedResponse.split('\n').filter(line => line.trim())
+    if (lines.length > 0) {
+      cleanedResponse = lines[0].trim()
+    }
+    
+    // Extraire le texte entre "Réponse:" ou similaire si présent
+    const responseMatch = cleanedResponse.match(/(?:réponse|response|titre|title):\s*(.+)/i)
+    if (responseMatch) {
+      cleanedResponse = responseMatch[1].trim()
+    }
+    
+    // Limiter à 72 caractères
+    if (cleanedResponse.length > 72) {
+      cleanedResponse = cleanedResponse.substring(0, 69) + '...'
+    }
+    
+    // Retourner le titre par défaut si le résultat est vide ou trop court
+    if (!cleanedResponse || cleanedResponse.length < 5) {
+      return 'Automated Task Completion'
+    }
+    
+    return cleanedResponse
   }
 }
