@@ -40,6 +40,7 @@
     "@types/tar-stream": "^3.1.4",
     "@types/uuid": "^10.0.0",
     "eslint": "^9.31.0",
+    "pino-pretty": "^13.1.1",
     "typescript": "^5.8.3",
     "vue-tsc": "^3.0.1"
   },
