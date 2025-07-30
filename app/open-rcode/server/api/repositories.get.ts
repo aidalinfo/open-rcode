@@ -2,6 +2,7 @@ import { connectToDatabase } from '../utils/database'
 import { UserModel } from '../models/User'
 import { SessionModel } from '../models/Session'
 import { getInstallationRepositories } from '../utils/github-app'
+import { logger } from '../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -31,7 +32,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    console.log('User installation IDs in DB:', user.githubAppInstallationIds)
+    logger.debug({ userId: user.githubId, installationIds: user.githubAppInstallationIds }, 'User installation IDs in DB')
     
     if (!user.githubAppInstallationIds || user.githubAppInstallationIds.length === 0) {
       throw createError({
@@ -49,14 +50,13 @@ export default defineEventHandler(async (event) => {
         const repositories = await getInstallationRepositories(installationId)
         allRepositories.push(...repositories.repositories)
         totalCount += repositories.total_count
-        console.log(`Installation ${installationId}: ${repositories.total_count} repositories`)
+        logger.info({ installationId, count: repositories.total_count }, 'Fetched repositories for installation')
       } catch (error) {
-        console.error(`Error fetching repositories for installation ${installationId}:`, error)
+        logger.error({ error, installationId }, 'Error fetching repositories for installation')
       }
     }
     
-    console.log(`Total repositories found across all installations: ${totalCount}`)
-    console.log('All repositories:', allRepositories.map((r: any) => r.full_name))
+    logger.info({ totalCount, repositories: allRepositories.map((r: any) => r.full_name) }, 'Total repositories found across all installations')
     
     return {
       repositories: allRepositories.map((repo: any) => ({
@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
       total_count: totalCount
     }
   } catch (error) {
-    console.error('Error fetching repositories:', error)
+    logger.error({ error }, 'Error fetching repositories')
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to fetch repositories'
