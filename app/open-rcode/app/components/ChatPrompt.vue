@@ -8,7 +8,7 @@
     <UChatPromptSubmit />
 
     <template #footer>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
         <USelect
           v-model="localSelectedEnvironment"
           :items="environmentOptions"
@@ -16,34 +16,37 @@
           placeholder="Select an environment"
           variant="ghost"
           :disabled="environments.length === 0"
+          class="w-full sm:w-auto"
         />
         
-        <UDropdownMenu :items="workflowOptions">
-          <UButton
-            variant="ghost"
-            icon="i-heroicons-cog-6-tooth"
-            size="sm"
-          >
-            Workflow
-          </UButton>
-        </UDropdownMenu>
-        
-        <div v-if="selectedWorkflow" class="flex items-center">
-          <UBadge
-            color="primary"
-            variant="solid"
-            size="sm"
-            class="flex items-center gap-1 pr-1"
-          >
-            {{ selectedWorkflow }}
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <UDropdownMenu :items="workflowOptions">
             <UButton
               variant="ghost"
-              size="2xs"
-              icon="i-heroicons-x-mark"
-              class="ml-2 h-4 w-4 p-0 text-white dark:text-black"
-              @click="removeWorkflow"
-            />
-          </UBadge>
+              icon="i-heroicons-cog-6-tooth"
+              size="sm"
+            >
+              Workflow
+            </UButton>
+          </UDropdownMenu>
+          
+          <div v-if="selectedWorkflow" class="flex items-center">
+            <UBadge
+              color="primary"
+              variant="solid"
+              size="sm"
+              class="flex items-center gap-1 pr-1"
+            >
+              {{ selectedWorkflow }}
+              <UButton
+                variant="ghost"
+                size="2xs"
+                icon="i-heroicons-x-mark"
+                class="ml-2 h-4 w-4 p-0 text-white dark:text-black"
+                @click="removeWorkflow"
+              />
+            </UBadge>
+          </div>
         </div>
         
       </div>
