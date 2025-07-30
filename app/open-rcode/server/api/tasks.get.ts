@@ -83,7 +83,8 @@ export default defineEventHandler(async (event) => {
         } : null,
         pr: prData,
         dockerId: task.dockerId,
-        error: task.error
+        error: task.error,
+        planMode: task.planMode
       }
     })
     
