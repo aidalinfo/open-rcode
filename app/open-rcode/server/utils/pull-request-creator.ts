@@ -174,8 +174,8 @@ Les modifications ont été poussées et une Pull Request a été créée automa
     const script = `
       cd "${workspaceDir}"
       git config --global --add safe.directory "${workspaceDir}" || true
-      # Obtenir le diff complet des changements
-      git diff HEAD --no-color || true
+      # Obtenir le diff complet des changements par rapport à la branche de base
+      git diff ${baseBranch}...HEAD --no-color || true
     `
     
     const result = await this.containerManager.executeInContainer({
