@@ -18,7 +18,7 @@
               AI access
             </h2>
             <p class="text-sm text-gray-600 dark:text-gray-400">
-              Toutes les clés sont chiffrées en base de données
+              All your API keys are securely encrypted in our database
             </p>
           </div>
         </template>
