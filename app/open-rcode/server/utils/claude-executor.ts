@@ -670,6 +670,7 @@ PROMPT_EOF
       
       # Vérifier que Claude est installé
       which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      which gemini || (echo "Gemini not found in PATH. Installing..." && npm install -g @google/gemini-cli)
       
       ${this.getEnvSetup(aiProvider)}
       ${this.getAiCommand(aiProvider, model)} "$(cat <<'PROMPT_EOF'
