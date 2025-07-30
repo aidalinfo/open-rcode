@@ -1,29 +1,30 @@
 import { startContainerMonitoring } from '../utils/container-monitor'
+import { logger } from '../utils/logger'
 
 export default async () => {
   // Démarrer le monitoring des conteneurs au démarrage du serveur
-  console.log('🐳 Starting container monitoring service...')
+  logger.info('Starting container monitoring service...')
   
   try {
     const monitor = startContainerMonitoring()
     const status = monitor.getStatus()
     
-    console.log('✅ Container monitoring started successfully')
-    console.log(`📅 Next check scheduled at: ${status.nextRun}`)
+    logger.info('Container monitoring started successfully')
+    logger.info({ nextRun: status.nextRun }, 'Next check scheduled')
     
     // Nettoyer les conteneurs orphelins au démarrage
     setTimeout(async () => {
       try {
         const cleanedCount = await monitor.cleanupOrphanedContainers()
         if (cleanedCount > 0) {
-          console.log(`🧹 Cleaned up ${cleanedCount} orphaned containers on startup`)
+          logger.info({ cleanedCount }, 'Cleaned up orphaned containers on startup')
         }
       } catch (error) {
-        console.error('Error during startup cleanup:', error)
+        logger.error({ error }, 'Error during startup cleanup')
       }
     }, 5000) // Attendre 5 secondes après le démarrage
     
   } catch (error) {
-    console.error('❌ Failed to start container monitoring:', error)
+    logger.error({ error }, 'Failed to start container monitoring')
   }
 }
