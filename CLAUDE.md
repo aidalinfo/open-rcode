@@ -185,6 +185,10 @@ KUBERNETES_NAMESPACE=default       # Optionnel
 KUBECONFIG=/path/to/kubeconfig     # Optionnel
 KUBERNETES_CONTEXT=my-context      # Optionnel
 
+# Monitoring des conteneurs (optionnel)
+DOCKER_MONITOR_TIMEOUT=60          # Intervalle en secondes pour Docker (défaut: 60)
+KUBERNETES_MONITOR_TIMEOUT=60      # Intervalle en secondes pour Kubernetes (défaut: 60)
+
 # Admin (optionnel)
 ADMIN_GOOGLE_API_KEY=AIza...       # Pour suggestions Gemini automatiques
 BASE_ROLE=basic                    # Rôle par défaut des nouveaux users

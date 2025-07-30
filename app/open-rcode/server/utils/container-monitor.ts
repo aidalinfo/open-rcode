@@ -11,14 +11,23 @@ export class ContainerMonitor {
   private docker: DockerManager // Maintenu pour compatibilité
   private isRunning = false
   private logger = createLogger('ContainerMonitor')
+  private monitorTimeout: number
 
   constructor(containerOptions?: any) {
     this.containerManager = createContainerManager({ connectionOptions: containerOptions })
     this.docker = new DockerManager(containerOptions) // Fallback pour compatibilité
+    
+    // Récupérer le timeout depuis les variables d'environnement selon le mode
+    const containerMode = process.env.CONTAINER_MODE?.toLowerCase()
+    if (containerMode === 'kubernetes') {
+      this.monitorTimeout = parseInt(process.env.KUBERNETES_MONITOR_TIMEOUT || '60', 10)
+    } else {
+      this.monitorTimeout = parseInt(process.env.DOCKER_MONITOR_TIMEOUT || '60', 10)
+    }
   }
 
   /**
-   * Démarre le monitoring des conteneurs toutes les 60 secondes
+   * Démarre le monitoring des conteneurs
    */
   start(): void {
     if (this.isRunning) {
@@ -26,9 +35,10 @@ export class ContainerMonitor {
       return
     }
 
-    // Cron job toutes les 60 secondes (chaque minute)
+    // Cron job toutes les X secondes (configurables)
+    const cronPattern = `*/${this.monitorTimeout} * * * * *`
     this.cronJob = new CronJob(
-      '0 * * * * *', // Chaque minute à la seconde 0
+      cronPattern,
       async () => {
         await this.checkContainers()
       },
@@ -38,7 +48,7 @@ export class ContainerMonitor {
     )
 
     this.isRunning = true
-    this.logger.info('Container monitor started - checking every 60 seconds')
+    this.logger.info(`Container monitor started - checking every ${this.monitorTimeout} seconds`)
   }
 
   /**
