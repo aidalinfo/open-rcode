@@ -93,7 +93,12 @@ PROMPT_EOF
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Parser la sortie JSON pour extraire les tool calls et les formater
+    // Si c'est Gemini, retourner la sortie brute sans parsing JSON
+    if (aiProvider === 'gemini-cli') {
+      return filteredOutput
+    }
+    
+    // Pour Claude, parser la sortie JSON pour extraire les tool calls et les formater
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
     
     // Combiner pour le retour (pour compatibilité)
@@ -599,12 +604,18 @@ PROMPT_EOF
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
+          console.log(`🤖 ${aiProvider === 'gemini-cli' ? 'Gemini' : 'Claude'}: ${line.trim()}`)
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
           
-          // Essayer de parser les lignes JSON complètes
+          // Pour Gemini, sauvegarder la sortie brute au fur et à mesure
+          if (aiProvider === 'gemini-cli') {
+            // Ne pas essayer de parser JSON pour Gemini
+            continue
+          }
+          
+          // Pour Claude, essayer de parser les lignes JSON complètes
           try {
             const jsonData = JSON.parse(line.trim())
             
@@ -676,7 +687,24 @@ PROMPT_EOF
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
     filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Parser la sortie JSON complète pour les éléments finaux
+    // Si c'est Gemini, gérer différemment
+    if (aiProvider === 'gemini-cli') {
+      // Créer un message avec la sortie brute de Gemini
+      if (filteredOutput.trim()) {
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${filteredOutput}`
+        })
+      }
+      
+      // Retourner la sortie pour la création de PR
+      return filteredOutput || 'Tâche terminée'
+    }
+    
+    // Pour Claude, parser la sortie JSON complète pour les éléments finaux
     const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
     
     // Créer un document UserCost si total_cost_usd est disponible
