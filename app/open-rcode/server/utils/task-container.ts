@@ -10,6 +10,7 @@ import { createContainerManager, ContainerManagerFactory } from './container/con
 import { BaseContainerManager } from './container/base-container-manager'
 import { DockerAdapter } from './container/docker-adapter'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from './logger'
 
 export class TaskContainerManager {
   private containerManager: BaseContainerManager

@@ -6,6 +6,7 @@ import { TaskMessageModel } from '../models/TaskMessage'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
 import { v4 as uuidv4 } from 'uuid'
 import { ClaudeExecutor } from './claude-executor'
+import { logger } from './logger'
 
 export class PullRequestCreator {
   private containerManager: BaseContainerManager
@@ -16,7 +17,7 @@ export class PullRequestCreator {
 
   async createFromChanges(containerId: string, task: any, summary: string): Promise<void> {
     try {
-      console.log(`Creating pull request for task ${task._id}`)
+      logger.info({ taskId: task._id }, 'Creating pull request for task')
       
       const environment = await EnvironmentModel.findById(task.environmentId)
       if (!environment) {
@@ -81,7 +82,7 @@ Contexte de la tâche: ${task.title || 'Automated task completion'}`
           content: `🤖 **Titre suggéré par Gemini:** ${prTitle}`
         })
       } catch (error) {
-        console.error('Erreur lors de la suggestion du titre par Gemini:', error)
+        logger.error({ error, taskId: task._id }, 'Error getting title suggestion from Gemini')
         // Continuer avec le titre par défaut en cas d'erreur
         await TaskMessageModel.create({
           id: uuidv4(),
@@ -138,10 +139,10 @@ Les modifications ont été poussées et une Pull Request a été créée automa
         updatedAt: new Date()
       })
       
-      console.log(`Pull request created successfully for task ${task._id}`)
+      logger.info({ taskId: task._id, prUrl }, 'Pull request created successfully')
       
     } catch (error) {
-      console.error(`Error creating pull request for task ${task._id}:`, error)
+      logger.error({ error, taskId: task._id }, 'Error creating pull request')
       
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -185,7 +186,7 @@ Les modifications ont été poussées et une Pull Request a été créée automa
     })
     
     if (result.exitCode !== 0) {
-      console.error(`Git diff failed with exit code ${result.exitCode}: ${result.stderr}`)
+      logger.error({ exitCode: result.exitCode, stderr: result.stderr }, 'Git diff failed')
       return ''
     }
     
@@ -246,7 +247,7 @@ EOF
           return await generateInstallationToken(installationId)
         }
       } catch (error) {
-        console.warn(`Error checking installation ${installationId}:`, error)
+        logger.warn({ error, installationId }, 'Error checking installation')
         continue
       }
     }
@@ -326,7 +327,7 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
     }
     
     const prData = await response.json()
-    console.log(`Pull request created: ${prData.html_url}`)
+    logger.info({ prUrl: prData.html_url, repo: `${owner}/${repo}` }, 'GitHub pull request created')
     return prData.html_url
   }
 

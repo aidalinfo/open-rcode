@@ -6,6 +6,7 @@ import { UserModel } from '../models/User'
 import { decrypt } from './crypto'
 import { RepositoryCloner } from './repository-cloner'
 import { DockerAdapter } from './container/docker-adapter'
+import { logger } from './logger'
 
 export interface TaskContainerOptions {
   taskId: string
@@ -69,25 +70,25 @@ export class ContainerSetup {
     }
 
     // Utiliser le provider spécifié avec ses credentials
-    console.log(`Using AI provider: ${aiProvider} for user ${task.userId}`)
+    logger.info({ aiProvider, userId: task.userId }, 'Using AI provider')
     
     switch (aiProvider) {
       case 'anthropic-api':
         requiredToken = decrypt(user.anthropicKey!)
-        console.log(`✓ Using Anthropic API key`)
+        logger.info({ userId: task.userId }, '✓ Using Anthropic API key')
         break
       case 'claude-oauth':
         requiredToken = decrypt(user.claudeOAuthToken!)
-        console.log(`✓ Using Claude OAuth token`)
+        logger.info({ userId: task.userId }, '✓ Using Claude OAuth token')
         break
       case 'gemini-cli':
         requiredToken = decrypt(user.geminiApiKey!)
-        console.log(`✓ Using Gemini API key`)
+        logger.info({ userId: task.userId }, '✓ Using Gemini API key')
         break
       case 'admin-gemini':
         // Admin Gemini utilise la clé admin du système
         requiredToken = process.env.ADMIN_GOOGLE_API_KEY || ''
-        console.log(`✓ Using Admin Gemini API key`)
+        logger.info({ userId: task.userId }, '✓ Using Admin Gemini API key')
         break
       default:
         throw new Error(`Unsupported AI provider: ${aiProvider}`)
@@ -177,7 +178,7 @@ export class ContainerSetup {
   }
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
-    console.log(`Waiting for container ${containerId} to be ready...`)
+    logger.info({ containerId, maxWaitTime }, 'Waiting for container to be ready')
     
     const startTime = Date.now()
     const checkInterval = 5000
@@ -187,21 +188,21 @@ export class ContainerSetup {
         const logs = await this.containerManager.getContainerLogs(containerId, 50)
         
         if (logs.includes('Environment ready') || logs.includes('Dropping you into a bash shell')) {
-          console.log(`Container ${containerId} is ready!`)
+          logger.info({ containerId }, 'Container is ready!')
           await new Promise(resolve => setTimeout(resolve, 5000))
           return
         }
         
-        console.log(`Container still setting up... (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`)
+        logger.debug({ containerId, elapsedSeconds: Math.floor((Date.now() - startTime) / 1000) }, 'Container still setting up')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
         
       } catch (error: any) {
-        console.warn(`Error checking container readiness: ${error.message}`)
+        logger.warn({ error, containerId }, 'Error checking container readiness')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
     }
     
-    console.warn(`Container ${containerId} setup timeout after ${maxWaitTime / 1000}s, proceeding anyway...`)
+    logger.warn({ containerId, timeoutSeconds: maxWaitTime / 1000 }, 'Container setup timeout, proceeding anyway')
   }
 
   private async ensureDockerImage(imageName: string): Promise<void> {
