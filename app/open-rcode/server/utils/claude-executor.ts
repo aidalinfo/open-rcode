@@ -467,14 +467,17 @@ PROMPT_EOF
     
     const envSetup = this.getEnvSetup(aiProvider || 'anthropic-api')
     const modelParam = model ? ` --model ${model}` : ''
+    const aiProviderLabel = this.getAiProviderLabel(aiProvider || 'anthropic-api')
     
     let planContent = ''
     let isInPlanMode = false
     let totalCostUsd: number | undefined
+    let processedToolCallIds = new Set<string>()
     
-    const onPlanOutput = (data: string) => {
+    const onPlanOutput = async (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
-      lines.forEach(line => {
+      
+      for (const line of lines) {
         if (line.trim()) {
           this.logger.debug({ output: line.trim() }, '📋 Plan output')
           
@@ -488,12 +491,35 @@ PROMPT_EOF
               this.logger.debug('✅ Mode plan activé')
             }
             
-            // Capturer le contenu du plan depuis ExitPlanMode
+            // Traiter les tool calls en temps réel (sauf ExitPlanMode)
             if (jsonData.type === 'assistant' && jsonData.message?.content) {
               for (const content of jsonData.message.content) {
-                if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
-                  planContent = content.input.plan
-                  this.logger.debug('📄 Plan capturé depuis ExitPlanMode')
+                if (content.type === 'tool_use') {
+                  // Capturer le plan depuis ExitPlanMode
+                  if (content.name === 'ExitPlanMode' && content.input?.plan) {
+                    planContent = content.input.plan
+                    this.logger.debug('📄 Plan capturé depuis ExitPlanMode')
+                  } else if (task && !processedToolCallIds.has(content.id)) {
+                    // Sauvegarder les autres tool calls en temps réel
+                    processedToolCallIds.add(content.id)
+                    
+                    const toolCall = {
+                      id: content.id,
+                      name: content.name,
+                      input: content.input
+                    }
+                    
+                    const toolContent = this.formatToolCall(toolCall)
+                    await TaskMessageModel.create({
+                      id: uuidv4(),
+                      userId: task.userId,
+                      taskId: task._id,
+                      role: 'assistant',
+                      content: `🤖 **${aiProviderLabel} (${model}) - Mode plan:**\n\n${toolContent}`
+                    })
+                    
+                    this.logger.debug({ toolName: content.name }, '💾 Tool call saved in plan mode')
+                  }
                 }
               }
             }
@@ -507,7 +533,7 @@ PROMPT_EOF
             // Ignorer les erreurs de parsing
           }
         }
-      })
+      }
     }
     
     // Phase 1: Exécuter en mode plan
@@ -542,28 +568,40 @@ PROMPT_EOF
       return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
-    // Si pas de plan capturé, essayer de le parser depuis la sortie
-    if (!planContent && planResult.stdout) {
-      const lines = planResult.stdout.split('\n')
-      for (const line of lines) {
-        try {
-          const jsonData = JSON.parse(line.trim())
-          if (jsonData.type === 'assistant' && jsonData.message?.content) {
-            for (const content of jsonData.message.content) {
-              if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
-                planContent = content.input.plan
-                break
-              }
-            }
+    // Parser la sortie complète pour récupérer les tool calls avec résultats
+    if (planResult.stdout) {
+      const parsedOutput = this.parseClaudeJsonOutput(planResult.stdout)
+      
+      // Si pas de plan capturé, essayer de le récupérer depuis la sortie parsée
+      if (!planContent) {
+        for (const toolCall of parsedOutput.toolCalls) {
+          if (toolCall.name === 'ExitPlanMode' && toolCall.input?.plan) {
+            planContent = toolCall.input.plan
+            break
           }
-          // Capturer aussi le total_cost_usd depuis la sortie complète
-          if (jsonData.type === 'result' && jsonData.total_cost_usd && !totalCostUsd) {
-            totalCostUsd = jsonData.total_cost_usd
-            this.logger.info({ costUsd: totalCostUsd }, '💰 Coût total du mode plan (depuis la sortie)')
-          }
-        } catch (e) {
-          // Ignorer
         }
+      }
+      
+      // Sauvegarder les tool calls qui n'ont pas été traités en temps réel (avec résultats)
+      if (task) {
+        for (const toolCall of parsedOutput.toolCalls) {
+          if (!processedToolCallIds.has(toolCall.id) && toolCall.result && toolCall.name !== 'ExitPlanMode') {
+            const toolContent = this.formatToolCall(toolCall)
+            await TaskMessageModel.create({
+              id: uuidv4(),
+              userId: task.userId,
+              taskId: task._id,
+              role: 'assistant',
+              content: `🤖 **${aiProviderLabel} (${model}) - Mode plan:**\n\n${toolContent}`
+            })
+          }
+        }
+      }
+      
+      // Capturer aussi le total_cost_usd depuis la sortie complète si pas déjà capturé
+      if (!totalCostUsd && parsedOutput.totalCostUsd) {
+        totalCostUsd = parsedOutput.totalCostUsd
+        this.logger.info({ costUsd: totalCostUsd }, '💰 Coût total du mode plan (depuis la sortie)')
       }
     }
     
