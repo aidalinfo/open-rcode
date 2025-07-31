@@ -13,7 +13,7 @@ export interface Environment {
   repositoryFullName: string; // owner/repository
   name: string;
   description?: string;
-  runtime: 'node' | 'php' | 'python';
+  runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php';
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
   model: 'opus' | 'sonnet';
   defaultBranch: string; // branche par défaut pour le clonage et les PRs
@@ -40,7 +40,7 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   description: { type: String },
   runtime: { 
     type: String, 
-    enum: ['node', 'php', 'python'], 
+    enum: ['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'], 
     required: true 
   },
   aiProvider: {
