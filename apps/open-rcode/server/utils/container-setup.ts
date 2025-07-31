@@ -94,14 +94,14 @@ export class ContainerSetup {
         throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
 
-    const containerName = `ccweb-task-${task._id}-${Date.now()}`
+    const containerName = `openrcode-task-${task._id}-${Date.now()}`
     const workspaceDir = options.workspaceDir || generateUniqueWorkspace(options.taskId, environment.repository)
 
     const envVars = this.prepareEnvironmentVariables(environment, requiredToken, aiProvider, options.additionalEnvVars)
 
     // Only ensure Docker image if we're using Docker mode
     if (this.containerManager instanceof DockerAdapter) {
-      await this.ensureDockerImage('ccweb-task-runner:latest')
+      await this.ensureDockerImage('openrcode-task-runner:latest')
     }
 
     const containerId = await this.containerManager.createContainer({
@@ -233,7 +233,7 @@ export class ContainerSetup {
     const dockerContext = tar.pack(dockerContextPath)
     
     const stream = await this.docker.getDockerInstance().buildImage(dockerContext, {
-      t: 'ccweb-task-runner:latest',
+      t: 'openrcode-task-runner:latest',
       dockerfile: 'Dockerfile'
     })
     

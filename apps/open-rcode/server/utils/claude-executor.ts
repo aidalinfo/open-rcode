@@ -181,7 +181,7 @@ export class ClaudeExecutor {
         throw new Error(`Environment ${task.environmentId} not found`);
       }
 
-      const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
+      const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'openrcode'}`;
       const aiProvider = (environment.aiProvider || 'anthropic-api') as AIProviderType
       const model = environment.model || 'sonnet'
       this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration')

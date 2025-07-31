@@ -9,7 +9,7 @@ export const connectToDatabase = async () => {
   }
 
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://root:password@localhost:27017/ccweb?authSource=admin'
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://root:password@localhost:27017/openrcode?authSource=admin'
     
     await mongoose.connect(mongoUri)
     isConnected = true
