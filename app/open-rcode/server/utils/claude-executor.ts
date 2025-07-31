@@ -317,10 +317,11 @@ export class ClaudeExecutor {
     let planContent = ''
     let isInPlanMode = false
     let totalCostUsd: number | undefined
+    let processedToolCallIds = new Set<string>()
     
-    const onPlanOutput = (data: string) => {
+    const onPlanOutput = async (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
-      lines.forEach(line => {
+      for (const line of lines) {
         if (line.trim()) {
           this.logger.debug({ output: line.trim() }, '📋 Plan output')
           
@@ -334,12 +335,38 @@ export class ClaudeExecutor {
               this.logger.debug('✅ Mode plan activé')
             }
             
-            // Capturer le contenu du plan depuis ExitPlanMode
+            // Traiter tous les tool calls (pas seulement ExitPlanMode)
             if (jsonData.type === 'assistant' && jsonData.message?.content) {
               for (const content of jsonData.message.content) {
-                if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
-                  planContent = content.input.plan
-                  this.logger.debug('📄 Plan capturé depuis ExitPlanMode')
+                if (content.type === 'tool_use' && !processedToolCallIds.has(content.id)) {
+                  processedToolCallIds.add(content.id)
+                  
+                  // Sauvegarder tous les tools, pas seulement ExitPlanMode
+                  const toolCall = {
+                    id: content.id,
+                    name: content.name,
+                    input: content.input
+                  }
+                  
+                  // Si c'est ExitPlanMode, capturer aussi le plan
+                  if (content.name === 'ExitPlanMode' && content.input?.plan) {
+                    planContent = content.input.plan
+                    this.logger.debug('📄 Plan capturé depuis ExitPlanMode')
+                  }
+                  
+                  // Sauvegarder le tool call dans la DB
+                  if (task) {
+                    const toolContent = adapter.formatToolCall(toolCall)
+                    await TaskMessageModel.create({
+                      id: uuidv4(),
+                      userId: task.userId,
+                      taskId: task._id,
+                      role: 'assistant',
+                      content: `🤖 **${adapter.getName()} (${model}) - Mode Plan:**\n\n${toolContent}`
+                    })
+                    
+                    this.logger.debug({ toolName: content.name }, '💾 Tool call saved in plan mode')
+                  }
                 }
               }
             }
@@ -353,7 +380,7 @@ export class ClaudeExecutor {
             // Ignorer les erreurs de parsing
           }
         }
-      })
+      }
     }
     
     // Phase 1: Exécuter en mode plan
