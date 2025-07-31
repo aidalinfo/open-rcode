@@ -17,7 +17,11 @@ export class ClaudeExecutor {
   }
 
   async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
-    // Si nous sommes en mode plan avec Claude, utiliser executePlanCommand
+    // Le mode plan permet à Claude de planifier son approche avant l'exécution
+    // Il fonctionne en deux phases :
+    // 1. Phase de planification : Claude génère un plan structuré avec l'outil ExitPlanMode
+    // 2. Phase d'exécution : Le plan est exécuté étape par étape
+    // Note : Le mode plan n'est supporté que pour Claude (anthropic-api et claude-oauth)
     if (planMode && aiProvider !== 'gemini-cli' && aiProvider !== 'admin-gemini') {
       return this.executePlanCommand(containerId, prompt, workdir, aiProvider, model, task)
     }
@@ -462,6 +466,27 @@ PROMPT_EOF
     }
   }
 
+  /**
+   * Exécute une commande en mode plan (deux phases : planification puis exécution)
+   * 
+   * Phase 1 - Planification :
+   * - Claude est lancé avec --permission-mode plan
+   * - Il analyse la demande et génère un plan structuré
+   * - Le plan est extrait via l'outil ExitPlanMode
+   * 
+   * Phase 2 - Exécution :
+   * - Le plan est préfixé au prompt original
+   * - Claude exécute le plan sans --permission-mode
+   * - Chaque action est sauvegardée en temps réel
+   * 
+   * @param containerId - ID du conteneur Docker/Kubernetes
+   * @param prompt - Prompt utilisateur original
+   * @param workdir - Répertoire de travail
+   * @param aiProvider - Provider AI (anthropic-api ou claude-oauth)
+   * @param model - Modèle Claude (opus ou sonnet)
+   * @param task - Objet tâche pour la sauvegarde des messages
+   * @returns Le résultat final de l'exécution
+   */
   private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
     this.logger.info('🎯 Exécution en mode plan...')
     
@@ -482,13 +507,15 @@ PROMPT_EOF
           try {
             const jsonData = JSON.parse(line.trim())
             
-            // Détecter si on est en mode plan
+            // Détecter l'activation du mode plan
+            // Claude envoie un message système avec permissionMode: 'plan'
             if (jsonData.type === 'system' && jsonData.permissionMode === 'plan') {
               isInPlanMode = true
               this.logger.debug('✅ Mode plan activé')
             }
             
-            // Capturer le contenu du plan depuis ExitPlanMode
+            // Capturer le plan généré par Claude
+            // L'outil ExitPlanMode contient le plan structuré dans input.plan
             if (jsonData.type === 'assistant' && jsonData.message?.content) {
               for (const content of jsonData.message.content) {
                 if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
@@ -601,6 +628,8 @@ PROMPT_EOF
     }
     
     // Phase 2: Exécuter le plan
+    // Le plan est préfixé au prompt original pour guider l'exécution
+    // Claude exécutera les étapes du plan une par une avec tous les outils disponibles
     this.logger.info('🏃 Exécution du plan...')
     const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
     
