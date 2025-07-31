@@ -1,4 +1,4 @@
-# Open-rcode
+# open-rcode
 
 ## About the Project
 
