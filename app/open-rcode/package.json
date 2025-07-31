@@ -2,7 +2,7 @@
   "name": "open-rcode",
   "private": true,
   "type": "module",
-  "version": "0.0.6alpha",
+  "version": "0.0.7alpha",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
