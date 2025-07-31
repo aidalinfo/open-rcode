@@ -12,7 +12,7 @@ useHead({
 })
 
 const title = 'open-rcode'
-const description = 'A development platform integrating AI to optimize your code projects.'
+const description = 'Open source web platform to execute Claude Code, Gemini CLI and other agentic tools. Create GitHub pull requests from any device with containerized AI-powered development tasks.'
 
 useSeoMeta({
   title,
