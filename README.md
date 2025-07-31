@@ -46,6 +46,6 @@ Detailed installation instructions are being prepared. For now, see the configur
 
 Comprehensive documentation is being developed. Current technical details can be found in CLAUDE.md.
 
-# Repo Activity
+# Repo activity
 
 ![Alt](https://repobeats.axiom.co/api/embed/21b2335261050e32619c9dab5b19e18575c2d7fd.svg "Repobeats analytics image")
