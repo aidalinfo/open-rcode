@@ -189,7 +189,7 @@ export class KubernetesManager {
     }
   }
 
-  static generatePodName(prefix: string = 'ccweb'): string {
+  static generatePodName(prefix: string = 'openrcode'): string {
     const randomId = crypto.randomBytes(8).toString('hex')
     return `${prefix}-${randomId}`
   }
@@ -205,8 +205,8 @@ export class KubernetesManager {
         name: podName,
         namespace,
         labels: {
-          'ccweb.managed': 'true',
-          'ccweb.created': new Date().toISOString().replace(/[:.]/g, '-')
+          'openrcode.managed': 'true',
+          'openrcode.created': new Date().toISOString().replace(/[:.]/g, '-')
         }
       },
       spec: {
@@ -514,7 +514,7 @@ export class KubernetesManager {
       if (labelSelector) {
         args.push('-l', labelSelector)
       } else {
-        args.push('-l', 'ccweb.managed=true')
+        args.push('-l', 'openrcode.managed=true')
       }
       
       const cmd = this.buildKubectlCommand(args)
@@ -626,12 +626,12 @@ export class KubernetesManager {
           name: serviceName,
           namespace: ns,
           labels: {
-            'ccweb.managed': 'true'
+            'openrcode.managed': 'true'
           }
         },
         spec: {
           selector: {
-            'ccweb.managed': 'true'
+            'openrcode.managed': 'true'
           },
           ports: Object.entries(ports).map(([containerPort, hostPort]) => ({
             port: parseInt(hostPort),

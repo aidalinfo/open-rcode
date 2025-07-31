@@ -13,7 +13,7 @@ export class DockerAdapter extends BaseContainerManager {
     return this.dockerManager.isDockerAvailable()
   }
 
-  generateContainerName(prefix: string = 'ccweb'): string {
+  generateContainerName(prefix: string = 'openrcode'): string {
     return DockerManager.generateContainerName(prefix)
   }
 

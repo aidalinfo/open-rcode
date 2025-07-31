@@ -24,7 +24,7 @@ export class RepositoryCloner {
 
     const repositoryUrl = `https://x-access-token:${installationToken}@github.com/${environment.repositoryFullName}.git`
 
-    const workspaceDir = customWorkspaceDir || `/tmp/workspace-${Date.now()}/${environment.repository || 'ccweb'}`
+    const workspaceDir = customWorkspaceDir || `/tmp/workspace-${Date.now()}/${environment.repository || 'openrcode'}`
     const defaultBranch = environment.defaultBranch || 'main'
 
     logger.info({

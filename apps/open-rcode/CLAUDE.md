@@ -167,7 +167,7 @@ Ensure user messages are saved to `TaskMessageModel` when creating tasks in `ser
 
 ```bash
 # Database
-DATABASE_URL=mongodb://localhost:27017/ccweb
+DATABASE_URL=mongodb://localhost:27017/openrcode
 
 # Container Mode
 CONTAINER_MODE=docker                    # or "kubernetes"
@@ -195,10 +195,10 @@ DOCKER_CERT_PATH=/path/to/certs         # Optional, for TLS certificates
 
 ## Docker Configuration
 
-The `ccweb-task-runner:latest` image includes:
+The `openrcode-task-runner:latest` image includes:
 - Ubuntu 24.04 base with development tools
 - Node.js (18, 20, 22) via NVM
 - Claude Code and Gemini CLI installed globally
 - Git configuration and repository cloning capabilities
 
-Build with: `docker build -t ccweb-task-runner:latest server/utils/docker/`
+Build with: `docker build -t openrcode-task-runner:latest server/utils/docker/`

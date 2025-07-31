@@ -24,7 +24,7 @@ export class PullRequestCreator {
         throw new Error(`Environment ${task.environmentId} not found`)
       }
       
-      const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}/repo`
+      const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'openrcode'}/repo`
       
       const user = await UserModel.findOne({ githubId: task.userId })
       if (!user) {

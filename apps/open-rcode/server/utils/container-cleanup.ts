@@ -41,7 +41,7 @@ export class ContainerCleanup {
   }
 
   private async cleanupWorkspaceFiles(taskId: string): Promise<void> {
-    const hostWorkspaceDir = `/tmp/ccweb-workspaces/${taskId}`
+    const hostWorkspaceDir = `/tmp/openrcode-workspaces/${taskId}`
     
     try {
       const { exec } = await import('child_process')

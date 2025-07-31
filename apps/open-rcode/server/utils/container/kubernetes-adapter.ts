@@ -13,7 +13,7 @@ export class KubernetesAdapter extends BaseContainerManager {
     return this.kubernetesManager.isKubernetesAvailable()
   }
 
-  generateContainerName(prefix: string = 'ccweb'): string {
+  generateContainerName(prefix: string = 'openrcode'): string {
     return KubernetesManager.generatePodName(prefix)
   }
 

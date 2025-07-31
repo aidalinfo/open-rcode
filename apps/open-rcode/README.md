@@ -22,7 +22,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ```bash
 # Database
-DATABASE_URL=mongodb://localhost:27017/ccweb
+DATABASE_URL=mongodb://localhost:27017/openrcode
 
 # Container Mode Configuration
 CONTAINER_MODE=docker                    # or "kubernetes"
@@ -85,7 +85,7 @@ docker-compose up -d mongodb
 For Docker mode, build the task runner container image:
 
 ```bash
-docker build -t ccweb-task-runner:latest server/utils/docker/
+docker build -t openrcode-task-runner:latest server/utils/docker/
 ```
 
 ## Development
@@ -115,16 +115,16 @@ pnpm typecheck # TypeScript validation
 
 ```bash
 # Build the application image
-docker build -t ccweb:latest \
+docker build -t openrcode:latest \
   --build-arg NUXT_UI_PRO_LICENSE=your_license_key .
 
 # Run the container
 docker run -d \
-  --name ccweb-app \
+  --name openrcode-app \
   -p 3000:3000 \
   --env-file .env \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  ccweb:latest
+  openrcode:latest
 ```
 
 #### Option 2: Docker Compose
@@ -141,7 +141,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=mongodb://mongodb:27017/ccweb
+      - DATABASE_URL=mongodb://mongodb:27017/openrcode
       - CONTAINER_MODE=docker
       - GITHUB_APP_ID=${GITHUB_APP_ID}
       - GITHUB_PRIVATE_KEY=${GITHUB_PRIVATE_KEY}
@@ -163,7 +163,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: ccweb
+      MONGO_INITDB_DATABASE: openrcode
 
 volumes:
   db-data:
@@ -185,14 +185,14 @@ kubectl create secret generic github-private-key \
   --from-file=private-key.pem=path/to/your/private-key.pem
 
 # Application secrets
-kubectl create secret generic ccweb-secrets \
+kubectl create secret generic openrcode-secrets \
   --from-literal=github-app-id="your_app_id" \
   --from-literal=github-client-id="your_client_id" \
   --from-literal=github-client-secret="your_client_secret" \
   --from-literal=encryption-key="your_32_character_secret_key" \
   --from-literal=session-secret="your_session_secret" \
   --from-literal=claude-oauth-token="your_claude_token" \
-  --from-literal=database-url="mongodb://mongodb:27017/ccweb"
+  --from-literal=database-url="mongodb://mongodb:27017/openrcode"
 ```
 
 #### 2. Deploy Application
@@ -203,20 +203,20 @@ Create `k8s-deployment.yaml`:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ccweb-app
+  name: openrcode-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: ccweb-app
+      app: openrcode-app
   template:
     metadata:
       labels:
-        app: ccweb-app
+        app: openrcode-app
     spec:
       containers:
-      - name: ccweb
-        image: ccweb:latest
+      - name: openrcode
+        image: openrcode:latest
         ports:
         - containerPort: 3000
         env:
@@ -227,39 +227,39 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: database-url
         - name: GITHUB_APP_ID
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: github-app-id
         - name: GITHUB_CLIENT_ID
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: github-client-id
         - name: GITHUB_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: github-client-secret
         - name: GITHUB_PRIVATE_KEY
           value: "/etc/github/private-key.pem"
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: encryption-key
         - name: SESSION_SECRET
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: session-secret
         - name: CLAUDE_CODE_OAUTH_TOKEN
           valueFrom:
             secretKeyRef:
-              name: ccweb-secrets
+              name: openrcode-secrets
               key: claude-oauth-token
         volumeMounts:
         - name: github-private-key
@@ -269,16 +269,16 @@ spec:
       - name: github-private-key
         secret:
           secretName: github-private-key
-      serviceAccountName: ccweb-service-account
+      serviceAccountName: openrcode-service-account
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ccweb-service
+  name: openrcode-service
 spec:
   selector:
-    app: ccweb-app
+    app: openrcode-app
   ports:
   - port: 80
     targetPort: 3000
@@ -288,13 +288,13 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ccweb-service-account
+  name: openrcode-service-account
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: ccweb-pod-manager
+  name: openrcode-pod-manager
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -307,14 +307,14 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: ccweb-pod-manager-binding
+  name: openrcode-pod-manager-binding
 subjects:
 - kind: ServiceAccount
-  name: ccweb-service-account
+  name: openrcode-service-account
   namespace: default
 roleRef:
   kind: ClusterRole
-  name: ccweb-pod-manager
+  name: openrcode-pod-manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -346,14 +346,14 @@ Monitor and clean up containers:
 
 ```bash
 # List active task containers
-docker ps -f name=ccweb-task
+docker ps -f name=openrcode-task
 
 # View container logs
 docker logs <container_id>
 
 # Cleanup old containers
-docker stop $(docker ps -q -f name=ccweb-task) && \
-docker rm $(docker ps -aq -f name=ccweb-task)
+docker stop $(docker ps -q -f name=openrcode-task) && \
+docker rm $(docker ps -aq -f name=openrcode-task)
 ```
 
 ### Kubernetes Mode
@@ -362,13 +362,13 @@ Monitor and clean up pods:
 
 ```bash
 # List active task pods
-kubectl get pods -l ccweb.managed=true
+kubectl get pods -l openrcode.managed=true
 
 # View pod logs
 kubectl logs <pod_name>
 
 # Cleanup old pods
-kubectl delete pods -l ccweb.managed=true
+kubectl delete pods -l openrcode.managed=true
 ```
 
 ## Monitoring & Troubleshooting
