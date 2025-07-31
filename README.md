@@ -4,6 +4,8 @@
 
 Open-rcode is an open source platform that allows you to execute Claude Code, Gemini CLI and soon other agentic CLI applications from a web interface. It enables you to easily launch requests across multiple projects and review code through Pull Requests. You can also run tasks from your phone.
 
+**🌐 Try the beta platform at: https://app.open-rcode.com/**
+
 ## Features
 
 - **Web Interface**: Execute AI-powered development tasks through a user-friendly web interface
@@ -32,7 +34,17 @@ Open-rcode is an open source platform that allows you to execute Claude Code, Ge
 - MongoDB
 - GitHub App configuration
 
-For detailed setup instructions, see the configuration section in CLAUDE.md.
+## Installation
+
+🚧 **Under Construction**
+
+Detailed installation instructions are being prepared. For now, see the configuration section in CLAUDE.md.
+
+## Documentation
+
+🚧 **Under Construction**
+
+Comprehensive documentation is being developed. Current technical details can be found in CLAUDE.md.
 
 # Repo Activity
 
