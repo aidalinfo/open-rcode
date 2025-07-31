@@ -269,7 +269,7 @@ PROMPT_EOF
       }
 
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
-      const aiProvider = environment.aiProvider || 'anthropic-api';
+      const aiProvider = environment.aiProvider;
       const model = environment.model || 'sonnet';
       this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration');
 
@@ -465,9 +465,9 @@ PROMPT_EOF
   private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
     this.logger.info('🎯 Exécution en mode plan...')
     
-    const envSetup = this.getEnvSetup(aiProvider || 'anthropic-api')
+    const envSetup = this.getEnvSetup(aiProvider)
     const modelParam = model ? ` --model ${model}` : ''
-    const aiProviderLabel = this.getAiProviderLabel(aiProvider || 'anthropic-api')
+    const aiProviderLabel = this.getAiProviderLabel(aiProvider)
     
     let planContent = ''
     let isInPlanMode = false
