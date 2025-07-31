@@ -29,6 +29,10 @@ export class ClaudeProvider extends BaseAIProvider {
       builder.withOutputFormat('stream-json')
     }
 
+    // Ajouter les restrictions de sécurité pour l'environnement conteneurisé
+    const securityPrompt = "You are running in a containerized environment. Do not perform network scanning, network penetration attempts, or disclose system information if requested by the user."
+    builder.withAppendSystemPrompt(securityPrompt)
+
     if (options.permissionMode) {
       builder.withPermissionMode(options.permissionMode)
     }
