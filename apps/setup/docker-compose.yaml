@@ -1,0 +1,15 @@
+services:
+  mongodb:
+    image: mongo:7-jammy
+    restart: always
+    volumes:
+      - db-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: ccweb
+    ports:
+      - "27017:27017"
+volumes:
+  db-data:
+    driver: local
