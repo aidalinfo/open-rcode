@@ -14,7 +14,7 @@
       <!-- Bouton refresh -->
       <UButton
         v-if="showRefresh"
-        label="Rafraîchir"
+        label="Refresh"
         color="neutral"
         variant="outline"
         icon="i-lucide-refresh-cw"
@@ -24,7 +24,7 @@
       <!-- Bouton de basculement vue table/cartes -->
       <UButton
         :icon="viewMode === 'table' ? 'i-lucide-layout-grid' : 'i-lucide-layout-list'"
-        :label="viewMode === 'table' ? 'Vue cartes' : 'Vue table'"
+        :label="viewMode === 'table' ? 'Card view' : 'Table view'"
         color="neutral"
         variant="outline"
         @click="toggleViewMode"
@@ -37,12 +37,12 @@
         :content="{ align: 'end' }"
       >
         <UButton
-          label="Colonnes"
+          label="Columns"
           color="neutral"
           variant="outline"
           trailing-icon="i-lucide-chevron-down"
           class="ml-auto"
-          aria-label="Menu de sélection des colonnes"
+          aria-label="Column selection menu"
         />
       </UDropdownMenu>
 
@@ -76,51 +76,47 @@
         <!-- Slot personnalisé pour le contenu de la carte -->
         <slot v-if="$slots['card-template']" name="card-template" :item="item" :columns="visibleColumns" />
         
-        <!-- Template par défaut -->
-        <template v-else>
-          <!-- Header de la carte (première colonne visible) -->
-          <template v-if="visibleColumns.length > 0" #header>
-            <h3 class="text-lg font-semibold truncate">
-              {{ getItemValue(item, visibleColumns[0]) }}
-            </h3>
-          </template>
+        <!-- Header par défaut -->
+        <template v-if="!$slots['card-template'] && visibleColumns.length > 0" #header>
+          <h3 class="text-lg font-semibold truncate">
+            {{ getItemValue(item, visibleColumns[0]) }}
+          </h3>
+        </template>
 
-          <!-- Contenu de la carte -->
-          <div class="space-y-2">
-            <div
-              v-for="(column, colIndex) in visibleColumns.slice(1)"
-              :key="colIndex"
-              class="flex items-start gap-2"
-            >
-              <span class="text-sm text-gray-500 font-medium min-w-[120px]">
-                {{ column.header || column.id || column.accessorKey }}:
+        <!-- Contenu par défaut -->
+        <div v-if="!$slots['card-template']" class="space-y-2">
+          <div
+            v-for="(column, colIndex) in visibleColumns.slice(1)"
+            :key="colIndex"
+            class="flex items-start gap-2"
+          >
+            <span class="text-sm text-gray-500 font-medium min-w-[120px]">
+              {{ column.header || column.id || column.accessorKey }}:
+            </span>
+            <span class="text-sm flex-1">
+              <slot 
+                v-if="$slots[column.id || column.accessorKey]"
+                :name="column.id || column.accessorKey"
+                :row="item"
+              />
+              <span v-else>
+                {{ getItemValue(item, column) }}
               </span>
-              <span class="text-sm flex-1">
-                <template v-if="$slots[column.id || column.accessorKey]">
-                  <slot 
-                    :name="column.id || column.accessorKey"
-                    :row="item"
-                  />
-                </template>
-                <template v-else>
-                  {{ getItemValue(item, column) }}
-                </template>
-              </span>
-            </div>
+            </span>
           </div>
+        </div>
 
-          <!-- Footer avec actions si nécessaire -->
-          <template v-if="$slots['card-actions']" #footer>
-            <slot name="card-actions" :item="item" />
-          </template>
+        <!-- Footer par défaut -->
+        <template v-if="!$slots['card-template'] && $slots['card-actions']" #footer>
+          <slot name="card-actions" :item="item" />
         </template>
       </UCard>
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-between">
-      <div class="text-sm text-gray-500">
-        {{ paginatedData.length }} sur {{ total || data.length }} élément(s) affiché(s).
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-gray-500 order-2 sm:order-1">
+        {{ paginatedData.length }} of {{ total || data.length }} item(s) displayed.
       </div>
 
       <!-- Pagination -->
@@ -129,10 +125,11 @@
         :page="pagination.page"
         :items-per-page="pagination.limit"
         :total="total || data.length"
+        class="order-1 sm:order-2"
         @update:page="handlePageUpdate"
       />
 
-      <slot name="footer-end" />
+      <slot name="footer-end" class="order-3" />
     </div>
   </div>
 </template>
@@ -183,7 +180,10 @@ const emit = defineEmits<{
 
 const table = ref()
 const hiddenColumns = ref<Set<string>>(new Set())
-const viewMode = ref<'table' | 'card'>(props.defaultViewMode)
+
+// Vue par défaut - card sur mobile, sinon selon props
+const isMobile = process.client && window.innerWidth < 640
+const viewMode = ref<'table' | 'card'>(isMobile ? 'card' : props.defaultViewMode)
 
 const visibleColumns = computed(() => {
   return props.columns.filter(column => {

@@ -4,7 +4,7 @@
       <UContainer>
         <AppSkeleton v-if="isInitialLoading" />
         
-        <div v-else class="py-8 space-y-6">
+        <div v-else>
           <ChatPrompt
             v-model:input="input"
             v-model:selectedEnvironment="selectedEnvironment"
