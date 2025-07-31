@@ -144,7 +144,7 @@ export class DockerManager {
   /**
    * Génère un nom unique pour le conteneur
    */
-  static generateContainerName(prefix: string = 'ccweb'): string {
+  static generateContainerName(prefix: string = 'openrcode'): string {
     const randomId = crypto.randomBytes(8).toString('hex')
     return `${prefix}-${randomId}`
   }
@@ -172,8 +172,8 @@ export class DockerManager {
           }
         },
         Labels: {
-          'ccweb.managed': 'true',
-          'ccweb.created': new Date().toISOString()
+          'openrcode.managed': 'true',
+          'openrcode.created': new Date().toISOString()
         }
       }
 
@@ -362,14 +362,14 @@ export class DockerManager {
   }
 
   /**
-   * Liste tous les conteneurs gérés par ccweb
+   * Liste tous les conteneurs gérés par openrcode
    */
   async listContainers(all: boolean = false): Promise<ContainerInfo[]> {
     try {
       const containers = await this.docker.listContainers({ 
         all,
         filters: {
-          label: ['ccweb.managed=true']
+          label: ['openrcode.managed=true']
         }
       })
       
@@ -455,7 +455,7 @@ export class DockerManager {
   }
 
   /**
-   * Nettoie tous les conteneurs ccweb arrêtés
+   * Nettoie tous les conteneurs openrcode arrêtés
    */
   async cleanupContainers(): Promise<number> {
     try {
