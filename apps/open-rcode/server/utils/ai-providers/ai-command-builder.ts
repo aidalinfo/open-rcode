@@ -40,6 +40,11 @@ export class AICommandBuilder {
     return this
   }
 
+  withAppendSystemPrompt(systemPrompt: string): AICommandBuilder {
+    this.args.push('--append-system-prompt', `"${systemPrompt}"`)
+    return this
+  }
+
   build(): string {
     const fullCommand = [this.command, ...this.args].join(' ')
     
