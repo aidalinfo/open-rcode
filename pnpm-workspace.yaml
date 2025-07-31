@@ -1,2 +1,15 @@
 packages:
-  - "apps/*"
+  - apps/*
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - better-sqlite3
+  - cpu-features
+  - esbuild
+  - maplibre-gl
+  - protobufjs
+  - sharp
+  - ssh2
+  - unrs-resolver
+  - vue-demi
