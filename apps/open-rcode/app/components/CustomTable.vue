@@ -79,7 +79,7 @@
         <!-- Header par défaut -->
         <template v-if="!$slots['card-template'] && visibleColumns.length > 0" #header>
           <h3 class="text-lg font-semibold truncate">
-            {{ getItemValue(item, visibleColumns[0]) }}
+            {{ visibleColumns[0] ? getItemValue(item, visibleColumns[0]) : '' }}
           </h3>
         </template>
 
@@ -95,8 +95,8 @@
             </span>
             <span class="text-sm flex-1">
               <slot 
-                v-if="$slots[column.id || column.accessorKey]"
-                :name="column.id || column.accessorKey"
+                v-if="$slots[(column.id || column.accessorKey) as string]"
+                :name="(column.id || column.accessorKey) as string"
                 :row="item"
               />
               <span v-else>
@@ -136,12 +136,13 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { upperFirst, get } from 'lodash-es'
 
-interface Column {
+// Type compatible avec UTable
+type Column = {
   id?: string
   accessorKey?: string
-  header?: string
+  header?: string | ((props: any) => any)
+  accessorFn?: (originalRow: any, index: number) => any
   [key: string]: any
 }
 
@@ -212,7 +213,7 @@ const paginatedData = computed(() => {
 
 const columnToggleItems = computed(() => {
   return props.columns.map((column) => ({
-    label: upperFirst(column.header || column.id || column.accessorKey || ''),
+    label: capitalize(column.header || column.id || column.accessorKey || ''),
     type: 'checkbox' as const,
     checked: isColumnVisible(column.id || column.accessorKey || ''),
     onUpdateChecked() {
@@ -253,10 +254,22 @@ function toggleViewMode() {
 }
 
 function getItemValue(item: any, column: Column): any {
+  if (column.accessorFn) {
+    return column.accessorFn(item, 0)
+  }
+  
   const key = column.accessorKey || column.id
   if (!key) return ''
   
   // Support des chemins imbriqués (ex: 'user.name')
-  return get(item, key, '')
+  return getNestedValue(item, key) || ''
+}
+
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current?.[key], obj)
+}
+
+function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1)
 }
 </script>
