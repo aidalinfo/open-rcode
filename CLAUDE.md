@@ -4,7 +4,7 @@ Ce fichier fournit des conseils à Claude Code lors du travail sur la codebase o
 
 ## Vue d'ensemble du projet
 
-Open-rcode est une plateforme web containerisée qui permet aux développeurs d'exécuter des tâches de programmation assistées par IA dans des conteneurs isolés (Docker ou Kubernetes), créant automatiquement des Pull Requests GitHub. La plateforme est construite avec :
+open-rcode est une plateforme web containerisée qui permet aux développeurs d'exécuter des tâches de programmation assistées par IA dans des conteneurs isolés (Docker ou Kubernetes), créant automatiquement des Pull Requests GitHub. La plateforme est construite avec :
 - **Frontend** : Nuxt 4 avec UI Pro
 - **Backend** : API Nitro (Nuxt server)
 - **Base de données** : MongoDB
@@ -23,7 +23,7 @@ Open-rcode est une plateforme web containerisée qui permet aux développeurs d'
 ### Structure du projet
 ```
 /
-├── app/
+├── apps/
 │   ├── docs/                  # Documentation (projet séparé)
 │   └── open-rcode/           # Application principale
 │       ├── app/              # Frontend Nuxt
@@ -40,7 +40,7 @@ Open-rcode est une plateforme web containerisée qui permet aux développeurs d'
 
 ```bash
 # Navigation
-cd app/open-rcode              # Aller dans l'application principale
+cd apps/open-rcode              # Aller dans l'application principale
 
 # Développement
 pnpm install                   # Installer les dépendances
