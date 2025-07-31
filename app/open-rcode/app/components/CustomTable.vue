@@ -182,7 +182,7 @@ const table = ref()
 const hiddenColumns = ref<Set<string>>(new Set())
 
 // Vue par défaut - card sur mobile, sinon selon props
-const isMobile = process.client && window.innerWidth < 640
+const isMobile = import.meta.client && window.innerWidth < 640
 const viewMode = ref<'table' | 'card'>(isMobile ? 'card' : props.defaultViewMode)
 
 const visibleColumns = computed(() => {

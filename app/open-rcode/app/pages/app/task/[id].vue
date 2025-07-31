@@ -61,7 +61,7 @@
               <div v-if="isPRLink(message)" class="pr-link-message">
                 <div class="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                   <div class="flex items-center gap-3">
-                    <UIcon name="i-heroicons-git-branch" class="w-5 h-5 text-green-600" />
+                    <UIcon name="i-lucide-git-branch" class="w-5 h-5 text-green-600" />
                     <div class="flex-1">
                       <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request created</p>
                       <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
@@ -79,7 +79,7 @@
                   />
                 </div>
               </div>
-              <ToolMessageTree v-else-if="isToolMessage(message)" :message="message.content" />
+              <ToolMessageTree v-else-if="message.type === 'tools'" :message="message.content" />
               <MDC v-else :value="message.content" :cache-key="message.id" unwrap="p" />
             </template>
           </UChatMessages>
@@ -114,13 +114,49 @@ const chatStatus = computed(() => {
 
 // Format messages for UChatMessages component
 const formattedMessages = computed(() => {
-  return messages.value.map((message, index) => ({
-    id: message._id || index,
-    role: message.role,
-    content: message.content,
-    timestamp: message.timestamp || new Date(),
-    type: message.type
-  }))
+  const grouped: any[] = []
+  let currentToolGroup: any = null
+  
+  for (const message of messages.value) {
+    if (isToolMessage(message)) {
+      // Si c'est un message outil
+      if (currentToolGroup) {
+        // Ajouter à l'outil en cours
+        currentToolGroup.content += '\n' + message.content
+      } else {
+        // Créer un nouveau groupe d'outils
+        currentToolGroup = {
+          id: message._id || Math.random(),
+          role: message.role,
+          content: message.content,
+          timestamp: message.timestamp || new Date(),
+          type: 'tools' as any
+        }
+      }
+    } else {
+      // Si ce n'est pas un message outil, finaliser le groupe précédent
+      if (currentToolGroup) {
+        grouped.push(currentToolGroup)
+        currentToolGroup = null
+      }
+      
+      // Ajouter le message normal
+      grouped.push({
+        id: message._id || Math.random(),
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp || new Date(),
+        type: message.type as any
+      })
+    }
+  }
+  
+  // Finaliser le dernier groupe d'outils si nécessaire
+  if (currentToolGroup) {
+    grouped.push(currentToolGroup)
+  }
+  
+  return grouped
 })
 
 // Helper function to detect PR links
