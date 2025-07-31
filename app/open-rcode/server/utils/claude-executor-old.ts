@@ -7,16 +7,6 @@ import { CountRequestModel } from '../models/CountRequest'
 import { UserCostModel } from '../models/UserCost'
 import { v4 as uuidv4 } from 'uuid'
 import { createLogger } from './logger'
-import { AIProviderAdapter } from './ai-providers/ai-provider-adapter'
-import { AIProviderType, ParsedOutput } from './ai-providers/base-ai-provider'
-import { ContainerScripts } from './container-scripts'
-import { AIProviderFactory } from './ai-providers/ai-provider-factory'
-
-interface ExecuteResult {
-  stdout: string
-  stderr: string
-  exitCode: number
-}
 
 export class ClaudeExecutor {
   private containerManager: BaseContainerManager
@@ -27,36 +17,80 @@ export class ClaudeExecutor {
   }
 
   async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
-    const providerType = (aiProvider || 'anthropic-api') as AIProviderType
-    const adapter = new AIProviderAdapter(providerType)
-    
     // Si nous sommes en mode plan avec Claude, utiliser executePlanCommand
-    if (planMode && adapter.supportsPlanMode()) {
-      return this.executePlanCommand(containerId, prompt, workdir, providerType, model, task)
+    if (planMode && aiProvider !== 'gemini-cli' && aiProvider !== 'admin-gemini') {
+      return this.executePlanCommand(containerId, prompt, workdir, aiProvider, model, task)
     }
     
     // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
     if (task) {
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
     const onOutput = (data: string) => {
+      // Afficher la sortie Claude en temps réel
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim() && !line.includes('===')) {
-          this.logger.debug({ output: line.trim() }, '🤖 AI output')
+          this.logger.debug({ output: line.trim() }, '🤖 Claude output')
         }
       })
     }
 
-    this.logger.debug({ aiProvider: providerType, model, hasAdminKey: !!process.env.ADMIN_GOOGLE_API_KEY }, 'AI Provider configuration')
+    // Déterminer la commande à exécuter selon le provider
+    let aiCommand = 'claude -p'
+    let envSetup = ''
 
-    const script = adapter.buildExecutionScript({
-      prompt,
-      workdir: workdir || '/tmp/workspace',
-      model,
-      planMode
-    })
+    // Ajouter le paramètre --model si spécifié
+    const modelParam = model ? ` --model ${model}` : ''
+
+    this.logger.debug({ aiProvider, model, hasAdminKey: !!process.env.ADMIN_GOOGLE_API_KEY }, 'AI Provider configuration')
+
+    switch (aiProvider) {
+      case 'anthropic-api':
+        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
+        envSetup = 'export ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"'
+        break
+      case 'claude-oauth':
+        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
+        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+        break
+      case 'gemini-cli':
+        aiCommand = `gemini${modelParam} -p`
+        envSetup = 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
+        break
+      case 'admin-gemini':
+        aiCommand = `gemini${modelParam} -p`
+        envSetup = `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
+        break
+      default:
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
+    }
+
+    const script = `
+      # Create and change to working directory
+      mkdir -p "${workdir || '/tmp/workspace'}"
+      cd "${workdir || '/tmp/workspace'}"
+      
+      # Configuration Git
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      # Charger l'environnement Node et npm global (version bash)
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      
+      # Vérifier que Claude est installé
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      
+      ${envSetup}
+      ${aiCommand} "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
+    `
 
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
 
@@ -64,35 +98,45 @@ export class ClaudeExecutor {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    const parsedOutput = adapter.parseOutput(result.stdout)
+    // Filtrer le chemin indésirable du début de la sortie
+    let filteredOutput = result.stdout
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
+    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
-    // Si c'est Gemini, retourner le résultat final directement
-    if (AIProviderFactory.isGeminiProvider(providerType)) {
-      return parsedOutput.finalResult
+    // Si c'est Gemini, retourner la sortie brute sans parsing JSON
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
+      return filteredOutput
     }
     
-    // Pour Claude, formater la sortie
+    // Pour Claude, parser la sortie JSON pour extraire les tool calls et les formater
+    const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
+    
+    // Combiner pour le retour (pour compatibilité)
     const formattedParts: string[] = []
     
+    // Ajouter chaque tool call formaté
     for (const toolCall of parsedOutput.toolCalls) {
-      formattedParts.push(adapter.formatToolCall(toolCall))
+      formattedParts.push(this.formatToolCall(toolCall))
     }
     
+    // Ajouter les messages texte
     if (parsedOutput.textMessages.length > 0) {
       formattedParts.push('\n💬 **Réponse:**')
       formattedParts.push(parsedOutput.textMessages.join('\n'))
     }
     
+    // Ajouter le résultat final si différent des messages
     if (parsedOutput.finalResult && !parsedOutput.textMessages.includes(parsedOutput.finalResult)) {
       formattedParts.push('\n📋 **Résumé:**')
       formattedParts.push(parsedOutput.finalResult)
     }
     
-    return formattedParts.length > 0 ? formattedParts.join('\n\n') : parsedOutput.finalResult
+    return formattedParts.length > 0 ? formattedParts.join('\n\n') : filteredOutput
   }
 
   async executeConfigurationScript(containerId: string, configScript: string, workdir?: string): Promise<string> {
     const onOutput = (data: string) => {
+      // Afficher la sortie en temps réel (sans les retours à la ligne vides)
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim()) {
@@ -101,10 +145,22 @@ export class ClaudeExecutor {
       })
     }
 
-    const script = ContainerScripts.buildConfigurationScript(
-      workdir || '/tmp/workspace',
-      configScript
-    )
+    const script = `
+      # Create and change to working directory
+      mkdir -p "${workdir || '/tmp/workspace'}"
+      cd "${workdir || '/tmp/workspace'}"
+      
+      # Configuration Git
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      echo "=== Executing configuration script ==="
+      ${configScript}
+      echo "=== Configuration script completed ==="
+    `
 
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
 
@@ -163,6 +219,37 @@ export class ClaudeExecutor {
     })
   }
 
+  async executeConfigurationScriptOld(containerId: string, configScript: string, workdir?: string): Promise<string> {
+    const script = `
+      cd "${workdir || '/tmp/workspace'}"
+      
+      # Configuration Git
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      echo "=== Executing configuration script ==="
+      ${configScript}
+      echo "=== Configuration script completed ==="
+    `
+
+    const result = await this.containerManager.executeInContainer({
+      containerId,
+      command: ['sh', '-c', script],
+      user: 'root',
+      environment: { 'HOME': '/root' }
+    })
+
+    if (result.exitCode !== 0) {
+      this.logger.error({ exitCode: result.exitCode, stderr: result.stderr }, '❌ Configuration script failed')
+      throw new Error(`Configuration script failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
+    }
+
+    this.logger.debug({ outputLength: result.stdout.length }, '✅ Configuration script completed')
+    return result.stdout
+  }
+
   async executeWorkflow(containerId: string, task: any): Promise<void> {
     const updateTaskStatus = async (status: string, error?: string) => {
       await TaskModel.findByIdAndUpdate(task._id, { 
@@ -182,9 +269,9 @@ export class ClaudeExecutor {
       }
 
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
-      const aiProvider = (environment.aiProvider || 'anthropic-api') as AIProviderType
-      const model = environment.model || 'sonnet'
-      this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration')
+      const aiProvider = environment.aiProvider || 'anthropic-api';
+      const model = environment.model || 'sonnet';
+      this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration');
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
         this.logger.info('Executing configuration script');
@@ -227,13 +314,11 @@ export class ClaudeExecutor {
           content: `🚀 **Démarrage de l'exécution avec ${this.getAiProviderLabel(aiProvider)} (${model})${task.planMode ? ' en mode plan' : ''}...**`
         });
         
-        const adapter = new AIProviderAdapter(aiProvider)
-        
-        // Si planMode est activé et que le provider le supporte
-        if (task.planMode && adapter.supportsPlanMode()) {
-          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task)
+        // Si planMode est activé et que c'est Claude, utiliser executePlanCommand
+        if (task.planMode && aiProvider !== 'gemini-cli' && aiProvider !== 'admin-gemini') {
+          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task);
         } else {
-          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche')
+          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche');
         }
       }
 
@@ -298,21 +383,90 @@ export class ClaudeExecutor {
   }
 
 
-  private getAiProviderLabel(provider: AIProviderType): string {
-    const adapter = new AIProviderAdapter(provider)
-    return adapter.getName()
+  private getAiProviderLabel(provider: string): string {
+    const labels = {
+      'anthropic-api': 'Claude API',
+      'claude-oauth': 'Claude Code',
+      'gemini-cli': 'Gemini',
+      'admin-gemini': 'Gemini Admin'
+    }
+    return labels[provider as keyof typeof labels] || provider
   }
 
-  private parseClaudeJsonOutput(rawOutput: string): ParsedOutput {
-    const adapter = new AIProviderAdapter('anthropic-api')
-    return adapter.parseOutput(rawOutput)
+  private parseClaudeJsonOutput(rawOutput: string): { toolCalls: any[], textMessages: string[], finalResult: string, totalCostUsd?: number } {
+    try {
+      const lines = rawOutput.split('\n')
+      let toolCalls: any[] = []
+      let toolResults: Map<string, any> = new Map()
+      let textMessages: string[] = []
+      let finalResult = ''
+      let totalCostUsd: number | undefined
+      
+      for (const line of lines) {
+        if (!line.trim() || line.trim().startsWith('[') && line.trim().endsWith(']')) continue
+        
+        try {
+          const jsonData = JSON.parse(line.trim())
+          
+          if (jsonData.type === 'assistant' && jsonData.message?.content) {
+            for (const content of jsonData.message.content) {
+              if (content.type === 'tool_use') {
+                toolCalls.push({
+                  id: content.id,
+                  name: content.name,
+                  input: content.input
+                })
+              } else if (content.type === 'text' && content.text?.trim()) {
+                textMessages.push(content.text.trim())
+              }
+            }
+          } else if (jsonData.type === 'user' && jsonData.message?.content) {
+            for (const content of jsonData.message.content) {
+              if (content.type === 'tool_result') {
+                toolResults.set(content.tool_use_id, content)
+              }
+            }
+          } else if (jsonData.type === 'result') {
+            if (jsonData.result) {
+              finalResult = jsonData.result
+            }
+            if (jsonData.total_cost_usd) {
+              totalCostUsd = jsonData.total_cost_usd
+            }
+          }
+        } catch (parseError) {
+          continue
+        }
+      }
+      
+      // Associer les résultats aux tool calls
+      const toolCallsWithResults = toolCalls.map(toolCall => ({
+        ...toolCall,
+        result: toolResults.get(toolCall.id)
+      }))
+      
+      return {
+        toolCalls: toolCallsWithResults,
+        textMessages,
+        finalResult,
+        totalCostUsd
+      }
+      
+    } catch (error) {
+      this.logger.debug({ error: error.message }, 'Error parsing Claude JSON output')
+      return {
+        toolCalls: [],
+        textMessages: [],
+        finalResult: rawOutput
+      }
+    }
   }
 
-  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: AIProviderType, model?: string, task?: any): Promise<string> {
+  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
     this.logger.info('🎯 Exécution en mode plan...')
     
-    const providerType = aiProvider || 'anthropic-api'
-    const adapter = new AIProviderAdapter(providerType)
+    const envSetup = this.getEnvSetup(aiProvider || 'anthropic-api')
+    const modelParam = model ? ` --model ${model}` : ''
     
     let planContent = ''
     let isInPlanMode = false
@@ -357,12 +511,26 @@ export class ClaudeExecutor {
     }
     
     // Phase 1: Exécuter en mode plan
-    const planScript = adapter.buildExecutionScript({
-      prompt,
-      workdir: workdir || '/tmp/workspace',
-      model,
-      planMode: true
-    })
+    const planScript = `
+      mkdir -p "${workdir || '/tmp/workspace'}"
+      cd "${workdir || '/tmp/workspace'}"
+      
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      
+      ${envSetup}
+      claude --verbose --output-format stream-json --permission-mode plan${modelParam} -p "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
+    `
     
     this.logger.info('🚀 Exécution de la commande en mode plan...')
     const planResult = await this.executeWithStreamingBash(containerId, planScript, onPlanOutput)
@@ -371,7 +539,7 @@ export class ClaudeExecutor {
       this.logger.error({ stderr: planResult.stderr }, '❌ Échec du mode plan')
       // En cas d'échec, fallback sur le mode normal
       this.logger.info('↩️ Fallback sur le mode normal...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
     // Si pas de plan capturé, essayer de le parser depuis la sortie
@@ -401,7 +569,7 @@ export class ClaudeExecutor {
     
     if (!planContent) {
       this.logger.warn('⚠️ Aucun plan trouvé, exécution directe du prompt...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
     // Si on a un task, sauvegarder le plan et le coût
@@ -423,7 +591,7 @@ export class ClaudeExecutor {
             taskId: task._id,
             costUsd: totalCostUsd,
             model: model === 'claude-sonnet-4' ? 'sonnet' : model || 'sonnet',
-            aiProvider: providerType
+            aiProvider: aiProvider || 'anthropic-api'
           })
           this.logger.info({ costUsd: totalCostUsd, taskId: task._id }, '💰 UserCost du mode plan sauvegardé')
         } catch (costError) {
@@ -436,26 +604,89 @@ export class ClaudeExecutor {
     this.logger.info('🏃 Exécution du plan...')
     const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
     
-    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution du plan')
+    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution du plan')
   }
 
   private formatToolCall(toolCall: any): string {
-    const adapter = new AIProviderAdapter('anthropic-api')
-    return adapter.formatToolCall(toolCall)
+    const parts: string[] = []
+    
+    parts.push(`🔧 **${toolCall.name}**`)
+    
+    // Formater l'input selon le type de tool de façon générique
+    if (toolCall.input) {
+      const inputEntries = Object.entries(toolCall.input)
+      
+      if (inputEntries.length === 1) {
+        const [key, value] = inputEntries[0]
+        
+        // Cas spéciaux avec émojis appropriés
+        if (key === 'file_path') {
+          const emoji = toolCall.name === 'Read' ? '📁' : toolCall.name === 'Write' ? '📝' : toolCall.name === 'Edit' ? '✏️' : '📄'
+          const action = toolCall.name === 'Read' ? 'Lecture' : toolCall.name === 'Write' ? 'Écriture' : toolCall.name === 'Edit' ? 'Édition' : 'Fichier'
+          parts.push(`   ${emoji} ${action}: \`${value}\``)
+        } else if (key === 'command') {
+          parts.push(`   💻 Commande: \`${value}\``)
+        } else if (key === 'path') {
+          parts.push(`   📂 Chemin: \`${value}\``)
+        } else if (key === 'pattern') {
+          parts.push(`   🔍 Motif: \`${value}\``)
+        } else if (key === 'url') {
+          parts.push(`   🌐 URL: \`${value}\``)
+        } else if (key === 'query') {
+          parts.push(`   🔎 Recherche: \`${value}\``)
+        } else if (key === 'todos' && Array.isArray(value)) {
+          parts.push(`   📝 Todos: ${value.length} tâches`)
+        } else {
+          // Formater les objets complexes
+          if (typeof value === 'object' && value !== null) {
+            if (Array.isArray(value)) {
+              parts.push(`   ⚙️ ${key}: ${value.length} éléments`)
+            } else {
+              const formattedValue = JSON.stringify(value, null, 2).replace(/\n/g, ' ').replace(/\s+/g, ' ')
+              if (formattedValue.length > 100) {
+                parts.push(`   ⚙️ ${key}: ${formattedValue.substring(0, 100)}...`)
+              } else {
+                parts.push(`   ⚙️ ${key}: ${formattedValue}`)
+              }
+            }
+          } else {
+            parts.push(`   ⚙️ ${key}: \`${value}\``)
+          }
+        }
+      } else if (inputEntries.length > 1) {
+        // Plusieurs paramètres
+        parts.push(`   ⚙️ Paramètres: ${inputEntries.map(([key, value]) => {
+          const formattedValue = typeof value === 'object' ? JSON.stringify(value, null, 2).replace(/\n/g, ' ').replace(/\s+/g, ' ') : value;
+          return `${key}=${formattedValue}`;
+        }).join(', ')}`)
+      }
+    }
+    
+    // Ajouter le résultat
+    if (toolCall.result) {
+      if (toolCall.result.is_error) {
+        parts.push(`   ❌ Erreur: ${toolCall.result.content}`)
+      } else if (toolCall.result.content && toolCall.result.content.length < 200) {
+        parts.push(`   ✅ Résultat: ${toolCall.result.content}`)
+      } else {
+        parts.push(`   ✅ Succès`)
+      }
+    }
+    
+    return parts.join('\n')
   }
 
   async executeAndSaveToolMessages(
     containerId: string, 
     prompt: string, 
     workdir: string, 
-    aiProvider: AIProviderType, 
+    aiProvider: string, 
     model: string, 
     task: any, 
     actionLabel: string
   ): Promise<string> {
     
-    const adapter = new AIProviderAdapter(aiProvider)
-    const aiProviderLabel = adapter.getName()
+    const aiProviderLabel = this.getAiProviderLabel(aiProvider)
     let streamBuffer = ''
     let processedToolCallIds = new Set<string>()
     
@@ -465,13 +696,13 @@ export class ClaudeExecutor {
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          this.logger.debug({ provider: AIProviderFactory.isGeminiProvider(aiProvider) ? 'Gemini' : 'Claude', output: line.trim() }, '🤖 AI output')
+          this.logger.debug({ provider: (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') ? 'Gemini' : 'Claude', output: line.trim() }, '🤖 AI output')
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
           
           // Pour Gemini, sauvegarder la sortie brute au fur et à mesure
-          if (AIProviderFactory.isGeminiProvider(aiProvider)) {
+          if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
             // Ne pas essayer de parser JSON pour Gemini
             continue
           }
@@ -513,40 +744,62 @@ export class ClaudeExecutor {
       }
     }
     
-    // Exécuter la commande AI avec le callback de streaming
-    const script = adapter.buildExecutionScript({
-      prompt,
-      workdir,
-      model,
-      planMode: false
-    })
-
-    const result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)
+    // Exécuter la commande Claude avec le callback de streaming
+    const result = await this.executeWithStreamingBash(containerId, `
+      # Create and change to working directory
+      mkdir -p "${workdir}"
+      cd "${workdir}"
+      
+      # Configuration Git
+      git config --global user.email "open-rcode@example.com" || true
+      git config --global user.name "open-rcode Container" || true
+      git config --global init.defaultBranch main || true
+      git config --global --add safe.directory "${workdir}" || true
+      
+      # Charger l'environnement Node et npm global (version bash)
+      [ -f /root/.nvm/nvm.sh ] && source /root/.nvm/nvm.sh || true
+      [ -f /etc/profile ] && source /etc/profile || true
+      
+      # Vérifier que Claude est installé
+      which claude || (echo "Claude not found in PATH. Installing..." && npm install -g @anthropic-ai/claude-code)
+      which gemini || (echo "Gemini not found in PATH. Installing..." && npm install -g @google/gemini-cli)
+      
+      ${this.getEnvSetup(aiProvider)}
+      ${this.getAiCommand(aiProvider, model)} "$(cat <<'PROMPT_EOF'
+${prompt}
+PROMPT_EOF
+)"
+    `, processStreamingOutput)
 
     if (result.exitCode !== 0) {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    const parsedOutput = adapter.parseOutput(result.stdout)
+    // Filtrer le chemin indésirable
+    let filteredOutput = result.stdout
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/claude\s*\n?/
+    filteredOutput = filteredOutput.replace(unwantedPathPattern, '')
     
     // Si c'est Gemini, gérer différemment
-    if (AIProviderFactory.isGeminiProvider(aiProvider)) {
+    if (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') {
       // Créer un message avec la sortie brute de Gemini
-      if (parsedOutput.finalResult.trim()) {
+      if (filteredOutput.trim()) {
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${parsedOutput.finalResult}`
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${filteredOutput}`
         })
       }
       
       // Retourner la sortie pour la création de PR
-      return parsedOutput.finalResult || 'Tâche terminée'
+      return filteredOutput || 'Tâche terminée'
     }
     
-    // Pour Claude, traiter les résultats complets
+    // Pour Claude, parser la sortie JSON complète pour les éléments finaux
+    const parsedOutput = this.parseClaudeJsonOutput(filteredOutput)
+    
     // Créer un document UserCost si total_cost_usd est disponible
     if (parsedOutput.totalCostUsd) {
       try {
@@ -635,4 +888,10 @@ export class ClaudeExecutor {
         throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
   }
+}
+
+interface ExecuteResult {
+  stdout: string
+  stderr: string
+  exitCode: number
 }
