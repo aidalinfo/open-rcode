@@ -3,12 +3,14 @@ import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { connectToDatabase } from './database'
 import { createContainerManager, BaseContainerManager } from './container'
+import { createLogger } from './logger'
 
 export class ContainerMonitor {
   private cronJob: CronJob | null = null
   private containerManager: BaseContainerManager
   private docker: DockerManager // Maintenu pour compatibilité
   private isRunning = false
+  private logger = createLogger('ContainerMonitor')
 
   constructor(containerOptions?: any) {
     this.containerManager = createContainerManager({ connectionOptions: containerOptions })
@@ -20,7 +22,7 @@ export class ContainerMonitor {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('Container monitor is already running')
+      this.logger.info('Container monitor is already running')
       return
     }
 
@@ -36,7 +38,7 @@ export class ContainerMonitor {
     )
 
     this.isRunning = true
-    console.log('Container monitor started - checking every 60 seconds')
+    this.logger.info('Container monitor started - checking every 60 seconds')
   }
 
   /**
@@ -48,7 +50,7 @@ export class ContainerMonitor {
       this.cronJob = null
     }
     this.isRunning = false
-    console.log('Container monitor stopped')
+    this.logger.info('Container monitor stopped')
   }
 
   /**
@@ -62,7 +64,7 @@ export class ContainerMonitor {
       const isAvailable = await this.containerManager.isAvailable()
       if (!isAvailable) {
         const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Kubernetes' : 'Docker'
-        console.warn(`${containerType} is not available - skipping container check`)
+        this.logger.warn({ containerType }, 'Container runtime not available - skipping check')
         return
       }
 
@@ -73,22 +75,22 @@ export class ContainerMonitor {
       })
 
       if (tasks.length === 0) {
-        console.log('No active containers to monitor')
+        this.logger.debug('No active containers to monitor')
         return
       }
 
-      console.log(`Checking ${tasks.length} containers...`)
+      this.logger.debug({ count: tasks.length }, 'Checking containers')
 
       for (const task of tasks) {
         try {
           await this.checkSingleContainer(task)
         } catch (error) {
-          console.error(`Error checking container for task ${task._id}:`, error)
+          this.logger.error({ taskId: task._id, error }, 'Error checking container')
         }
       }
 
     } catch (error) {
-      console.error('Error in container monitoring:', error)
+      this.logger.error({ error }, 'Error in container monitoring')
     }
   }
 
@@ -103,7 +105,7 @@ export class ContainerMonitor {
 
       if (!containerInfo) {
         // Le conteneur n'existe plus
-        console.log(`Container ${task.dockerId} no longer exists for task ${task._id}`)
+        this.logger.info({ containerId: task.dockerId, taskId: task._id }, 'Container no longer exists')
         await this.handleContainerNotFound(task)
         return
       }
@@ -113,19 +115,19 @@ export class ContainerMonitor {
       const state = containerInfo.state.toLowerCase()
       
       if (status === 'running' || state === 'running') {
-        console.log(`Container ${task.dockerId} is running`)
+        this.logger.debug({ containerId: task.dockerId }, 'Container is running')
       } else if (status === 'exited' || state === 'succeeded' || state === 'failed') {
-        console.log(`Container ${task.dockerId} has ${status}/${state}`)
+        this.logger.info({ containerId: task.dockerId, status, state }, 'Container has exited')
         await this.handleContainerExited(task, containerInfo)
       } else if (status === 'dead' || status === 'removing' || state === 'pending') {
-        console.log(`Container ${task.dockerId} is ${status}/${state}`)
+        this.logger.warn({ containerId: task.dockerId, status, state }, 'Container is dead/removing')
         await this.handleContainerDead(task)
       } else {
-        console.log(`Container ${task.dockerId} status: ${status}/${state}`)
+        this.logger.debug({ containerId: task.dockerId, status, state }, 'Container status')
       }
 
     } catch (error) {
-      console.error(`Error checking container ${task.dockerId}:`, error)
+      this.logger.error({ containerId: task.dockerId, error }, 'Error checking container')
       
       // Si le conteneur est introuvable, le marquer comme non trouvé
       if (error.message.includes('No such container')) {
@@ -138,7 +140,7 @@ export class ContainerMonitor {
    * Gère le cas où le conteneur n'est plus trouvé
    */
   private async handleContainerNotFound(task: any): Promise<void> {
-    console.log(`Marking task ${task._id} as completed - container not found`)
+    this.logger.info({ taskId: task._id }, 'Marking task as completed - container not found')
     
     task.executed = true
     task.error = 'Container not found - may have been auto-removed'
@@ -159,7 +161,7 @@ export class ContainerMonitor {
       // Récupérer les logs du conteneur
       const logs = await this.containerManager.getContainerLogs(task.dockerId, 1000)
       
-      console.log(`Task ${task._id} container exited, updating with logs`)
+      this.logger.info({ taskId: task._id }, 'Container exited, updating with logs')
       
       task.executed = true
       task.messages.push({
@@ -173,13 +175,13 @@ export class ContainerMonitor {
       // Nettoyer le conteneur
       try {
         await this.containerManager.removeContainer(task.dockerId, true)
-        console.log(`Container ${task.dockerId} removed`)
+        this.logger.debug({ containerId: task.dockerId }, 'Container removed')
       } catch (removeError) {
-        console.log(`Container ${task.dockerId} may have been auto-removed`)
+        this.logger.debug({ containerId: task.dockerId }, 'Container may have been auto-removed')
       }
       
     } catch (error) {
-      console.error(`Error handling exited container for task ${task._id}:`, error)
+      this.logger.error({ taskId: task._id, error }, 'Error handling exited container')
       
       task.executed = true
       task.error = `Container exited but failed to retrieve logs: ${error.message}`
@@ -191,7 +193,7 @@ export class ContainerMonitor {
    * Gère le cas où le conteneur est mort ou en cours de suppression
    */
   private async handleContainerDead(task: any): Promise<void> {
-    console.log(`Task ${task._id} container is dead, marking as failed`)
+    this.logger.warn({ taskId: task._id }, 'Container is dead, marking task as failed')
     
     task.executed = true
     task.error = 'Container died unexpectedly'
@@ -212,15 +214,15 @@ export class ContainerMonitor {
       const isAvailable = await this.containerManager.isAvailable()
       if (!isAvailable) {
         const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Kubernetes' : 'Docker'
-        console.warn(`${containerType} not available for cleanup`)
+        this.logger.warn({ containerType }, 'Container runtime not available for cleanup')
         return 0
       }
 
       const cleanedCount = await this.containerManager.cleanupContainers()
-      console.log(`Cleaned up ${cleanedCount} orphaned containers`)
+      this.logger.info({ cleanedCount }, 'Cleaned up orphaned containers')
       return cleanedCount
     } catch (error) {
-      console.error('Error during container cleanup:', error)
+      this.logger.error({ error }, 'Error during container cleanup')
       return 0
     }
   }
@@ -238,7 +240,7 @@ export class ContainerMonitor {
           nextRun = nextDate.toString()
         }
       } catch (error) {
-        console.warn('Error getting next run date:', error)
+        this.logger.debug({ error }, 'Error getting next run date')
       }
     }
     
@@ -257,7 +259,7 @@ let globalMonitor: ContainerMonitor | null = null
  */
 export function startContainerMonitoring(containerOptions?: any): ContainerMonitor {
   if (globalMonitor) {
-    console.log('Container monitoring already started')
+    createLogger('ContainerMonitor').info('Container monitoring already started')
     return globalMonitor
   }
 

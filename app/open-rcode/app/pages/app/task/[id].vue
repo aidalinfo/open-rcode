@@ -79,6 +79,7 @@
                   />
                 </div>
               </div>
+              <ToolMessageTree v-else-if="isToolMessage(message)" :message="message.content" />
               <MDC v-else :value="message.content" :cache-key="message.id" unwrap="p" />
             </template>
           </UChatMessages>
@@ -130,6 +131,13 @@ const isPRLink = (message: any) => {
     message.content.includes('github.com') && 
     message.content.includes('/pull/')
   )
+}
+
+// Helper function to detect tool messages
+const isToolMessage = (message: any) => {
+  return message.role === 'assistant' && 
+    typeof message.content === 'string' && 
+    message.content.includes('🔧 **')
 }
 
 // Function to open GitHub PR

@@ -1,6 +1,7 @@
 import { connectToDatabase } from '../../utils/database'
 import { UserModel } from '../../models/User'
 import { SessionModel } from '../../models/Session'
+import { logger } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   const { code } = getQuery(event)
@@ -84,7 +85,7 @@ export default defineEventHandler(async (event) => {
     
     return sendRedirect(event, '/app')
   } catch (error) {
-    console.error('GitHub auth error:', error)
+    logger.error({ error }, 'GitHub auth error')
     return sendRedirect(event, '/login?error=auth_failed')
   }
 })

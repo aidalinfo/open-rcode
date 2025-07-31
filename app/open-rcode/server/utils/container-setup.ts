@@ -6,6 +6,7 @@ import { UserModel } from '../models/User'
 import { decrypt } from './crypto'
 import { RepositoryCloner } from './repository-cloner'
 import { DockerAdapter } from './container/docker-adapter'
+import { logger } from './logger'
 
 export interface TaskContainerOptions {
   taskId: string
@@ -52,46 +53,45 @@ export class ContainerSetup {
       throw new Error(`User ${task.userId} not found`)
     }
 
-    // Auto-détecter le provider AI selon les tokens disponibles
-    let aiProvider = environment.aiProvider || 'auto'
+    // Utiliser le provider AI spécifié dans l'environnement
+    let aiProvider = environment.aiProvider
     let requiredToken: string | null = null
 
-    // Si aucun provider spécifié ou si le token requis n'est pas disponible,
-    // utiliser le premier token disponible
-    if (aiProvider === 'auto' || !this.isTokenAvailable(user, aiProvider)) {
-      console.log(`Auto-detecting AI provider for user ${task.userId}`)
-      
-      // Priorité : claude-oauth > anthropic-api > gemini-cli
-      if (user.claudeOAuthToken) {
-        aiProvider = 'claude-oauth'
-        requiredToken = decrypt(user.claudeOAuthToken)
-        console.log(`✓ Using Claude OAuth token`)
-      } else if (user.anthropicKey) {
-        aiProvider = 'anthropic-api'
-        requiredToken = decrypt(user.anthropicKey)
-        console.log(`✓ Using Anthropic API key`)
-      } else if (user.geminiApiKey) {
-        aiProvider = 'gemini-cli'
-        requiredToken = decrypt(user.geminiApiKey)
-        console.log(`✓ Using Gemini API key`)
-      } else {
-        throw new Error(`User ${task.userId} has not configured any AI provider tokens. Please configure at least one of: Anthropic API key, Claude OAuth token, or Gemini API key.`)
-      }
-    } else {
-      // Utiliser le provider spécifié
-      switch (aiProvider) {
-        case 'anthropic-api':
-          requiredToken = decrypt(user.anthropicKey!)
-          break
-        case 'claude-oauth':
-          requiredToken = decrypt(user.claudeOAuthToken!)
-          break
-        case 'gemini-cli':
-          requiredToken = decrypt(user.geminiApiKey!)
-          break
-        default:
-          throw new Error(`Unsupported AI provider: ${aiProvider}`)
-      }
+    // Vérifier que le provider est spécifié
+    if (!aiProvider) {
+      throw new Error(`No AI provider specified in environment ${environment._id}. Please configure an AI provider.`)
+    }
+
+    // Vérifier que le token requis est disponible pour le provider choisi
+    if (!this.isTokenAvailable(user, aiProvider)) {
+      const providerName = this.getProviderDisplayName(aiProvider)
+      const missingTokenMessage = this.getMissingTokenMessage(aiProvider)
+      throw new Error(`${providerName} is selected but ${missingTokenMessage} for user ${task.userId}. Please configure the required credentials in your settings.`)
+    }
+
+    // Utiliser le provider spécifié avec ses credentials
+    logger.info({ aiProvider, userId: task.userId }, 'Using AI provider')
+    
+    switch (aiProvider) {
+      case 'anthropic-api':
+        requiredToken = decrypt(user.anthropicKey!)
+        logger.info({ userId: task.userId }, '✓ Using Anthropic API key')
+        break
+      case 'claude-oauth':
+        requiredToken = decrypt(user.claudeOAuthToken!)
+        logger.info({ userId: task.userId }, '✓ Using Claude OAuth token')
+        break
+      case 'gemini-cli':
+        requiredToken = decrypt(user.geminiApiKey!)
+        logger.info({ userId: task.userId }, '✓ Using Gemini API key')
+        break
+      case 'admin-gemini':
+        // Admin Gemini utilise la clé admin du système
+        requiredToken = process.env.ADMIN_GOOGLE_API_KEY || ''
+        logger.info({ userId: task.userId }, '✓ Using Admin Gemini API key')
+        break
+      default:
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
 
     const containerName = `ccweb-task-${task._id}-${Date.now()}`
@@ -178,7 +178,7 @@ export class ContainerSetup {
   }
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
-    console.log(`Waiting for container ${containerId} to be ready...`)
+    logger.info({ containerId, maxWaitTime }, 'Waiting for container to be ready')
     
     const startTime = Date.now()
     const checkInterval = 5000
@@ -188,21 +188,21 @@ export class ContainerSetup {
         const logs = await this.containerManager.getContainerLogs(containerId, 50)
         
         if (logs.includes('Environment ready') || logs.includes('Dropping you into a bash shell')) {
-          console.log(`Container ${containerId} is ready!`)
+          logger.info({ containerId }, 'Container is ready!')
           await new Promise(resolve => setTimeout(resolve, 5000))
           return
         }
         
-        console.log(`Container still setting up... (${Math.floor((Date.now() - startTime) / 1000)}s elapsed)`)
+        logger.debug({ containerId, elapsedSeconds: Math.floor((Date.now() - startTime) / 1000) }, 'Container still setting up')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
         
       } catch (error: any) {
-        console.warn(`Error checking container readiness: ${error.message}`)
+        logger.warn({ error, containerId }, 'Error checking container readiness')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
     }
     
-    console.warn(`Container ${containerId} setup timeout after ${maxWaitTime / 1000}s, proceeding anyway...`)
+    logger.warn({ containerId, timeoutSeconds: maxWaitTime / 1000 }, 'Container setup timeout, proceeding anyway')
   }
 
   private async ensureDockerImage(imageName: string): Promise<void> {
@@ -262,8 +262,40 @@ export class ContainerSetup {
         return !!user.claudeOAuthToken
       case 'gemini-cli':
         return !!user.geminiApiKey
+      case 'admin-gemini':
+        return !!process.env.ADMIN_GOOGLE_API_KEY
       default:
         return false
+    }
+  }
+
+  private getProviderDisplayName(provider: string): string {
+    switch (provider) {
+      case 'anthropic-api':
+        return 'Anthropic API'
+      case 'claude-oauth':
+        return 'Claude OAuth'
+      case 'gemini-cli':
+        return 'Gemini'
+      case 'admin-gemini':
+        return 'Admin Gemini'
+      default:
+        return provider
+    }
+  }
+
+  private getMissingTokenMessage(provider: string): string {
+    switch (provider) {
+      case 'anthropic-api':
+        return 'no Anthropic API key is configured'
+      case 'claude-oauth':
+        return 'no Claude OAuth token is configured'
+      case 'gemini-cli':
+        return 'no Gemini API key is configured'
+      case 'admin-gemini':
+        return 'no admin Gemini API key is configured in the system'
+      default:
+        return 'the required credentials are not configured'
     }
   }
 }

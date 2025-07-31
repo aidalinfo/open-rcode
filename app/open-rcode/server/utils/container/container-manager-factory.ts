@@ -1,6 +1,7 @@
 import { DockerAdapter } from './docker-adapter'
 import { KubernetesAdapter } from './kubernetes-adapter'
 import { BaseContainerManager, BaseConnectionOptions } from './base-container-manager'
+import { logger } from '../logger'
 
 export type ContainerMode = 'docker' | 'kubernetes'
 
@@ -28,15 +29,15 @@ export class ContainerManagerFactory {
     const mode = options?.mode || ContainerManagerFactory.getDefaultMode()
     const connectionOptions = options?.connectionOptions
 
-    console.log(`🔧 Container Manager: Using ${mode.toUpperCase()} mode`)
+    logger.info({ mode }, `🔧 Container Manager: Using ${mode.toUpperCase()} mode`)
 
     switch (mode) {
       case 'kubernetes':
-        console.log('☸️ Initializing Kubernetes container manager')
+        logger.info('☸️ Initializing Kubernetes container manager')
         return new KubernetesAdapter(connectionOptions)
       case 'docker':
       default:
-        console.log('🐳 Initializing Docker container manager')
+        logger.info('🐳 Initializing Docker container manager')
         return new DockerAdapter(connectionOptions)
     }
   }
@@ -56,13 +57,13 @@ export class ContainerManagerFactory {
     if (!options?.mode) {
       const k8sManager = new KubernetesAdapter(connectionOptions)
       if (await k8sManager.isAvailable()) {
-        console.log('Auto-detected Kubernetes environment')
+        logger.info('Auto-detected Kubernetes environment')
         return k8sManager
       }
 
       const dockerManager = new DockerAdapter(connectionOptions)
       if (await dockerManager.isAvailable()) {
-        console.log('Auto-detected Docker environment')
+        logger.info('Auto-detected Docker environment')
         return dockerManager
       }
 

@@ -1,5 +1,6 @@
 import { createAppAuth } from '@octokit/auth-app'
 import jwt from 'jsonwebtoken'
+import { logger } from './logger'
 
 export async function generateInstallationToken(installationId: string): Promise<string> {
   const appId = process.env.GITHUB_APP_ID
@@ -12,14 +13,16 @@ export async function generateInstallationToken(installationId: string): Promise
     try {
       privateKey = fs.readFileSync(privateKeyPath, 'utf8')
     } catch (error) {
-      console.error('Error reading private key from path:', error)
+      logger.error({ error, privateKeyPath }, 'Error reading private key from path')
       throw new Error(`Failed to read GitHub App private key from path: ${privateKeyPath}`)
     }
   }
   
-  console.log('App ID:', appId)
-  console.log('Private key exists:', !!privateKey)
-  console.log('Installation ID:', installationId)
+  logger.debug({
+    appId,
+    privateKeyExists: !!privateKey,
+    installationId
+  }, 'GitHub App authentication details')
   
   if (!appId || !privateKey) {
     throw new Error('GitHub App credentials not configured')
@@ -33,10 +36,10 @@ export async function generateInstallationToken(installationId: string): Promise
     })
     
     const installationAuthentication = await auth({ type: 'installation' })
-    console.log('Token generated successfully')
+    logger.info({ installationId }, 'GitHub installation token generated successfully')
     return installationAuthentication.token
   } catch (error) {
-    console.error('Error generating installation token:', error)
+    logger.error({ error, installationId }, 'Error generating installation token')
     throw error
   }
 }
@@ -67,7 +70,11 @@ export async function getInstallationRepositories(installationId: string) {
     page++
   }
   
-  console.log(`Fetched ${allRepositories.length} repositories out of ${totalCount} for installation ${installationId}`)
+  logger.info({
+    repositoryCount: allRepositories.length,
+    totalCount,
+    installationId
+  }, 'Fetched repositories for installation')
   
   return {
     repositories: allRepositories,

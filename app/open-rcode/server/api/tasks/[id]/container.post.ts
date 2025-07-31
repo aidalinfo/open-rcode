@@ -4,6 +4,7 @@ import { EnvironmentModel } from '../../../models/Environment'
 import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from '../../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -60,7 +61,7 @@ export default defineEventHandler(async (event) => {
           content: `Container created successfully for task`
         })
       } catch (error) {
-        console.error('Background container creation failed:', error)
+        logger.error({ error, taskId }, 'Background container creation failed')
         // Optionnel: créer un message d'erreur
         await TaskMessageModel.create({
           id: uuidv4(),
@@ -77,7 +78,7 @@ export default defineEventHandler(async (event) => {
       message: 'Container creation started in background'
     }
   } catch (error: any) {
-    console.error('Error creating task container:', error)
+    logger.error({ error, taskId }, 'Error creating task container')
     
     if (error.statusCode) {
       throw error

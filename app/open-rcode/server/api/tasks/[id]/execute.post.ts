@@ -3,6 +3,7 @@ import { TaskModel } from '../../../models/Task'
 import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
 import { v4 as uuidv4 } from 'uuid'
+import { logger } from '../../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
       message: 'Command executed successfully'
     }
   } catch (error) {
-    console.error('Error executing command in task container:', error)
+    logger.error({ error, taskId }, 'Error executing command in task container')
     
     if (error.statusCode) {
       throw error

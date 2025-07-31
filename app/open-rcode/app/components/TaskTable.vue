@@ -31,7 +31,66 @@
       :show-column-toggle="false"
       @refresh="fetchTasks"
       @update:page="handlePageUpdate"
-    />
+    >
+      <!-- Template personnalisé pour les cartes -->
+      <template #card-template="{ item }">
+        <div class="space-y-3">
+          <!-- En-tête avec nom et statut -->
+          <div class="flex items-start justify-between gap-2">
+            <h4 class="font-medium text-gray-900 dark:text-white truncate flex-1">
+              {{ item.name }}
+            </h4>
+            <UBadge
+              :color="getStatusColor(item)"
+              :variant="item.status === 'completed' || item.status === 'failed' ? 'solid' : 'soft'"
+              size="xs"
+            >
+              {{ getStatusText(item) }}
+            </UBadge>
+          </div>
+
+          <!-- Infos de la tâche -->
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-folder" class="w-4 h-4 text-gray-400" />
+              <span class="text-gray-600 dark:text-gray-400 truncate">
+                {{ item.environment?.name || 'N/A' }}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+              <span class="text-gray-600 dark:text-gray-400">
+                {{ formatDate(item.createdAt) }}
+              </span>
+            </div>
+
+            <div v-if="item.pr" class="flex items-center gap-2 text-sm">
+              <UIcon name="i-lucide-git-pull-request" class="w-4 h-4 text-gray-400" />
+              <ULink
+                :to="item.pr.url"
+                target="_blank"
+                class="text-primary-500 hover:text-primary-600"
+              >
+                PR #{{ item.pr.number }}
+              </ULink>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <UButton
+              label="View details"
+              variant="soft"
+              size="sm"
+              icon="i-lucide-eye"
+              block
+              @click="viewTask(item._id)"
+            />
+          </div>
+        </div>
+      </template>
+    </CustomTable>
   </UCard>
 </template>
 

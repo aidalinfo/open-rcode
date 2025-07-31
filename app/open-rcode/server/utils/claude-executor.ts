@@ -6,9 +6,11 @@ import { TaskMessageModel } from '../models/TaskMessage'
 import { CountRequestModel } from '../models/CountRequest'
 import { UserCostModel } from '../models/UserCost'
 import { v4 as uuidv4 } from 'uuid'
+import { createLogger } from './logger'
 
 export class ClaudeExecutor {
   private containerManager: BaseContainerManager
+  private logger = createLogger('ClaudeExecutor')
 
   constructor(containerManager: BaseContainerManager) {
     this.containerManager = containerManager
@@ -30,7 +32,7 @@ export class ClaudeExecutor {
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 Claude: ${line.trim()}`)
+          this.logger.debug({ output: line.trim() }, '🤖 Claude output')
         }
       })
     }
@@ -42,8 +44,7 @@ export class ClaudeExecutor {
     // Ajouter le paramètre --model si spécifié
     const modelParam = model ? ` --model ${model}` : ''
 
-    console.log(`🔍 Debug: aiProvider='${aiProvider}', model='${model}'`)
-    console.log(`🔍 Debug: ADMIN_GOOGLE_API_KEY='${process.env.ADMIN_GOOGLE_API_KEY}'`)
+    this.logger.debug({ aiProvider, model, hasAdminKey: !!process.env.ADMIN_GOOGLE_API_KEY }, 'AI Provider configuration')
 
     switch (aiProvider) {
       case 'anthropic-api':
@@ -63,8 +64,7 @@ export class ClaudeExecutor {
         envSetup = `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
         break
       default:
-        aiCommand = `claude --verbose --output-format stream-json${modelParam} -p`
-        envSetup = 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
 
     const script = `
@@ -140,7 +140,7 @@ PROMPT_EOF
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim()) {
-          console.log(`📋 Config: ${line.trim()}`)
+          this.logger.debug({ output: line.trim() }, '📋 Config script output')
         }
       })
     }
@@ -165,11 +165,11 @@ PROMPT_EOF
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
 
     if (result.exitCode !== 0) {
-      console.error(`❌ Configuration script failed:`, result.stderr)
+      this.logger.error({ exitCode: result.exitCode, stderr: result.stderr }, '❌ Configuration script failed')
       throw new Error(`Configuration script failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    console.log(`✅ Configuration script completed successfully`)
+    this.logger.info('✅ Configuration script completed successfully')
     return result.stdout
   }
 
@@ -242,11 +242,11 @@ PROMPT_EOF
     })
 
     if (result.exitCode !== 0) {
-      console.error(`❌ Configuration script failed:`, result.stderr)
+      this.logger.error({ exitCode: result.exitCode, stderr: result.stderr }, '❌ Configuration script failed')
       throw new Error(`Configuration script failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
     }
 
-    console.log(`✅ Configuration script output:`, result.stdout.substring(0, 500) + (result.stdout.length > 500 ? '...' : ''))
+    this.logger.debug({ outputLength: result.stdout.length }, '✅ Configuration script completed')
     return result.stdout
   }
 
@@ -261,7 +261,7 @@ PROMPT_EOF
 
     try {
       await updateTaskStatus('running');
-      console.log(`Starting Claude workflow for task ${task._id}`);
+      this.logger.info({ taskId: task._id }, 'Starting Claude workflow');
 
       const environment = await EnvironmentModel.findById(task.environmentId);
       if (!environment) {
@@ -269,12 +269,12 @@ PROMPT_EOF
       }
 
       const workspaceDir = task.workspaceDir || `/tmp/workspace/${environment.repository || 'ccweb'}`;
-      console.log(`🔧 Using workspace directory: ${workspaceDir}`);
       const aiProvider = environment.aiProvider || 'anthropic-api';
       const model = environment.model || 'sonnet';
+      this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration');
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
-        console.log('Executing configuration script');
+        this.logger.info('Executing configuration script');
         try {
           const configOutput = await this.executeConfigurationScript(containerId, environment.configurationScript, workspaceDir);
           await TaskMessageModel.create({
@@ -284,9 +284,9 @@ PROMPT_EOF
             role: 'assistant',
             content: `⚙️ **Configuration du projet:**\n\`\`\`\n${configOutput}\n\`\`\``
           });
-          console.log('Configuration script completed successfully');
+          this.logger.info('Configuration script completed successfully');
         } catch (configError: any) {
-          console.error('Configuration script failed:', configError);
+          this.logger.error({ error: configError.message }, 'Configuration script failed');
           await TaskMessageModel.create({
             id: uuidv4(),
             userId: task.userId,
@@ -304,7 +304,7 @@ PROMPT_EOF
       let finalResult = 'Tâche terminée'
       
       if (userMessage) {
-        console.log(`Executing AI command with user text (provider: ${aiProvider}, model: ${model}, planMode: ${task.planMode})`);
+        this.logger.info({ aiProvider, model, planMode: task.planMode }, 'Executing AI command with user text');
         // Créer le message initial avant de commencer l'exécution
         await TaskMessageModel.create({
           id: uuidv4(),
@@ -332,13 +332,13 @@ PROMPT_EOF
         model: model,
         taskId: task._id
       });
-      console.log(`CountRequest created for task ${task._id}`);
+      this.logger.debug({ taskId: task._id }, 'CountRequest created');
 
       await updateTaskStatus('completed');
-      console.log(`Claude workflow completed for task ${task._id}`);
+      this.logger.info({ taskId: task._id }, 'Claude workflow completed');
 
     } catch (error: any) {
-      console.error(`Error in Claude workflow for task ${task._id}:`, error);
+      this.logger.error({ taskId: task._id, error: error.message }, 'Error in Claude workflow');
       await updateTaskStatus('failed', error.message);
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -354,10 +354,10 @@ PROMPT_EOF
       const resourceTypeCapitalized = isKubernetes ? 'Pod' : 'Conteneur Docker';
       
       // Nettoyer le conteneur/pod après l'exécution (succès ou échec)
-      console.log(`Cleaning up ${resourceType} for task ${task._id}`);
+      this.logger.info({ taskId: task._id, resourceType }, `Cleaning up ${resourceType}`);
       try {
         await this.containerManager.removeContainer(containerId, true);
-        console.log(`${resourceTypeCapitalized} ${containerId} cleaned up successfully`);
+        this.logger.info({ containerId, resourceType: resourceTypeCapitalized }, 'Resource cleaned up successfully');
         
         // Supprimer la référence du conteneur de la tâche
         await TaskModel.findByIdAndUpdate(task._id, { dockerId: null });
@@ -370,7 +370,7 @@ PROMPT_EOF
           content: `🧹 **Nettoyage automatique:** Le ${resourceType} a été supprimé après l'exécution de la tâche.`
         });
       } catch (cleanupError: any) {
-        console.error(`Failed to cleanup ${resourceType} ${containerId}:`, cleanupError);
+        this.logger.warn({ containerId, resourceType, error: cleanupError.message }, 'Failed to cleanup resource');
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
@@ -453,7 +453,7 @@ PROMPT_EOF
       }
       
     } catch (error) {
-      console.error('Error parsing Claude JSON output:', error)
+      this.logger.debug({ error: error.message }, 'Error parsing Claude JSON output')
       return {
         toolCalls: [],
         textMessages: [],
@@ -463,19 +463,20 @@ PROMPT_EOF
   }
 
   private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any): Promise<string> {
-    console.log('🎯 Exécution en mode plan...')
+    this.logger.info('🎯 Exécution en mode plan...')
     
     const envSetup = this.getEnvSetup(aiProvider || 'anthropic-api')
     const modelParam = model ? ` --model ${model}` : ''
     
     let planContent = ''
     let isInPlanMode = false
+    let totalCostUsd: number | undefined
     
     const onPlanOutput = (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
       lines.forEach(line => {
         if (line.trim()) {
-          console.log(`📋 Plan: ${line.trim()}`)
+          this.logger.debug({ output: line.trim() }, '📋 Plan output')
           
           // Essayer de parser le JSON pour détecter le mode plan et extraire le contenu
           try {
@@ -484,7 +485,7 @@ PROMPT_EOF
             // Détecter si on est en mode plan
             if (jsonData.type === 'system' && jsonData.permissionMode === 'plan') {
               isInPlanMode = true
-              console.log('✅ Mode plan activé')
+              this.logger.debug('✅ Mode plan activé')
             }
             
             // Capturer le contenu du plan depuis ExitPlanMode
@@ -492,9 +493,15 @@ PROMPT_EOF
               for (const content of jsonData.message.content) {
                 if (content.type === 'tool_use' && content.name === 'ExitPlanMode' && content.input?.plan) {
                   planContent = content.input.plan
-                  console.log('📄 Plan capturé depuis ExitPlanMode')
+                  this.logger.debug('📄 Plan capturé depuis ExitPlanMode')
                 }
               }
+            }
+            
+            // Capturer le total_cost_usd du result
+            if (jsonData.type === 'result' && jsonData.total_cost_usd) {
+              totalCostUsd = jsonData.total_cost_usd
+              this.logger.info({ costUsd: totalCostUsd }, '💰 Coût total du mode plan')
             }
           } catch (parseError) {
             // Ignorer les erreurs de parsing
@@ -525,13 +532,13 @@ PROMPT_EOF
 )"
     `
     
-    console.log('🚀 Exécution de la commande en mode plan...')
+    this.logger.info('🚀 Exécution de la commande en mode plan...')
     const planResult = await this.executeWithStreamingBash(containerId, planScript, onPlanOutput)
     
     if (planResult.exitCode !== 0) {
-      console.error('❌ Échec du mode plan:', planResult.stderr)
+      this.logger.error({ stderr: planResult.stderr }, '❌ Échec du mode plan')
       // En cas d'échec, fallback sur le mode normal
-      console.log('↩️ Fallback sur le mode normal...')
+      this.logger.info('↩️ Fallback sur le mode normal...')
       return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
@@ -549,6 +556,11 @@ PROMPT_EOF
               }
             }
           }
+          // Capturer aussi le total_cost_usd depuis la sortie complète
+          if (jsonData.type === 'result' && jsonData.total_cost_usd && !totalCostUsd) {
+            totalCostUsd = jsonData.total_cost_usd
+            this.logger.info({ costUsd: totalCostUsd }, '💰 Coût total du mode plan (depuis la sortie)')
+          }
         } catch (e) {
           // Ignorer
         }
@@ -556,11 +568,11 @@ PROMPT_EOF
     }
     
     if (!planContent) {
-      console.log('⚠️ Aucun plan trouvé, exécution directe du prompt...')
+      this.logger.warn('⚠️ Aucun plan trouvé, exécution directe du prompt...')
       return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution de commande')
     }
     
-    // Si on a un task, sauvegarder le plan
+    // Si on a un task, sauvegarder le plan et le coût
     if (task) {
       await TaskMessageModel.create({
         id: uuidv4(),
@@ -569,10 +581,27 @@ PROMPT_EOF
         role: 'assistant',
         content: `📋 **Plan d'exécution:**\n\n${planContent}`
       })
+      
+      // Sauvegarder le coût du mode plan si disponible
+      if (totalCostUsd) {
+        try {
+          await UserCostModel.create({
+            environmentId: task.environmentId,
+            userId: task.userId,
+            taskId: task._id,
+            costUsd: totalCostUsd,
+            model: model === 'claude-sonnet-4' ? 'sonnet' : model || 'sonnet',
+            aiProvider: aiProvider || 'anthropic-api'
+          })
+          this.logger.info({ costUsd: totalCostUsd, taskId: task._id }, '💰 UserCost du mode plan sauvegardé')
+        } catch (costError) {
+          this.logger.error({ error: costError }, 'Erreur lors de la création du document UserCost pour le mode plan')
+        }
+      }
     }
     
     // Phase 2: Exécuter le plan
-    console.log('🏃 Exécution du plan...')
+    this.logger.info('🏃 Exécution du plan...')
     const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
     
     return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', aiProvider || 'anthropic-api', model || 'sonnet', task, 'Exécution du plan')
@@ -667,7 +696,7 @@ PROMPT_EOF
       
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          console.log(`🤖 ${(aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') ? 'Gemini' : 'Claude'}: ${line.trim()}`)
+          this.logger.debug({ provider: (aiProvider === 'gemini-cli' || aiProvider === 'admin-gemini') ? 'Gemini' : 'Claude', output: line.trim() }, '🤖 AI output')
           
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
@@ -704,7 +733,7 @@ PROMPT_EOF
                     content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${toolContent}`
                   })
                   
-                  console.log(`💾 Tool call saved in real-time: ${content.name}`)
+                  this.logger.debug({ toolName: content.name }, '💾 Tool call saved in real-time')
                 }
               }
             }
@@ -782,9 +811,9 @@ PROMPT_EOF
           model: model === 'claude-sonnet-4' ? 'sonnet' : model,
           aiProvider: aiProvider
         })
-        console.log(`UserCost created: $${parsedOutput.totalCostUsd} for task ${task._id}`)
+        this.logger.info({ costUsd: parsedOutput.totalCostUsd, taskId: task._id }, 'UserCost created')
       } catch (costError) {
-        console.error('Error creating UserCost document:', costError)
+        this.logger.error({ error: costError }, 'Error creating UserCost document')
       }
     }
     
@@ -839,7 +868,7 @@ PROMPT_EOF
       case 'admin-gemini':
         return `export GEMINI_API_KEY="${process.env.ADMIN_GOOGLE_API_KEY}"`
       default:
-        return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
   }
 
@@ -856,7 +885,7 @@ PROMPT_EOF
       case 'admin-gemini':
         return `gemini${modelParam} -p`
       default:
-        return `claude --verbose --output-format stream-json${modelParam} -p`
+        throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
   }
 }

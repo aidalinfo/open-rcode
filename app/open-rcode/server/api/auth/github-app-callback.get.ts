@@ -1,12 +1,13 @@
 import { connectToDatabase } from '../../utils/database'
 import { UserModel } from '../../models/User'
+import { logger } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
     
     const query = getQuery(event)
-    console.log('GitHub App callback received:', query)
+    logger.info({ query }, 'GitHub App callback received')
     
     const { installation_id, setup_action, state } = query
     
@@ -26,20 +27,25 @@ export default defineEventHandler(async (event) => {
           user.githubAppInstalledAt = new Date()
           await user.save()
           
-          console.log(`GitHub App ${setup_action || 'updated'} for user ${userId} with installation ID ${installation_id}`)
-          console.log(`User now has ${user.githubAppInstallationIds.length} installation(s): ${user.githubAppInstallationIds.join(', ')}`)
+          logger.info({ 
+            userId, 
+            installationId: installation_id, 
+            action: setup_action || 'updated',
+            totalInstallations: user.githubAppInstallationIds.length,
+            installationIds: user.githubAppInstallationIds
+          }, 'GitHub App installation added')
         } else {
-          console.log(`Installation ID ${installation_id} already exists for user ${userId}`)
+          logger.debug({ installationId: installation_id, userId }, 'Installation ID already exists')
         }
         
         return sendRedirect(event, '/app?success=github_app_installed')
       }
     }
     
-    console.log('GitHub App callback failed - missing parameters or user not found')
+    logger.warn('GitHub App callback failed - missing parameters or user not found')
     return sendRedirect(event, '/app?error=github_app_install_failed')
   } catch (error) {
-    console.error('GitHub App callback error:', error)
+    logger.error({ error }, 'GitHub App callback error')
     return sendRedirect(event, '/app?error=github_app_install_failed')
   }
 })

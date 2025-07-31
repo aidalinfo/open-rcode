@@ -2,6 +2,7 @@ import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import crypto from 'crypto'
 import type { ExecuteResult } from '../base-container-manager'
+import { createLogger } from '../../logger'
 
 const execAsync = promisify(exec)
 
@@ -63,16 +64,18 @@ export class KubernetesManager {
   private defaultNamespace: string
   private context?: string
   private kubeconfig?: string
+  private logger = createLogger('KubernetesManager')
 
   constructor(options?: KubernetesConnectionOptions) {
     this.defaultNamespace = options?.namespace || 'default'
     this.context = options?.context
     this.kubeconfig = options?.kubeconfig
     
-    console.log(`☸️ Kubernetes Manager initialized:`)
-    console.log(`   Namespace: ${this.defaultNamespace}`)
-    if (this.context) console.log(`   Context: ${this.context}`)
-    if (this.kubeconfig) console.log(`   Kubeconfig: ${this.kubeconfig}`)
+    this.logger.info({
+      namespace: this.defaultNamespace,
+      context: this.context,
+      kubeconfig: this.kubeconfig
+    }, '☸️ Kubernetes Manager initialized')
   }
 
   static createWithKubeconfig(kubeconfigPath: string, context?: string): KubernetesManager {
@@ -120,7 +123,7 @@ export class KubernetesManager {
   }
 
   private async executeKubectlWithStdin(args: string[], input: string): Promise<{ stdout: string; stderr: string }> {
-    console.log(`🔧 Executing kubectl with stdin: ${args.join(' ')}`)
+    this.logger.debug({ args }, '🔧 Executing kubectl with stdin')
     
     return new Promise((resolve, reject) => {
       const kubectlArgs = ['kubectl']
@@ -149,9 +152,11 @@ export class KubernetesManager {
       })
       
       process.on('close', (code) => {
-        console.log(`📊 kubectl process closed with code: ${code}`)
-        if (stdout) console.log(`📤 stdout: ${stdout.substring(0, 200)}...`)
-        if (stderr) console.log(`📤 stderr: ${stderr.substring(0, 200)}...`)
+        this.logger.debug({ 
+          code, 
+          stdoutLength: stdout.length,
+          stderrLength: stderr.length 
+        }, '📊 kubectl process closed')
         
         if (code === 0) {
           resolve({ stdout, stderr })
@@ -161,7 +166,7 @@ export class KubernetesManager {
       })
       
       process.on('error', (error) => {
-        console.error(`❌ kubectl process error:`, error)
+        this.logger.error({ error }, '❌ kubectl process error')
         reject(error)
       })
       
@@ -173,14 +178,13 @@ export class KubernetesManager {
 
   async isKubernetesAvailable(): Promise<boolean> {
     try {
-      console.log('☸️ Checking Kubernetes cluster connectivity...')
+      this.logger.debug('☸️ Checking Kubernetes cluster connectivity...')
       const cmd = this.buildKubectlCommand(['cluster-info'])
       const { stdout } = await execAsync(cmd)
-      console.log('✅ Kubernetes cluster is available')
-      console.log(`📋 Cluster info: ${stdout.split('\n')[0]}`) // Premier ligne du cluster-info
+      this.logger.info({ clusterInfo: stdout.split('\n')[0] }, '✅ Kubernetes cluster is available')
       return true
     } catch (error) {
-      console.error('❌ Kubernetes is not available:', error)
+      this.logger.error({ error }, '❌ Kubernetes is not available')
       return false
     }
   }
@@ -236,26 +240,26 @@ export class KubernetesManager {
       const podName = manifest.metadata.name
       const namespace = manifest.metadata.namespace
       
-      console.log(`☸️ Creating Kubernetes pod: ${podName} in namespace: ${namespace}`)
-      console.log(`📦 Using image: ghcr.io/aidalinfo/open-rcoder-worker:latest`)
+      this.logger.info({ podName, namespace }, '☸️ Creating Kubernetes pod')
+      this.logger.debug({ image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest' }, '📦 Using image')
       
       // Appliquer le manifest
       try {
         await this.executeKubectlWithStdin(['apply', '-f', '-'], manifestJson)
-        console.log(`✅ Pod manifest applied successfully`)
+        this.logger.debug('✅ Pod manifest applied successfully')
       } catch (applyError) {
-        console.error(`❌ Failed to apply pod manifest:`, applyError)
+        this.logger.error({ error: applyError }, '❌ Failed to apply pod manifest')
         throw applyError
       }
       
       // Attendre que le pod soit prêt
-      console.log(`⏳ Waiting for pod to be ready...`)
+      this.logger.info('⏳ Waiting for pod to be ready...')
       await this.waitForPodReady(podName, namespace)
       
-      console.log(`🚀 Pod created and ready: ${podName}`)
+      this.logger.info({ podName }, '🚀 Pod created and ready')
       return podName
     } catch (error) {
-      console.error('❌ Error creating pod:', error)
+      this.logger.error({ error }, '❌ Error creating pod')
       throw new Error(`Failed to create pod: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -271,14 +275,14 @@ export class KubernetesManager {
           const currentStatus = `${podInfo.phase}${podInfo.containers.length > 0 ? ` (${podInfo.containers.filter(c => c.ready).length}/${podInfo.containers.length} ready)` : ''}`
           
           if (currentStatus !== lastStatus) {
-            console.log(`📊 Pod status: ${currentStatus}`)
+            this.logger.debug({ status: currentStatus }, '📊 Pod status')
             lastStatus = currentStatus
           }
           
           if (podInfo.phase === 'Running') {
             const readyContainers = podInfo.containers.filter(c => c.ready).length
             if (readyContainers === podInfo.containers.length) {
-              console.log(`✅ All containers are ready`)
+              this.logger.debug('✅ All containers are ready')
               return
             }
           }
@@ -290,7 +294,7 @@ export class KubernetesManager {
       }
     }
     
-    console.error(`⏰ Timeout: Pod ${podName} did not become ready within ${timeout} seconds`)
+    this.logger.error({ podName, timeout }, '⏰ Timeout: Pod did not become ready')
     throw new Error(`Pod ${podName} did not become ready within ${timeout} seconds`)
   }
 
@@ -299,8 +303,12 @@ export class KubernetesManager {
       const namespace = options.namespace || this.defaultNamespace
       const container = options.container || 'main'
       
-      console.log(`🔧 Executing command in pod ${options.podName} (streaming): ${options.command.join(' ')}`)
-      console.log(`⏳ Command may take up to 30 minutes to complete...`)
+      this.logger.info({ 
+        podName: options.podName, 
+        command: options.command,
+        namespace 
+      }, '🔧 Executing command in pod (streaming)')
+      this.logger.debug('⏳ Command may take up to 30 minutes to complete...')
       
       const kubectlArgs = ['kubectl']
       
@@ -347,12 +355,12 @@ export class KubernetesManager {
       
       process.on('close', (code) => {
         clearTimeout(timeout)
-        console.log(`📊 kubectl process closed with code: ${code}`)
+        this.logger.debug({ code }, '📊 kubectl process closed')
         
         if (code === 0) {
-          console.log(`✅ Command executed successfully`)
+          this.logger.debug('✅ Command executed successfully')
         } else {
-          console.log(`⚠️ Command failed with exit code ${code}`)
+          this.logger.warn({ exitCode: code }, '⚠️ Command failed')
         }
         
         resolve({
@@ -364,7 +372,7 @@ export class KubernetesManager {
       
       process.on('error', (error) => {
         clearTimeout(timeout)
-        console.error(`❌ kubectl process error:`, error)
+        this.logger.error({ error }, '❌ kubectl process error')
         reject(error)
       })
     })
@@ -375,8 +383,12 @@ export class KubernetesManager {
       const namespace = options.namespace || this.defaultNamespace
       const container = options.container || 'main'
       
-      console.log(`🔧 Executing command in pod ${options.podName}: ${options.command.join(' ')}`)
-      console.log(`⏳ Command may take up to 30 minutes to complete...`)
+      this.logger.info({ 
+        podName: options.podName, 
+        command: options.command,
+        namespace 
+      }, '🔧 Executing command in pod')
+      this.logger.debug('⏳ Command may take up to 30 minutes to complete...')
       
       let execArgs = ['exec', options.podName, '-n', namespace, '-c', container, '--']
       execArgs = execArgs.concat(options.command)
@@ -424,7 +436,7 @@ export class KubernetesManager {
           
           process.on('close', (code) => {
             clearTimeout(timeout)
-            console.log(`✅ kubectl process closed with code: ${code}`)
+            this.logger.debug({ code }, '✅ kubectl process closed')
             resolve({
               stdout,
               stderr,
@@ -434,19 +446,19 @@ export class KubernetesManager {
           
           process.on('error', (error) => {
             clearTimeout(timeout)
-            console.error(`❌ kubectl process error:`, error)
+            this.logger.error({ error }, '❌ kubectl process error')
             reject(error)
           })
         })
 
-        console.log(`✅ Command executed successfully`)
+        this.logger.debug('✅ Command executed successfully')
         return result
       } catch (error: any) {
-        console.log(`⚠️ Command failed: ${error}`)
+        this.logger.warn({ error: error.message }, '⚠️ Command failed')
         throw error
       }
     } catch (error) {
-      console.error('❌ Error executing command in pod:', error)
+      this.logger.error({ error }, '❌ Error executing command in pod')
       throw new Error(`Failed to execute command: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -454,12 +466,12 @@ export class KubernetesManager {
   async deletePod(podName: string, namespace?: string): Promise<void> {
     try {
       const ns = namespace || this.defaultNamespace
-      console.log(`🗑️ Deleting pod: ${podName} from namespace: ${ns}`)
+      this.logger.info({ podName, namespace: ns }, '🗑️ Deleting pod')
       const cmd = this.buildKubectlCommand(['delete', 'pod', podName, '-n', ns, '--force', '--grace-period=0'])
       await execAsync(cmd)
-      console.log(`✅ Pod deleted: ${podName}`)
+      this.logger.info({ podName }, '✅ Pod deleted')
     } catch (error) {
-      console.error('❌ Error deleting pod:', error)
+      this.logger.error({ error }, '❌ Error deleting pod')
       throw new Error(`Failed to delete pod: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -489,7 +501,7 @@ export class KubernetesManager {
         })) || []
       }
     } catch (error) {
-      console.error('Error getting pod info:', error)
+      this.logger.debug({ error, podName }, 'Error getting pod info')
       return null
     }
   }
@@ -527,7 +539,7 @@ export class KubernetesManager {
         })) || []
       }))
     } catch (error) {
-      console.error('Error listing pods:', error)
+      this.logger.error({ error }, 'Error listing pods')
       return []
     }
   }
@@ -546,7 +558,7 @@ export class KubernetesManager {
       
       return stdout
     } catch (error) {
-      console.error('Error getting pod logs:', error)
+      this.logger.error({ error, podName }, 'Error getting pod logs')
       throw new Error(`Failed to get pod logs: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -572,9 +584,9 @@ export class KubernetesManager {
       // Recréer le pod
       await this.executeKubectlWithStdin(['apply', '-f', '-'], stdout)
       
-      console.log(`Pod restarted: ${podName}`)
+      this.logger.info({ podName }, 'Pod restarted')
     } catch (error) {
-      console.error('Error restarting pod:', error)
+      this.logger.error({ error, podName }, 'Error restarting pod')
       throw new Error(`Failed to restart pod: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -590,14 +602,14 @@ export class KubernetesManager {
           await this.deletePod(pod.name, pod.namespace)
           cleanedCount++
         } catch (error) {
-          console.error(`Failed to remove pod ${pod.name}:`, error)
+          this.logger.warn({ podName: pod.name, error }, 'Failed to remove pod during cleanup')
         }
       }
       
-      console.log(`Cleaned up ${cleanedCount} pods`)
+      this.logger.info({ cleanedCount }, 'Cleaned up pods')
       return cleanedCount
     } catch (error) {
-      console.error('Error cleaning up pods:', error)
+      this.logger.error({ error }, 'Error cleaning up pods')
       return 0
     }
   }
@@ -633,10 +645,10 @@ export class KubernetesManager {
       const manifestJson = JSON.stringify(serviceManifest)
       await this.executeKubectlWithStdin(['apply', '-f', '-'], manifestJson)
       
-      console.log(`Service created: ${serviceName}`)
+      this.logger.info({ serviceName }, 'Service created')
       return serviceName
     } catch (error) {
-      console.error('Error creating service:', error)
+      this.logger.error({ error }, 'Error creating service')
       throw new Error(`Failed to create service: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
@@ -646,9 +658,9 @@ export class KubernetesManager {
       const ns = namespace || this.defaultNamespace
       const cmd = this.buildKubectlCommand(['delete', 'service', serviceName, '-n', ns])
       await execAsync(cmd)
-      console.log(`Service deleted: ${serviceName}`)
+      this.logger.info({ serviceName }, 'Service deleted')
     } catch (error) {
-      console.error('Error deleting service:', error)
+      this.logger.error({ error, serviceName }, 'Error deleting service')
       throw new Error(`Failed to delete service: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
