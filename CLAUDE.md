@@ -125,6 +125,8 @@ La plateforme supporte plusieurs providers IA configurables par environnement :
 
 1. **anthropic-api** : Utilise la clé API Anthropic de l'utilisateur
 2. **claude-oauth** : Utilise le token OAuth Claude Code de l'utilisateur
+   - Le token OAuth est configuré et crypté de manière sécurisée
+   - Pour obtenir le token OAuth, exécuter : `claude setup-token`
 3. **gemini-cli** : Utilise la clé API Gemini de l'utilisateur
 4. **admin-gemini** : Utilise la clé Gemini admin du système (ADMIN_GOOGLE_API_KEY)
 
