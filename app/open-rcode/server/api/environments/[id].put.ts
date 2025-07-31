@@ -12,10 +12,10 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     
     // Validation du runtime si fourni
-    if (body.runtime && !['node', 'php', 'python'].includes(body.runtime)) {
+    if (body.runtime && !['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'].includes(body.runtime)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Runtime must be one of: node, php, python'
+        statusMessage: 'Runtime must be one of: node, python, bun, java, swift, ruby, rust, go, php'
       })
     }
     

@@ -145,7 +145,7 @@ interface Environment {
   name: string
   description?: string
   repositoryFullName: string
-  runtime: 'node' | 'php' | 'python'
+  runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php'
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli'
   defaultBranch: string
   environmentVariables: Array<{ key: string; value: string; description?: string }>
@@ -310,8 +310,14 @@ const deleteEnvironment = async (id: string) => {
 const getRuntimeColor = (runtime: string) => {
   switch (runtime) {
     case 'node': return 'success'
-    case 'php': return 'info'
     case 'python': return 'warning'
+    case 'bun': return 'indigo'
+    case 'java': return 'danger'
+    case 'swift': return 'orange'
+    case 'ruby': return 'red'
+    case 'rust': return 'amber'
+    case 'go': return 'sky'
+    case 'php': return 'info'
     default: return 'secondary'
   }
 }

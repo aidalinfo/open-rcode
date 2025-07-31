@@ -43,10 +43,10 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    if (!['node', 'php', 'python'].includes(body.runtime)) {
+    if (!['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'].includes(body.runtime)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Runtime must be one of: node, php, python'
+        statusMessage: 'Runtime must be one of: node, python, bun, java, swift, ruby, rust, go, php'
       })
     }
     

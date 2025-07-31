@@ -238,8 +238,14 @@ const form = ref({
 // Options
 const runtimeOptions = [
   { label: 'Node.js', value: 'node' },
-  { label: 'PHP', value: 'php' },
-  { label: 'Python', value: 'python' }
+  { label: 'Python', value: 'python' },
+  { label: 'Bun', value: 'bun' },
+  { label: 'Java', value: 'java' },
+  { label: 'Swift', value: 'swift' },
+  { label: 'Ruby', value: 'ruby' },
+  { label: 'Rust', value: 'rust' },
+  { label: 'Go', value: 'go' },
+  { label: 'PHP', value: 'php' }
 ]
 
 const aiProviderOptions = [

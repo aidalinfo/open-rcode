@@ -279,8 +279,14 @@ const form = ref({
 // Options
 const runtimeOptions = [
   { label: 'Node.js', value: 'node' },
-  { label: 'PHP', value: 'php' },
-  { label: 'Python', value: 'python' }
+  { label: 'Python', value: 'python' },
+  { label: 'Bun', value: 'bun' },
+  { label: 'Java', value: 'java' },
+  { label: 'Swift', value: 'swift' },
+  { label: 'Ruby', value: 'ruby' },
+  { label: 'Rust', value: 'rust' },
+  { label: 'Go', value: 'go' },
+  { label: 'PHP', value: 'php' }
 ]
 
 const aiProviderOptions = [
@@ -421,8 +427,14 @@ const fetchEnvironment = async () => {
 const getRuntimeLabel = (runtime: string) => {
   const labels = {
     'node': 'Node.js',
-    'php': 'PHP',
-    'python': 'Python'
+    'python': 'Python',
+    'bun': 'Bun',
+    'java': 'Java',
+    'swift': 'Swift',
+    'ruby': 'Ruby',
+    'rust': 'Rust',
+    'go': 'Go',
+    'php': 'PHP'
   }
   return labels[runtime as keyof typeof labels] || runtime
 }
