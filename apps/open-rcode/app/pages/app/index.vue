@@ -5,6 +5,8 @@
         <AppSkeleton v-if="isInitialLoading" />
         
         <div v-else>
+          <WelcomeModal v-model="showWelcomeModal" />
+          
           <ChatPrompt
             v-model:input="input"
             v-model:selectedEnvironment="selectedEnvironment"
@@ -50,12 +52,18 @@ const loading = ref(false)
 const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
 const isInitialLoading = ref(true)
+const showWelcomeModal = ref(false)
 
 // Méthodes
 const fetchEnvironments = async () => {
   try {
     const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
+    
+    // Show welcome modal if no environments
+    if (data.environments.length === 0) {
+      showWelcomeModal.value = true
+    }
   } catch (error) {
     if (import.meta.dev) console.error('Error fetching environments:', error)
   } finally {
