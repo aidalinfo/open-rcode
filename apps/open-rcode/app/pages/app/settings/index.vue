@@ -126,7 +126,7 @@
               <h3 class="text-lg font-medium">Claude Code OAuth Token</h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
-              {{ hasClaudeOAuth ? 'Your Claude Code OAuth token is configured and securely encrypted.' : 'Configure your OAuth token to use Claude Code CLI.' }}
+              {{ hasClaudeOAuth ? 'Your Claude Code OAuth token is configured and securely encrypted.' : 'Configure your OAuth token to use Claude Code CLI. (use claude setup-token command  to obtain the OAuth token.)' }}
             </p>
 
             <div v-if="!hasClaudeOAuth" class="space-y-4">
