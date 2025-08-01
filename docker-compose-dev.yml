@@ -10,6 +10,16 @@ services:
       MONGO_INITDB_DATABASE: openrcode
     ports:
       - "27017:27017"
+  open-rcode-doc:
+    build:
+      context: ./apps/docs
+      dockerfile: Dockerfile
+      args:
+        - NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3052:3000"
 
   open-rcode:
     build:
