@@ -25,7 +25,7 @@ jobs:
       - name: Extract version from package.json
         id: version
         run: |
-          VERSION=$(grep '"version"' app/open-rcode/package.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          VERSION=$(grep '"version"' apps/open-rcode/package.json | sed 's/.*"version": "\(.*\)".*/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
