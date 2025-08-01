@@ -4,7 +4,7 @@ Ce fichier fournit des conseils à Claude Code lors du travail sur la codebase o
 
 ## Vue d'ensemble du projet
 
-Open-rcode est une plateforme web containerisée qui permet aux développeurs d'exécuter des tâches de programmation assistées par IA dans des conteneurs isolés (Docker ou Kubernetes), créant automatiquement des Pull Requests GitHub. La plateforme est construite avec :
+open-rcode est une plateforme web containerisée qui permet aux développeurs d'exécuter des tâches de programmation assistées par IA dans des conteneurs isolés (Docker ou Kubernetes), créant automatiquement des Pull Requests GitHub. La plateforme est construite avec :
 - **Frontend** : Nuxt 4 avec UI Pro
 - **Backend** : API Nitro (Nuxt server)
 - **Base de données** : MongoDB
@@ -23,7 +23,7 @@ Open-rcode est une plateforme web containerisée qui permet aux développeurs d'
 ### Structure du projet
 ```
 /
-├── app/
+├── apps/
 │   ├── docs/                  # Documentation (projet séparé)
 │   └── open-rcode/           # Application principale
 │       ├── app/              # Frontend Nuxt
@@ -40,7 +40,7 @@ Open-rcode est une plateforme web containerisée qui permet aux développeurs d'
 
 ```bash
 # Navigation
-cd app/open-rcode              # Aller dans l'application principale
+cd apps/open-rcode              # Aller dans l'application principale
 
 # Développement
 pnpm install                   # Installer les dépendances
@@ -56,8 +56,8 @@ pnpm typecheck               # Validation TypeScript
 docker-compose up -d mongodb  # Démarrer MongoDB localement
 
 # Conteneurs
-docker ps -f name=ccweb-task  # Lister les conteneurs de tâches actifs
-kubectl get pods -l ccweb.managed=true  # Lister les pods Kubernetes
+docker ps -f name=openrcode-task  # Lister les conteneurs de tâches actifs
+kubectl get pods -l openrcode.managed=true  # Lister les pods Kubernetes
 ```
 
 ## Composants backend critiques
@@ -165,7 +165,7 @@ Le système utilise automatiquement Gemini Admin pour suggérer des titres de PR
 
 ```bash
 # Base de données
-DATABASE_URL=mongodb://localhost:27017/ccweb
+DATABASE_URL=mongodb://localhost:27017/openrcode
 
 # Mode conteneur
 CONTAINER_MODE=docker              # ou "kubernetes"
@@ -198,8 +198,8 @@ NUXT_UI_PRO_LICENSE=xxxx-xxxx-xxxx-xxxx
 ### 1. "No space left on device" (Docker)
 ```bash
 # Nettoyer les conteneurs de tâches
-docker stop $(docker ps -q -f name=ccweb-task)
-docker rm $(docker ps -aq -f name=ccweb-task)
+docker stop $(docker ps -q -f name=openrcode-task)
+docker rm $(docker ps -aq -f name=openrcode-task)
 docker system prune -f
 ```
 
@@ -255,8 +255,8 @@ throw createError({
 - Valider l'appartenance des ressources avant l'accès
 
 ### 5. Conteneurs
-- Utiliser des noms uniques : `ccweb-task-{taskId}-{timestamp}`
-- Toujours taguer avec `ccweb.managed=true` pour le tracking
+- Utiliser des noms uniques : `openrcode-task-{taskId}-{timestamp}`
+- Toujours taguer avec `openrcode.managed=true` pour le tracking
 - Implémenter le cleanup automatique après exécution
 
 ## Notes spécifiques pour Claude Code
@@ -300,6 +300,6 @@ gemini --model gemini-2.0-flash -p "prompt"
 
 ### Points de vérification
 1. MongoDB : `docker-compose logs mongodb`
-2. Conteneurs de tâches : `docker logs ccweb-task-*`
-3. Pods Kubernetes : `kubectl logs -l ccweb.managed=true`
+2. Conteneurs de tâches : `docker logs openrcode-task-*`
+3. Pods Kubernetes : `kubectl logs -l openrcode.managed=true`
 4. Application : Console du navigateur et logs serveur Nuxt

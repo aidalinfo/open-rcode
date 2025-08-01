@@ -13,7 +13,7 @@ services:
 
   open-rcode:
     build:
-      context: ./app/open-rcode
+      context: ./apps/open-rcode
       dockerfile: Dockerfile
       args:
         - NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
