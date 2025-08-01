@@ -1,5 +1,6 @@
 {
   "name": "open-rcode",
+  "description": "open rcode - A platform for running and managing code execution tasks",
   "private": false,
   "type": "module",
   "version": "0.0.8alpha",
