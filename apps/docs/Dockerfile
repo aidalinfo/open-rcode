@@ -7,9 +7,11 @@ ARG NUXT_UI_PRO_LICENSE
 
 # Install pnpm
 RUN npm install -g pnpm
-
 # Copy package files
 COPY package.json pnpm-lock.yaml* ./
+RUN pnpm pkg set pnpm.onlyBuiltDependencies[0]=better-sqlite3
+RUN pnpm add better-sqlite3
+RUN node -e 'new require("better-sqlite3")(":memory:")'
 
 # Install all dependencies (including devDependencies for build)
 RUN pnpm install
