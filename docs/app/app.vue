@@ -21,6 +21,7 @@ useHead({
 useSeoMeta({
   titleTemplate: `%s - ${seo?.siteName}`,
   ogSiteName: seo?.siteName,
+  ogImage: 'http://doc.open-rcode.com/_og.png',
   twitterCard: 'summary_large_image'
 })
 
