@@ -34,17 +34,10 @@ Open-rcode is an open source platform that allows you to execute Claude Code, Ge
 - MongoDB
 - GitHub App configuration
 
-## Installation
-
-🚧 **Under Construction**
-
-Detailed installation instructions are being prepared. For now, see the configuration section in CLAUDE.md.
-
 ## Documentation
 
-🚧 **Under Construction**
+📖 **Full documentation available at: https://doc.open-rcode.com**
 
-Comprehensive documentation is being developed. Current technical details can be found in CLAUDE.md.
 
 # Repo activity
 
