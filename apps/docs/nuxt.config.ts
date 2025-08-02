@@ -1,10 +1,6 @@
 export default defineNuxtConfig({
-  modules: ['@nuxtjs/i18n','@nuxtjs/sitemap'],
-  site: {
-    url: 'https://doc.open-rcode.com',
-  },
+  modules: ['@nuxtjs/i18n'],
   i18n: {
-    lazy: false,
     defaultLocale: 'en',
     locales: [{
       code: 'en',
