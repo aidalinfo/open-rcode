@@ -10,19 +10,23 @@ orientation: horizontal
 ---
   :::prose-pre
   ---
-  code: npx nuxi init -t github:nuxt-ui-pro/docs
+  code: wget https://raw.githubusercontent.com/aidalinfo/open-rcode/refs/heads/dev/setup/docker-compose.yaml docker-compose.yaml && docker compose up -d
   filename: Terminal
   ---
   ```bash
-  npx nuxi init -t github:nuxt-ui-pro/docs
+  # Download the Docker Compose configuration
+  wget https://raw.githubusercontent.com/aidalinfo/open-rcode/refs/heads/dev/setup/docker-compose.yaml
+  
+  # Start open-rcode platform
+  docker compose up -d
   ```
   :::
 
 #title
-AI-Powered Development with open-rcode
+open-rcode
 
 #description
-open-rcode is an open source platform that allows you to execute Claude Code, Gemini CLI and other agentic applications from a web interface, creating automated Pull Requests for your projects.
+Open source platform that allows you to execute Claude Code, Gemini CLI and other agentic applications from a web interface, creating automated Pull Requests for your projects.
 
 #links
   :::u-button
