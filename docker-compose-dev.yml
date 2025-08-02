@@ -12,7 +12,7 @@ services:
       - "27017:27017"
   open-rcode-doc:
     build:
-      context: ./apps/docs
+      context: ./docs
       dockerfile: Dockerfile
       args:
         - NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
