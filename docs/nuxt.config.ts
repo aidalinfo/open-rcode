@@ -5,8 +5,8 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/ui-pro',
     '@nuxt/content',
-    'nuxt-og-image',
-    'nuxt-llms'
+    'nuxt-og-image'
+    // 'nuxt-llms' // Disabled temporarily due to prerender errors
   ],
 
   devtools: {
