@@ -16,7 +16,12 @@ Open-rcode is an open source platform that allows you to execute Claude Code, Ge
 - **Containerized Execution**: Isolated execution environment using Docker or Kubernetes
 - **Real-time Streaming**: Live updates during task execution
 
-## Quick Start
+
+## Documentation
+
+📖 **Full documentation available at: https://doc.open-rcode.com**
+
+## Dev setup
 
 1. Clone the repository
 2. Install dependencies: `pnpm install`
@@ -26,18 +31,13 @@ Open-rcode is an open source platform that allows you to execute Claude Code, Ge
 4. Start development server: `pnpm dev`
 6. Open http://localhost:3000
 
-## Requirements
+## Dev Requirements
 
 - Node.js
 - pnpm
 - Docker or Kubernetes
 - MongoDB
 - GitHub App configuration
-
-## Documentation
-
-📖 **Full documentation available at: https://doc.open-rcode.com**
-
 
 # Repo activity
 
