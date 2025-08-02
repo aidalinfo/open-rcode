@@ -35,7 +35,6 @@ GITHUB_CLIENT_SECRET=your_oauth_client_secret
 
 # Security & Sessions (Required)
 ENCRYPTION_KEY=your_32_character_secret_key_here
-SESSION_SECRET=your_session_secret_here
 
 
 # Nuxt UI Pro License (Required for build)
@@ -148,7 +147,6 @@ services:
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - SESSION_SECRET=${SESSION_SECRET}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -190,7 +188,6 @@ kubectl create secret generic openrcode-secrets \
   --from-literal=github-client-id="your_client_id" \
   --from-literal=github-client-secret="your_client_secret" \
   --from-literal=encryption-key="your_32_character_secret_key" \
-  --from-literal=session-secret="your_session_secret" \
   --from-literal=claude-oauth-token="your_claude_token" \
   --from-literal=database-url="mongodb://mongodb:27017/openrcode"
 ```
@@ -251,11 +248,6 @@ spec:
             secretKeyRef:
               name: openrcode-secrets
               key: encryption-key
-        - name: SESSION_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: openrcode-secrets
-              key: session-secret
         - name: CLAUDE_CODE_OAUTH_TOKEN
           valueFrom:
             secretKeyRef:

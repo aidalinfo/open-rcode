@@ -180,7 +180,6 @@ GITHUB_CLIENT_SECRET=your_oauth_client_secret
 
 # Encryption and Sessions
 ENCRYPTION_KEY=your_32_character_secret_key
-SESSION_SECRET=your_session_secret
 
 # Kubernetes Configuration (when CONTAINER_MODE=kubernetes)
 KUBERNETES_NAMESPACE=default            # Optional, defaults to "default"

@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  modules: ['@nuxtjs/i18n'],
+  modules: ['@nuxtjs/i18n','@nuxtjs/sitemap'],
   i18n: {
     defaultLocale: 'en',
     locales: [{
