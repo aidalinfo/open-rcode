@@ -51,12 +51,12 @@ export default defineNuxtConfig({
   },
 
   llms: {
-    domain: 'https://docs-template.nuxt.dev/',
-    title: 'Nuxt Docs Template',
-    description: 'A template for building documentation with Nuxt UI Pro and Nuxt Content.',
+    domain: 'https://doc.open-rcode.com/',
+    title: 'open-rcode Documentation',
+    description: 'Open source platform for AI-powered development with automated GitHub PR creation using Claude Code, Gemini CLI and other agentic applications.',
     full: {
-      title: 'Nuxt Docs Template - Full Documentation',
-      description: 'This is the full documentation for the Nuxt Docs Template.'
+      title: 'open-rcode - Complete Documentation',
+      description: 'Complete documentation for open-rcode, the open source platform that allows you to execute AI-powered development tasks from a web interface.'
     },
     sections: [
       {
@@ -67,10 +67,10 @@ export default defineNuxtConfig({
         ]
       },
       {
-        title: 'Essentials',
+        title: 'Troubleshooting',
         contentCollection: 'docs',
         contentFilters: [
-          { field: 'path', operator: 'LIKE', value: '/essentials%' }
+          { field: 'path', operator: 'LIKE', value: '/troubleshooting%' }
         ]
       }
     ]
