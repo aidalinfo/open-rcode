@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-open-rcode-svc
+  labels:
+    app: app-open-rcode
+  namespace: ns-open-rcode
+spec:
+  ports:
+    - port: 3000
+  selector:
+    app: open-rcode
+    tier: frontend
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+  name: ns-open-rcode
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-open-rcode
+  labels:
+    app: app-open-rcode
+  namespace: ns-open-rcode
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: open-rcode
+      tier: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: open-rcode
+        tier: frontend
+    spec:
+      volumes:
+      - name: kubeconfig-volume
+        configMap:
+          name: kubeconfig-configmap
+      containers:
+      - image: ghcr.io/aidalinfo/open-rcode:v0.0.8alpha
+        name: open-rcode
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: app-configmap
+        volumeMounts:
+        - name: kubeconfig-volume
+          mountPath: /tmp
+          readOnly: true
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi

@@ -1,0 +1,9 @@
+kind: ConfigMap 
+apiVersion: v1 
+metadata:
+  name: mongo-configmap 
+  namespace: ns-open-rcode
+data:
+  MONGO_INITDB_ROOT_PASSWORD: "your-mongodb-password"
+  MONGO_INITDB_ROOT_USERNAME: "root"
+  MONGO_INITDB_DATABASE: "openrcode"
