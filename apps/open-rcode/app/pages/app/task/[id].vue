@@ -1,13 +1,5 @@
 <template>
   <UDashboardPanel>
-    <template #header>
-      <div class="flex items-center justify-center gap-4">
-        <h1 class="text-xl font-semibold">
-          {{ task ? `Task: ${task.name || task.id}` : 'Loading...' }}
-        </h1>
-        <UBadge v-if="task" :color="getStatusColor(task.status)" :label="getStatusLabel(task.status)" />
-      </div>
-    </template>
     
     <template #body>
       <UContainer class="flex flex-col h-full px-4">
@@ -101,6 +93,10 @@ const messages = ref<any[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const isTaskRunning = ref(true)
+
+// Inject the setPageTitle function from layout
+const pageTitle = usePageTitle()
+const navbarBadge = useNavbarBadge()
 
 let pollInterval: NodeJS.Timeout | null = null
 
@@ -225,6 +221,12 @@ const fetchTaskAndMessages = async () => {
     // Fetch task details
     const taskData = await $fetch(`/api/tasks/${taskId}`)
     task.value = taskData.task
+    pageTitle.value = task.value.name || `Task: ${task.value.id}`
+    navbarBadge.value = {
+      label: getStatusLabel(task.value.status),
+      color: getStatusColor(task.value.status),
+      variant: 'solid'
+    }
 
     // Fetch messages
     const messagesData = await $fetch(`/api/tasks/${taskId}/messages`)
@@ -254,6 +256,7 @@ onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval)
   }
+  navbarBadge.value = null
 })
 </script>
 
