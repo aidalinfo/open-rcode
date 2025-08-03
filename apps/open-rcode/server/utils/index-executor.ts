@@ -3,8 +3,8 @@ import { IndexPathModel } from '../models/IndexPath'
 import { UserModel } from '../models/User'
 import { ContainerManagerFactory } from './container/container-manager-factory'
 import { RepositoryCloner } from './repository-cloner'
-import { decrypt } from './encryption'
-import { createAppInstallationAccessToken } from '~/server/utils/github'
+import { decrypt } from './crypto'
+import { generateInstallationToken } from './github-app'
 
 export class IndexExecutor {
   private repositoryCloner: RepositoryCloner
@@ -47,7 +47,7 @@ export class IndexExecutor {
         throw new Error('No GitHub App installation found')
       }
 
-      const accessToken = await createAppInstallationAccessToken(installationId)
+      const accessToken = await generateInstallationToken(installationId)
 
       console.log(`🔄 Cloning repository: ${environment.repositoryFullName}`)
       const repoPath = await this.repositoryCloner.cloneRepository(
