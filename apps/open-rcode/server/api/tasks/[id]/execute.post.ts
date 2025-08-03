@@ -4,10 +4,14 @@ import { TaskMessageModel } from '../../../models/TaskMessage'
 import { connectToDatabase } from '../../../utils/database'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../../../utils/logger'
+import { requireUser } from '../../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
+    
+    // Authentification requise
+    const user = await requireUser(event)
     
     const taskId = getRouterParam(event, 'id')
     if (!taskId) {
@@ -26,9 +30,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Vérifier que la tâche existe et a un conteneur
-    const task = await TaskModel.findById(taskId)
+    // Vérifier que la tâche existe et appartient à l'utilisateur
+    const task = await TaskModel.findOne({ _id: taskId, userId: user.githubId })
     if (!task) {
+      logger.warn({ taskId, userId: user.githubId }, 'Unauthorized access attempt to task')
       throw createError({
         statusCode: 404,
         statusMessage: 'Task not found'
