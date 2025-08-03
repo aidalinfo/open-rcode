@@ -177,8 +177,7 @@ GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
 GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Sécurité (REQUIS)
-ENCRYPTION_KEY=32_caracteres_exactement_requis!!  # Pour crypter les API keys
-SESSION_SECRET=votre_secret_de_session
+ENCRYPTION_KEY=32_caracteres_exactement_requis!
 
 # Kubernetes (si CONTAINER_MODE=kubernetes)
 KUBERNETES_NAMESPACE=default       # Optionnel

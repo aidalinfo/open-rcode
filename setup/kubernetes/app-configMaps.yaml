@@ -1,0 +1,17 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: app-configmap
+  namespace: ns-open-rcode
+data:
+  NODE_ENV: "production"
+  GITHUB_APP_NAME: "your-github-app-name"
+  CONTAINER_MODE: "kubernetes"
+  GITHUB_APP_ID: "your-github-app-id"
+  KUBECONFIG: "/tmp/kubeconfig.yaml"
+  GITHUB_APP_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\nYOUR_GITHUB_APP_PRIVATE_KEY_CONTENT\n-----END RSA PRIVATE KEY-----"
+  GITHUB_REDIRECT_URI: "https://your-domain.com/api/auth/github"
+  GITHUB_CLIENT_ID: "your-github-oauth-client-id"
+  GITHUB_CLIENT_SECRET: "your-github-oauth-client-secret"
+  ENCRYPTION_KEY: "your-32-character-encryption-key-here"
+  MONGODB_URI: "mongodb://root:your-mongodb-password@mongo-svc:27017/openrcode?authSource=admin"

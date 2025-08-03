@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-open-rcode-ingress
+  namespace: ns-open-rcode
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/enable-gzip: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: your-domain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-open-rcode-svc
+                port:
+                  number: 3000
+  tls:
+  - hosts:
+    - your-domain.com
+    secretName: your-tls-secret

@@ -1,13 +1,17 @@
 <template>
-  <UChatPrompt 
-    v-model="localInput" 
-    :status="loading ? 'streaming' : 'ready'"
-    placeholder="Ask your question..."
-    @submit="handleSubmit"
-  >
-    <UChatPromptSubmit />
-
-    <template #footer>
+  <div class="relative">
+    <UChatPrompt 
+      ref="chatPromptRef"
+      v-model="localInput" 
+      :status="loading ? 'streaming' : 'ready'"
+      placeholder="Ask your question... (use @ to reference files)"
+      @submit="handleSubmit"
+      @keydown="handleKeydown"
+      @input="handleInput"
+    >
+      <UChatPromptSubmit />
+      
+      <template #footer>
       <div class="flex flex-wrap items-center gap-3">
         <USelect
           v-model="localSelectedEnvironment"
@@ -52,6 +56,24 @@
       </div>
     </template>
   </UChatPrompt>
+  
+  <!-- File Path Autocomplete -->
+  <div v-if="showFileMenu && filteredFilePaths.length > 0" class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto min-w-80" :style="menuPosition">
+    <div class="p-2">
+      <div class="text-xs text-gray-500 mb-2">Select a file path:</div>
+      <div class="space-y-1">
+        <button
+          v-for="item in filteredFilePaths"
+          :key="item.value"
+          @click="insertFilePath(item.value)"
+          class="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+        >
+          <div class="font-medium">{{ item.label }}</div>
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -77,6 +99,15 @@ const toast = useToast()
 // Workflow state
 const selectedWorkflow = ref('')
 
+// File path autocomplete state
+const showFileMenu = ref(false)
+const selectedFilePath = ref('')
+const menuPosition = ref({ top: '0px', left: '0px' })
+const cursorPosition = ref(0)
+const atPosition = ref(-1)
+const filePaths = ref<string[]>([])
+const chatPromptRef = ref()
+
 // Computed properties for two-way binding
 const localInput = computed({
   get: () => props.input,
@@ -95,6 +126,18 @@ const environmentOptions = computed(() => {
     value: env.id,
     icon: getRuntimeIcon(env.runtime)
   }))
+})
+
+// File path autocomplete computed properties
+const filteredFilePaths = computed(() => {
+  const query = localInput.value.slice(atPosition.value + 1, cursorPosition.value).toLowerCase()
+  return filePaths.value
+    .filter(path => path.toLowerCase().includes(query))
+    .map(path => ({
+      label: path,
+      value: path
+    }))
+    .slice(0, 10) // Limit to 10 results
 })
 
 // Options for workflow dropdown
@@ -168,4 +211,100 @@ const getRuntimeIcon = (runtime: string) => {
     default: return 'i-heroicons-code-bracket'
   }
 }
+
+// File path autocomplete methods
+const fetchFilePaths = async (environmentId: string) => {
+  try {
+    const data = await $fetch(`/api/environments/${environmentId}/file-index`)
+    filePaths.value = data.paths || []
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching file paths:', error)
+    filePaths.value = []
+  }
+}
+
+const handleInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  cursorPosition.value = input.selectionStart || 0
+  
+  // Check for @ character
+  const value = input.value
+  const lastAtIndex = value.lastIndexOf('@', cursorPosition.value - 1)
+  
+  if (lastAtIndex !== -1) {
+    // Check if there's no space between @ and cursor
+    const textBetween = value.slice(lastAtIndex + 1, cursorPosition.value)
+    if (!textBetween.includes(' ') && !textBetween.includes('\n')) {
+      atPosition.value = lastAtIndex
+      showFileMenu.value = true
+      updateMenuPosition(input)
+      
+      // Fetch file paths if not already loaded
+      if (filePaths.value.length === 0 && localSelectedEnvironment.value) {
+        fetchFilePaths(localSelectedEnvironment.value)
+      }
+    } else {
+      showFileMenu.value = false
+    }
+  } else {
+    showFileMenu.value = false
+  }
+}
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (showFileMenu.value) {
+    if (event.key === 'Escape') {
+      showFileMenu.value = false
+      event.preventDefault()
+    }
+  }
+}
+
+const updateMenuPosition = (input: HTMLInputElement) => {
+  // Create a temporary element to measure text width
+  const temp = document.createElement('div')
+  temp.style.position = 'absolute'
+  temp.style.visibility = 'hidden'
+  temp.style.whiteSpace = 'pre'
+  temp.style.font = window.getComputedStyle(input).font
+  temp.textContent = localInput.value.slice(0, atPosition.value + 1)
+  document.body.appendChild(temp)
+  
+  const textWidth = temp.offsetWidth
+  document.body.removeChild(temp)
+  
+  menuPosition.value = {
+    top: '100%',
+    left: `${Math.min(textWidth, input.offsetWidth - 200)}px`
+  }
+}
+
+const insertFilePath = (filePath: string) => {
+  if (!filePath) return
+  
+  const currentValue = localInput.value
+  const beforeAt = currentValue.slice(0, atPosition.value)
+  const afterCursor = currentValue.slice(cursorPosition.value)
+  
+  localInput.value = `${beforeAt}@${filePath} ${afterCursor}`
+  showFileMenu.value = false
+  selectedFilePath.value = ''
+  
+  // Focus back to input
+  nextTick(() => {
+    const inputElement = chatPromptRef.value?.$el?.querySelector('input') || chatPromptRef.value?.$el?.querySelector('textarea')
+    if (inputElement) {
+      inputElement.focus()
+      const newPosition = beforeAt.length + filePath.length + 2
+      inputElement.setSelectionRange(newPosition, newPosition)
+    }
+  })
+}
+
+// Watch for environment changes to load file paths
+watch(localSelectedEnvironment, (newEnvironmentId) => {
+  if (newEnvironmentId) {
+    fetchFilePaths(newEnvironmentId)
+  }
+})
 </script>

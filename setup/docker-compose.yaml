@@ -5,11 +5,48 @@ services:
     volumes:
       - db-data:/data/db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password}
       MONGO_INITDB_DATABASE: openrcode
+      
+  open-rcode:
+    image: ghcr.io/aidalinfo/open-rcode:v0.0.8alpha
+    restart: always
     ports:
-      - "27017:27017"
+      - "8080:3000"
+    environment:
+      # Database
+      MONGODB_URI: ${MONGODB_URI:-mongodb://root:${MONGO_INITDB_ROOT_PASSWORD:-password}@mongodb:27017/openrcode?authSource=admin}
+
+      # Container Mode
+      CONTAINER_MODE: ${CONTAINER_MODE:-docker}
+      
+      # GitHub Integration (REQUIRED)
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_NAME: ${GITHUB_APP_NAME}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY} # Or use GITHUB_APP_PRIVATE_KEY_PATH
+      # GITHUB_APP_PRIVATE_KEY_PATH: ${GITHUB_APP_PRIVATE_KEY_PATH:-/app/github_private_key.pem}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_REDIRECT_URI: ${GITHUB_REDIRECT_URI:-http://localhost:8080/api/auth/github}
+      
+      # Encryption and Sessions (REQUIRED)
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      
+      # # Kubernetes Configuration (when CONTAINER_MODE=kubernetes)
+      # KUBERNETES_NAMESPACE: ${KUBERNETES_NAMESPACE:-default}
+      # KUBECONFIG: ${KUBECONFIG} # Path to kubeconfig file
+      
+      # Docker Configuration (when CONTAINER_MODE=docker)
+      DOCKER_HOST: ${DOCKER_HOST:-host.docker.internal}
+      
+      # Optional Admin Configuration
+      ADMIN_GOOGLE_API_KEY: ${ADMIN_GOOGLE_API_KEY}
+      BASE_ROLE: ${BASE_ROLE:-basic}
+      
+    depends_on:
+      - mongodb
+
 volumes:
   db-data:
     driver: local

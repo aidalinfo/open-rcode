@@ -1,9 +1,11 @@
 import { TaskModel } from '../../../models/Task'
 import { connectToDatabase } from '../../../utils/database'
+import { requireUser } from '../../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
-
+  
+  const user = await requireUser(event)
   const taskId = event.context.params?.id
 
   if (!taskId) {
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const task = await TaskModel.findById(taskId)
+    const task = await TaskModel.findOne({ _id: taskId, userId: user.githubId })
 
     if (!task) {
       throw createError({
