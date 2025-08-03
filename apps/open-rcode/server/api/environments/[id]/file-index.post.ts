@@ -1,11 +1,13 @@
 import { defineEventHandler, getCookie, createError, getRouterParam, setResponseStatus } from 'h3'
 import { EnvironmentModel } from '../../../models/Environment'
 import { IndexExecutor } from '../../../utils/index-executor'
-import jwt from 'jsonwebtoken'
+import { SessionModel } from '../../../models/Session'
+import { connectToDatabase } from '../../../utils/database'
 
 export default defineEventHandler(async (event) => {
   const environmentId = getRouterParam(event, 'id')
-  
+  await connectToDatabase()
+
   if (!environmentId) {
     throw createError({
       statusCode: 400,
@@ -22,15 +24,14 @@ export default defineEventHandler(async (event) => {
   }
 
   let userId: string
-  try {
-    const decoded = jwt.verify(sessionToken, process.env.JWT_SECRET || 'secret') as any
-    userId = decoded.userId
-  } catch {
+  const session = await SessionModel.findOne({ sessionToken })
+  if (!session || session.expires < new Date()) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Invalid session',
+      statusMessage: 'Session expired'
     })
   }
+  userId = session.userId
 
   const environment = await EnvironmentModel.findById(environmentId)
   if (!environment) {
@@ -50,7 +51,7 @@ export default defineEventHandler(async (event) => {
   const indexExecutor = new IndexExecutor()
 
   setResponseStatus(event, 202)
-  
+
   indexExecutor.executeIndexing(environmentId, userId).catch((error) => {
     console.error('Background indexing failed:', error)
   })

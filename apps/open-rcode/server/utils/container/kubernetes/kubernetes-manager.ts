@@ -594,7 +594,12 @@ export class KubernetesManager {
   async cleanupPods(namespace?: string): Promise<number> {
     try {
       const pods = await this.listPods(namespace)
-      const stoppedPods = pods.filter(p => p.phase !== 'Running')
+      // Only clean up pods that are truly stopped/completed, not pending or running ones
+      const stoppedPods = pods.filter(p => 
+        p.phase === 'Succeeded' || 
+        p.phase === 'Failed' || 
+        p.phase === 'Unknown'
+      )
       
       let cleanedCount = 0
       for (const pod of stoppedPods) {

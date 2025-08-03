@@ -1,11 +1,12 @@
 import { defineEventHandler, getCookie, createError } from 'h3'
-import { EnvironmentModel } from '~/server/models/Environment'
-import { IndexExecutor } from '~/server/utils/index-executor'
-import jwt from 'jsonwebtoken'
+import { EnvironmentModel } from '../../../models/Environment'
+import { IndexExecutor } from '../../../utils/index-executor'
+import { SessionModel } from '../../../models/Session'
+import { connectToDatabase } from '../../../utils/database'
 
 export default defineEventHandler(async (event) => {
   const environmentId = getRouterParam(event, 'id')
-  
+  await connectToDatabase()
   if (!environmentId) {
     throw createError({
       statusCode: 400,
@@ -21,16 +22,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  let userId: string
-  try {
-    const decoded = jwt.verify(sessionToken, process.env.JWT_SECRET || 'secret') as any
-    userId = decoded.userId
-  } catch {
-    throw createError({
-      statusCode: 401,
-      statusMessage: 'Invalid session',
-    })
-  }
+     const session = await SessionModel.findOne({ sessionToken })
+     if (!session || session.expires < new Date()) {
+       throw createError({
+         statusCode: 401,
+         statusMessage: 'Session expired'
+       })
+     }
 
   const environment = await EnvironmentModel.findById(environmentId)
   if (!environment) {
@@ -40,7 +38,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (environment.userId !== userId) {
+  if (environment.userId !== session.userId) {
     throw createError({
       statusCode: 403,
       statusMessage: 'Forbidden',

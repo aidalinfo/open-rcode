@@ -215,27 +215,16 @@
               <div class="flex items-center gap-4">
                 <div v-if="indexInfo" class="text-sm text-gray-500">
                   <span v-if="indexInfo.indexed">
-                    {{ indexInfo.totalFiles }} files indexed
-                    <time :datetime="indexInfo.indexedAt" class="ml-2">
-                      ({{ formatDate(indexInfo.indexedAt) }})
+                    {{ (indexInfo.totalFiles ?? indexInfo.paths?.length) || 0 }} files indexed
+                    <time :datetime="indexInfo.indexedAt || undefined" class="ml-2">
+                      ({{ formatDate(indexInfo.indexedAt || '') }})
                     </time>
                   </span>
                   <span v-else>
                     Not indexed
                   </span>
                 </div>
-                <UButton
-                  v-if="indexInfo?.indexed"
-                  @click="showIndexModal = true"
-                  variant="ghost"
-                  size="sm"
-                  class="mr-2"
-                >
-                  <template #leading>
-                    <UIcon name="i-heroicons-eye" />
-                  </template>
-                  View Files
-                </UButton>
+                
                 <UButton
                   @click="indexFiles"
                   variant="outline"
@@ -251,29 +240,18 @@
               </div>
             </div>
             
-            <UModal v-model="showIndexModal" :ui="{ width: 'sm:max-w-2xl' }">
-              <UCard>
-                <template #header>
-                  <h3 class="text-lg font-medium">
-                    Indexed Files ({{ indexedFiles.length }})
-                  </h3>
-                </template>
-                
-                <div class="max-h-96 overflow-y-auto">
-                  <ul class="space-y-1">
-                    <li v-for="(file, index) in indexedFiles" :key="index" class="text-sm font-mono text-gray-600 dark:text-gray-400">
-                      {{ file }}
-                    </li>
-                  </ul>
+            <!-- Indexed Files Tree -->
+            <div v-if="indexInfo?.indexed" class="mt-6">
+              <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4">
+                Indexed Files ({{ indexedFiles.length }})
+              </h4>
+              <div class="rounded-lg p-4 max-h-80 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
+                <UTree v-if="indexTree.length" :items="indexTree" />
+                <div v-else class="text-center py-8 text-gray-500">
+                  No files indexed yet
                 </div>
-                
-                <template #footer>
-                  <UButton @click="showIndexModal = false" variant="ghost">
-                    Close
-                  </UButton>
-                </template>
-              </UCard>
-            </UModal>
+              </div>
+            </div>
           </div>
 
           <!-- Action buttons -->
@@ -333,9 +311,21 @@ const isDeleting = ref(false)
 const loadingRepositories = ref(false)
 const loadingBranches = ref(false)
 const isIndexing = ref(false)
-const showIndexModal = ref(false)
-const indexInfo = ref<{ indexed: boolean; paths: string[]; indexedAt: string | null; totalFiles: number } | null>(null)
+interface IndexInfo {
+  indexed: boolean
+  paths: string[]
+  indexedAt: string | null
+  totalFiles?: number
+}
+
+const indexInfo = ref<IndexInfo | null>(null)
 const indexedFiles = ref<string[]>([])
+
+// Tree structure for file index
+const indexTree = computed(() => {
+  if (!indexedFiles.value.length) return []
+  return buildFileTree(indexedFiles.value)
+})
 
 // Data
 const repositories = ref<any[]>([])
@@ -343,20 +333,26 @@ const branches = ref<any[]>([])
 const currentEnvironment = ref<any>(null)
 
 // Form
+interface SelectOption {
+  label: string
+  value: string
+  description?: string
+}
+
 const form = ref({
-  selectedRepository: { label: '', value: '', description: '' },
+  selectedRepository: { label: '', value: '', description: '' } as SelectOption,
   name: '',
   description: '',
-  runtime: { label: 'Node.js', value: 'node' },
-  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
-  model: { label: 'Claude Sonnet', value: 'sonnet' },
-  defaultBranch: { label: 'main', value: 'main' },
+  runtime: { label: 'Node.js', value: 'node' } as SelectOption,
+  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' } as SelectOption,
+  model: { label: 'Claude Sonnet', value: 'sonnet' } as SelectOption,
+  defaultBranch: { label: 'main', value: 'main' } as SelectOption,
   environmentVariables: [] as Array<{ key: string; value: string; description: string }>,
   configurationScript: ''
 })
 
 // Options
-const runtimeOptions = [
+const runtimeOptions: SelectOption[] = [
   { label: 'Node.js', value: 'node' },
   { label: 'Python', value: 'python' },
   { label: 'Bun', value: 'bun' },
@@ -368,18 +364,18 @@ const runtimeOptions = [
   { label: 'PHP', value: 'php' }
 ]
 
-const aiProviderOptions = [
+const aiProviderOptions: SelectOption[] = [
   { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
   { label: 'Google Gemini CLI', value: 'gemini-cli' }
 ]
 
-const modelOptions = [
+const modelOptions: SelectOption[] = [
   { label: 'Claude Sonnet', value: 'sonnet' },
   { label: 'Claude Opus', value: 'opus' }
 ]
 
-const repositoryOptions = computed(() => {
+const repositoryOptions = computed((): SelectOption[] => {
   return repositories.value.map((repo: any) => ({
     label: repo.full_name,
     value: repo.full_name,
@@ -387,11 +383,11 @@ const repositoryOptions = computed(() => {
   }))
 })
 
-const branchOptions = computed(() => {
+const branchOptions = computed((): SelectOption[] => {
   return branches.value.map((branch: any) => ({
     label: branch.name,
     value: branch.name,
-    description: branch.protected ? 'Protected branch' : ''
+    description: branch.protected ? 'Protected branch' : 'Regular branch'
   }))
 })
 
@@ -451,55 +447,72 @@ const fetchEnvironment = async () => {
 
   try {
     isLoadingEnvironment.value = true
+    
+    // Load environment data first for immediate display
     const data = await $fetch(`/api/environments/${environmentId.value}`)
     currentEnvironment.value = data.environment
     
-    if (import.meta.dev) {
-      console.log('ENVIRONMENT DATA RECEIVED:')
-      console.log('- Full data:', data)
-      console.log('- environment:', data.environment)
-      console.log('- aiProvider:', data.environment.aiProvider, typeof data.environment.aiProvider)
-      console.log('- model:', data.environment.model, typeof data.environment.model)
-      console.log('- runtime:', data.environment.runtime, typeof data.environment.runtime)
-      console.log('- environmentVariables:', data.environment.environmentVariables)
-    }
-    
-    // Fetch repository branches
-    await fetchBranches(data.environment.repositoryFullName)
-    
-    // Fill form with existing data
+    // Fill form with existing data immediately (without repository/branch for now)
     form.value = {
-      selectedRepository: {
-        label: data.environment.repositoryFullName,
-        value: data.environment.repositoryFullName,
-        description: ''
-      },
-      name: data.environment.name,
-      description: data.environment.description,
+      selectedRepository: { label: '', value: '', description: '' }, // Will be set later
+      name: data.environment.name || '',
+      description: data.environment.description || '',
       runtime: {
-        label: getRuntimeLabel(data.environment.runtime),
-        value: data.environment.runtime
+        label: getRuntimeLabel(data.environment.runtime || 'node'),
+        value: data.environment.runtime || 'node'
       },
       aiProvider: {
-        label: getAiProviderLabel(data.environment.aiProvider),
-        value: data.environment.aiProvider
+        label: getAiProviderLabel(data.environment.aiProvider || 'anthropic-api'),
+        value: data.environment.aiProvider || 'anthropic-api'
       },
       model: {
         label: getModelLabel(data.environment.model || 'sonnet'),
         value: data.environment.model || 'sonnet'
       },
-      defaultBranch: {
-        label: data.environment.defaultBranch || 'main',
-        value: data.environment.defaultBranch || 'main'
-      },
+      defaultBranch: { label: 'main', value: 'main' }, // Will be set later
       environmentVariables: data.environment.environmentVariables || [],
-      configurationScript: data.environment.configurationScript
+      configurationScript: data.environment.configurationScript || ''
     }
+    
+    // Page is ready to display
+    isLoadingEnvironment.value = false
+    
+    // Load repositories and branches in background
+    loadRepositoriesAndBranches(data.environment)
+    
   } catch (error) {
     if (import.meta.dev) console.error('Error loading environment:', error)
     loadError.value = 'Unable to load environment'
-  } finally {
     isLoadingEnvironment.value = false
+  }
+}
+
+const loadRepositoriesAndBranches = async (environment: any) => {
+  try {
+    // Load repositories in background
+    await fetchRepositories()
+    
+    // Find and set the exact repository object from repositoryOptions
+    await nextTick()
+    const foundRepoOption = repositoryOptions.value.find(option => option.value === environment.repositoryFullName)
+    if (foundRepoOption) {
+      form.value.selectedRepository = foundRepoOption
+    }
+    
+    // Load branches
+    await fetchBranches(environment.repositoryFullName)
+    
+    // Find and set the exact branch object from branchOptions
+    await nextTick()
+    const defaultBranchName = environment.defaultBranch || 'main'
+    const foundBranchOption = branchOptions.value.find(option => option.value === defaultBranchName)
+    
+    if (foundBranchOption) {
+      form.value.defaultBranch = foundBranchOption
+    }
+    
+  } catch (error) {
+    if (import.meta.dev) console.error('Error loading repositories/branches:', error)
   }
 }
 
@@ -578,14 +591,6 @@ const submitForm = async () => {
     const selectedRuntime = form.value.runtime?.value || form.value.runtime
     const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
     const selectedModel = canSelectModel.value ? (form.value.model?.value || form.value.model) : null
-    
-    if (import.meta.dev) {
-      console.log('UPDATE FORM VALUES:')
-      console.log('- selectedAiProvider:', selectedAiProvider, typeof selectedAiProvider)
-      console.log('- selectedModel:', selectedModel, typeof selectedModel)
-      console.log('- form.value.aiProvider:', form.value.aiProvider)
-    }
-    
     const selectedDefaultBranch = form.value.defaultBranch?.value || form.value.defaultBranch
     
     const payload = {
@@ -667,8 +672,13 @@ const fetchIndexInfo = async () => {
   if (!environmentId.value) return
   
   try {
-    const data = await $fetch(`/api/environments/${environmentId.value}/index`)
-    indexInfo.value = data
+    const data = await $fetch(`/api/environments/${environmentId.value}/file-index`)
+    indexInfo.value = {
+      indexed: data.indexed,
+      paths: data.paths || [],
+      indexedAt: data.indexedAt,
+      totalFiles: (data as any).totalFiles ?? data.paths?.length ?? 0
+    }
     indexedFiles.value = data.paths || []
   } catch (error) {
     if (import.meta.dev) console.error('Error fetching index info:', error)
@@ -678,7 +688,7 @@ const fetchIndexInfo = async () => {
 const indexFiles = async () => {
   isIndexing.value = true
   try {
-    await $fetch(`/api/environments/${environmentId.value}/index`, {
+    await $fetch(`/api/environments/${environmentId.value}/file-index`, {
       method: 'POST'
     })
     
@@ -702,7 +712,7 @@ const indexFiles = async () => {
         if (indexInfo.value?.indexed) {
           toast.add({
             title: 'Indexing completed',
-            description: `Successfully indexed ${indexInfo.value.totalFiles} files`,
+            description: `Successfully indexed ${indexInfo.value?.totalFiles ?? indexInfo.value?.paths.length ?? 0} files`,
             color: 'success'
           })
         }
@@ -730,10 +740,112 @@ const formatDate = (dateString: string) => {
   }).format(date)
 }
 
+// Build tree structure from file paths
+const buildFileTree = (paths: string[]) => {
+  const tree: any[] = []
+  const pathMap = new Map()
+
+  paths.forEach(path => {
+    const parts = path.split('/')
+    let current = tree
+    let currentPath = ''
+
+    parts.forEach((part, index) => {
+      currentPath = currentPath ? `${currentPath}/${part}` : part
+      const isFile = index === parts.length - 1
+      
+      let existing = current.find(item => item.label === part)
+      
+      if (!existing) {
+        existing = {
+          label: part,
+          ...(isFile ? { icon: getFileIcon(part) } : { children: [], defaultExpanded: index < 2 })
+        }
+        current.push(existing)
+      }
+      
+      if (!isFile) {
+        current = existing.children
+      }
+    })
+  })
+
+  return tree
+}
+
+// Get icon based on file extension
+const getFileIcon = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  
+  const iconMap: Record<string, string> = {
+    // Web files
+    'vue': 'i-vscode-icons-file-type-vue',
+    'js': 'i-vscode-icons-file-type-js',
+    'ts': 'i-vscode-icons-file-type-typescript',
+    'jsx': 'i-vscode-icons-file-type-reactjs',
+    'tsx': 'i-vscode-icons-file-type-reactts',
+    'html': 'i-vscode-icons-file-type-html',
+    'css': 'i-vscode-icons-file-type-css',
+    'scss': 'i-vscode-icons-file-type-scss',
+    'sass': 'i-vscode-icons-file-type-sass',
+    'less': 'i-vscode-icons-file-type-less',
+    
+    // Config files
+    'json': 'i-vscode-icons-file-type-json',
+    'yaml': 'i-vscode-icons-file-type-yaml',
+    'yml': 'i-vscode-icons-file-type-yaml',
+    'toml': 'i-vscode-icons-file-type-toml',
+    'env': 'i-vscode-icons-file-type-dotenv',
+    
+    // Build/Package
+    'dockerfile': 'i-vscode-icons-file-type-docker',
+    'lock': 'i-vscode-icons-file-type-npm',
+    
+    // Documentation
+    'md': 'i-vscode-icons-file-type-markdown',
+    'mdx': 'i-vscode-icons-file-type-mdx',
+    'txt': 'i-vscode-icons-file-type-text',
+    'pdf': 'i-vscode-icons-file-type-pdf',
+    
+    // Programming languages
+    'py': 'i-vscode-icons-file-type-python',
+    'rb': 'i-vscode-icons-file-type-ruby',
+    'php': 'i-vscode-icons-file-type-php',
+    'go': 'i-vscode-icons-file-type-go',
+    'rs': 'i-vscode-icons-file-type-rust',
+    'java': 'i-vscode-icons-file-type-java',
+    'kt': 'i-vscode-icons-file-type-kotlin',
+    'swift': 'i-vscode-icons-file-type-swift',
+    'c': 'i-vscode-icons-file-type-c',
+    'cpp': 'i-vscode-icons-file-type-cpp',
+    'cs': 'i-vscode-icons-file-type-csharp',
+    
+    // Images
+    'png': 'i-vscode-icons-file-type-image',
+    'jpg': 'i-vscode-icons-file-type-image',
+    'jpeg': 'i-vscode-icons-file-type-image',
+    'gif': 'i-vscode-icons-file-type-image',
+    'svg': 'i-vscode-icons-file-type-svg',
+    'webp': 'i-vscode-icons-file-type-image',
+    
+    // Archives
+    'zip': 'i-vscode-icons-file-type-zip',
+    'tar': 'i-vscode-icons-file-type-zip',
+    'gz': 'i-vscode-icons-file-type-zip',
+  }
+  
+  // Special file names
+  if (filename.toLowerCase() === 'package.json') return 'i-vscode-icons-file-type-node'
+  if (filename.toLowerCase() === 'dockerfile') return 'i-vscode-icons-file-type-docker'
+  if (filename.toLowerCase().startsWith('readme')) return 'i-vscode-icons-file-type-markdown'
+  if (filename.toLowerCase().includes('license')) return 'i-vscode-icons-file-type-license'
+  
+  return iconMap[ext || ''] || 'i-heroicons-document'
+}
+
 // Initial loading
 onMounted(() => {
-  fetchRepositories()
-  fetchEnvironment()
+  fetchEnvironment() // Load environment first, then repositories in background
   fetchIndexInfo()
 })
 

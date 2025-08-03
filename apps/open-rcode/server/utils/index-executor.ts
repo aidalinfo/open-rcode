@@ -7,11 +7,6 @@ import { decrypt } from './crypto'
 import { generateInstallationToken } from './github-app'
 
 export class IndexExecutor {
-  private repositoryCloner: RepositoryCloner
-
-  constructor() {
-    this.repositoryCloner = new RepositoryCloner()
-  }
 
   async executeIndexing(environmentId: string, userId: string): Promise<void> {
     console.log(`🔍 Starting file indexing for environment: ${environmentId}`)
@@ -27,43 +22,45 @@ export class IndexExecutor {
     }
 
     const containerManager = await ContainerManagerFactory.create()
-    const containerId = `openrcode-index-${environmentId}-${Date.now()}`
+    const repositoryCloner = new RepositoryCloner(containerManager)
 
+    let containerId: string | undefined
     try {
-      console.log(`📦 Creating container: ${containerId}`)
-      await containerManager.createContainer(containerId, {
-        labels: {
-          'openrcode.type': 'index',
-          'openrcode.environment': environmentId,
-          'openrcode.user': userId,
+      console.log(`📦 Creating container for indexing`)
+      containerId = await containerManager.createContainer({
+        image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest',
+        name: `openrcode-index-${environmentId}-${Date.now()}`,
+        environment: {
+          'OPENRCODE_TYPE': 'index',
+          'OPENRCODE_ENVIRONMENT': environmentId,
+          'OPENRCODE_USER': userId,
         },
       })
+      console.log(`📦 Created container: ${containerId}`)
 
       const workDir = `/tmp/workspace-${Date.now()}-${environmentId}`
       console.log(`📁 Setting up workspace: ${workDir}`)
 
-      const installationId = user.githubAppInstallationIds?.[0]
-      if (!installationId) {
-        throw new Error('No GitHub App installation found')
-      }
-
-      const accessToken = await generateInstallationToken(installationId)
-
       console.log(`🔄 Cloning repository: ${environment.repositoryFullName}`)
-      const repoPath = await this.repositoryCloner.cloneRepository(
+      await repositoryCloner.cloneInContainer(
+        { userId },
+        environment,
         containerId,
-        environment.repositoryFullName,
-        workDir,
-        environment.defaultBranch || 'main',
-        accessToken
+        workDir
       )
+
+      const repoPath = `${workDir}/repo`
 
       console.log(`🌳 Indexing files in: ${repoPath}`)
       const findCommand = `cd "${repoPath}" && find . -type f -not -path '*/\\.*' -not -path '*/node_modules/*' -not -path '*/vendor/*' -not -path '*/dist/*' -not -path '*/build/*' | sort`
       
-      const result = await containerManager.executeCommand(containerId, ['sh', '-c', findCommand])
+      const result = await containerManager.executeInContainer({
+        containerId,
+        command: ['sh', '-c', findCommand],
+        user: 'root',
+      })
       
-      const paths = result.output
+      const paths = result.stdout
         .split('\n')
         .filter(path => path.trim() !== '')
         .map(path => path.startsWith('./') ? path.substring(2) : path)
@@ -88,11 +85,13 @@ export class IndexExecutor {
       console.error(`❌ Indexing failed:`, error)
       throw error
     } finally {
-      try {
-        console.log(`🧹 Cleaning up container: ${containerId}`)
-        await containerManager.removeContainer(containerId)
-      } catch (cleanupError) {
-        console.error(`⚠️ Failed to cleanup container:`, cleanupError)
+      if (containerId) {
+        try {
+          console.log(`🧹 Cleaning up container: ${containerId}`)
+          await containerManager.removeContainer(containerId)
+        } catch (cleanupError) {
+          console.error(`⚠️ Failed to cleanup container:`, cleanupError)
+        }
       }
     }
   }
