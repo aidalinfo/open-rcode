@@ -28,7 +28,7 @@
           />
 
           <!-- File Indexation Section (only shown after creation) -->
-          <FileIndexationSection
+          <EnvironmentFileIndexationSection
             v-if="createdEnvironmentId"
             :environment-id="createdEnvironmentId"
             class="mt-10"

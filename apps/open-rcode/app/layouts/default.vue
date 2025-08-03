@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { NavigationMenuItem } from '@nuxt/ui'
+
 const route = useRoute()
 
 useHead({
@@ -22,90 +24,216 @@ useSeoMeta({
   ogTitle: title,
   ogDescription: description,
   ogImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
-  twitterImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
+  twitterImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
   twitterCard: 'summary_large_image'
 })
 
-const items = computed(() => [{
-  label: 'Dashboard',
-  to: '/app/dashboard',
-  icon: 'i-heroicons-chart-bar',
-  active: route.path.startsWith('/app/dashboard')
+const open = ref(false)
+const collapsed = ref(false)
+
+defineShortcuts({
+  c: () => collapsed.value = !collapsed.value
+})
+
+// Reactive data for recent tasks
+const recentTasks = ref([])
+
+// Fetch recent tasks
+const fetchRecentTasks = async () => {
+  try {
+    const data = await $fetch('/api/tasks', {
+      query: {
+        page: 1,
+        limit: 10
+      }
+    })
+    recentTasks.value = data.tasks || []
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching recent tasks:', error)
+  }
+}
+
+// Get task status icon
+const getTaskStatusIcon = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'i-heroicons-check-circle'
+    case 'running':
+      return 'i-heroicons-arrow-path'
+    case 'failed':
+      return 'i-heroicons-x-circle'
+    case 'pending':
+    default:
+      return 'i-heroicons-clock'
+  }
+}
+
+const links = computed(() => [[{
+  label: 'New Prompt',
+  icon: 'i-heroicons-plus-circle',
+  to: '/app',
+  onSelect: () => {
+    open.value = false
+  }
 }, {
-  label: 'Kanban',
-  to: '/app/kanban',
-  icon: 'i-heroicons-view-columns',
-  active: route.path.startsWith('/app/kanban'),
-  disabled: true
+  label: 'Dashboard',
+  icon: 'i-heroicons-chart-bar',
+  to: '/app/dashboard',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
+  label: 'Recent Tasks',
+  icon: 'i-heroicons-clock',
+  type: 'trigger',
+  defaultOpen: false,
+  children: recentTasks.value.length > 0 ? recentTasks.value.map((task: any) => ({
+    label: task.name || `Task ${task._id.substring(0, 8)}`,
+    to: `/app/task/${task._id}`,
+    description: `${task.environment?.name || 'N/A'} • ${new Date(task.createdAt).toLocaleDateString()}`,
+    icon: getTaskStatusIcon(task.status),
+    onSelect: () => {
+      open.value = false
+    }
+  })) : [{
+    label: 'No recent tasks',
+    disabled: true
+  }]
 }, {
   label: 'Settings',
-  to: '/app/settings',
   icon: 'i-heroicons-cog-6-tooth',
-  active: route.path.startsWith('/app/settings')
+  type: 'trigger',
+  defaultOpen: false,
+  children: [{
+    label: 'General',
+    to: '/app/settings',
+    exact: true,
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Environments',
+    to: '/app/settings/environnement',
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Create Environment',
+    to: '/app/settings/environnement/create',
+    onSelect: () => {
+      open.value = false
+    }
+  }]
+}], [{
+  label: 'GitHub',
+  icon: 'i-simple-icons-github',
+  to: 'https://github.com/aidalinfo/open-rcode',
+  target: '_blank'
+}, {
+  label: 'Documentation',
+  icon: 'i-heroicons-document-text',
+  to: 'https://doc.open-rcode.com',
+  target: '_blank'
+}]] satisfies NavigationMenuItem[][])
+
+const groups = computed(() => [{
+  id: 'navigation',
+  label: 'Go to',
+  items: links.value.flat()
+}, {
+  id: 'external',
+  label: 'External',
+  items: [{
+    id: 'github',
+    label: 'View on GitHub',
+    icon: 'i-simple-icons-github',
+    to: 'https://github.com/aidalinfo/open-rcode',
+    target: '_blank'
+  }]
 }])
 
 definePageMeta({
   middleware: 'auth'
 })
+
+// Load recent tasks on mount
+onMounted(() => {
+  fetchRecentTasks()
+  
+  // Refresh tasks every 30 seconds (only in browser)
+  if (import.meta.client) {
+    setInterval(() => {
+      fetchRecentTasks()
+    }, 30000)
+  }
+})
 </script>
 
 <template>
-    <UHeader>
-      <template #left>
-        <NuxtLink to="/app">
-          <LogoPro class="w-auto h-24 shrink-0" />
+  <UDashboardGroup unit="rem" class="min-h-screen">
+    <UDashboardSidebar
+      id="default"
+      v-model:open="open"
+      v-model:collapsed="collapsed"
+      collapsible
+      resizable
+      class="bg-elevated/25"
+      :ui="{ footer: 'lg:border-t lg:border-default' }"
+    >
+      <template #header="{ collapsed }">
+        <NuxtLink to="/app" >
+          <LogoPro class="w-auto h-16 shrink-0" v-if="!collapsed"/>
         </NuxtLink>
       </template>
 
-      <UNavigationMenu
-        :items="items"
-        variant="link"
-      />
+      <template #default="{ collapsed }">
+        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />
 
-      <template #right>
-        <UColorModeButton />
-
-        <UButton
-          to="https://github.com/aidalinfo/open-rcode"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
-
-      <template #body>
         <UNavigationMenu
-          :items="items"
+          :collapsed="collapsed"
+          :items="links[0]"
           orientation="vertical"
-          class="-mx-2.5"
+          tooltip
+          popover
+        />
+
+        <UNavigationMenu
+          :collapsed="collapsed"
+          :items="links[1]"
+          orientation="vertical"
+          tooltip
+          class="mt-auto"
         />
       </template>
-    </UHeader>
 
-    <UMain>
-      <slot />
-    </UMain>
-
-    <USeparator />
-
-    <UFooter>
-      <template #left>
-        <p class="text-sm text-muted">
-          Copyright © {{ new Date().getFullYear() }}
-        </p>
+      <template #footer="{ collapsed }">
+        <div class="flex items-center justify-between px-4 py-3">
+          <UColorModeButton />
+          <UButton
+            v-if="!collapsed"
+            to="https://github.com/aidalinfo/open-rcode"
+            target="_blank"
+            icon="i-simple-icons-github"
+            aria-label="GitHub"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+          />
+        </div>
       </template>
+    </UDashboardSidebar>
 
-      <template #right>
-        <UButton
-          to="https://github.com/aidalinfo/open-rcode"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
-    </UFooter>
+    <UDashboardPanel class="h-screen">
+      <UDashboardNavbar>
+        <template #leading>
+          <UDashboardSidebarCollapse />
+        </template>
+      </UDashboardNavbar>
+      <UMain class="h-full overflow-y-auto">
+        <slot />
+      </UMain>
+    </UDashboardPanel>
+
+    <UDashboardSearch :groups="groups" />
+  </UDashboardGroup>
 </template>

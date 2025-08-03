@@ -43,7 +43,7 @@
           />
 
           <!-- File Indexation Section -->
-          <FileIndexationSection
+          <EnvironmentFileIndexationSection
             :environment-id="environmentId"
             class="mt-10"
           />
