@@ -1,6 +1,6 @@
-import { defineEventHandler, getCookie, createError } from 'h3'
-import { EnvironmentModel } from '~/server/models/Environment'
-import { IndexExecutor } from '~/server/utils/index-executor'
+import { defineEventHandler, getCookie, createError, getRouterParam, setResponseStatus } from 'h3'
+import { EnvironmentModel } from '../../../models/Environment'
+import { IndexExecutor } from '../../../utils/index-executor'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
