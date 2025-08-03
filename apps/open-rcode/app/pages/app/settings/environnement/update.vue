@@ -201,6 +201,81 @@
             />
           </UFormField>
 
+          <!-- File Indexation Section -->
+          <div class="space-y-6 mt-10">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                  File Indexation
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Index all files in the repository for faster access
+                </p>
+              </div>
+              <div class="flex items-center gap-4">
+                <div v-if="indexInfo" class="text-sm text-gray-500">
+                  <span v-if="indexInfo.indexed">
+                    {{ indexInfo.totalFiles }} files indexed
+                    <time :datetime="indexInfo.indexedAt" class="ml-2">
+                      ({{ formatDate(indexInfo.indexedAt) }})
+                    </time>
+                  </span>
+                  <span v-else>
+                    Not indexed
+                  </span>
+                </div>
+                <UButton
+                  v-if="indexInfo?.indexed"
+                  @click="showIndexModal = true"
+                  variant="ghost"
+                  size="sm"
+                  class="mr-2"
+                >
+                  <template #leading>
+                    <UIcon name="i-heroicons-eye" />
+                  </template>
+                  View Files
+                </UButton>
+                <UButton
+                  @click="indexFiles"
+                  variant="outline"
+                  size="sm"
+                  :loading="isIndexing"
+                  :disabled="!currentEnvironment"
+                >
+                  <template #leading>
+                    <UIcon name="i-heroicons-magnifying-glass" />
+                  </template>
+                  {{ indexInfo?.indexed ? 'Re-index' : 'Index' }} Files
+                </UButton>
+              </div>
+            </div>
+            
+            <UModal v-model="showIndexModal" :ui="{ width: 'sm:max-w-2xl' }">
+              <UCard>
+                <template #header>
+                  <h3 class="text-lg font-medium">
+                    Indexed Files ({{ indexedFiles.length }})
+                  </h3>
+                </template>
+                
+                <div class="max-h-96 overflow-y-auto">
+                  <ul class="space-y-1">
+                    <li v-for="(file, index) in indexedFiles" :key="index" class="text-sm font-mono text-gray-600 dark:text-gray-400">
+                      {{ file }}
+                    </li>
+                  </ul>
+                </div>
+                
+                <template #footer>
+                  <UButton @click="showIndexModal = false" variant="ghost">
+                    Close
+                  </UButton>
+                </template>
+              </UCard>
+            </UModal>
+          </div>
+
           <!-- Action buttons -->
           <div class="flex justify-between gap-3 mt-12">
             <UButton
@@ -257,6 +332,10 @@ const isSubmitting = ref(false)
 const isDeleting = ref(false)
 const loadingRepositories = ref(false)
 const loadingBranches = ref(false)
+const isIndexing = ref(false)
+const showIndexModal = ref(false)
+const indexInfo = ref<{ indexed: boolean; paths: string[]; indexedAt: string | null; totalFiles: number } | null>(null)
+const indexedFiles = ref<string[]>([])
 
 // Data
 const repositories = ref<any[]>([])
@@ -584,16 +663,85 @@ const goBack = () => {
   router.push('/app/settings')
 }
 
+const fetchIndexInfo = async () => {
+  if (!environmentId.value) return
+  
+  try {
+    const data = await $fetch(`/api/environments/${environmentId.value}/index`)
+    indexInfo.value = data
+    indexedFiles.value = data.paths || []
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching index info:', error)
+  }
+}
+
+const indexFiles = async () => {
+  isIndexing.value = true
+  try {
+    await $fetch(`/api/environments/${environmentId.value}/index`, {
+      method: 'POST'
+    })
+    
+    toast.add({
+      title: 'Indexing started',
+      description: 'File indexing has been started in the background',
+      color: 'success'
+    })
+    
+    // Poll for completion
+    let attempts = 0
+    const maxAttempts = 30 // 30 seconds
+    const pollInterval = setInterval(async () => {
+      attempts++
+      await fetchIndexInfo()
+      
+      if (indexInfo.value?.indexed || attempts >= maxAttempts) {
+        clearInterval(pollInterval)
+        isIndexing.value = false
+        
+        if (indexInfo.value?.indexed) {
+          toast.add({
+            title: 'Indexing completed',
+            description: `Successfully indexed ${indexInfo.value.totalFiles} files`,
+            color: 'success'
+          })
+        }
+      }
+    }, 1000)
+    
+  } catch (error) {
+    if (import.meta.dev) console.error('Error starting indexation:', error)
+    toast.add({
+      title: 'Error',
+      description: 'Unable to start file indexation',
+      color: 'error'
+    })
+    isIndexing.value = false
+  }
+}
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
+}
+
 // Initial loading
 onMounted(() => {
   fetchRepositories()
   fetchEnvironment()
+  fetchIndexInfo()
 })
 
 // Watch for ID changes in URL
 watch(() => route.query.edit, (newId) => {
   if (newId) {
     fetchEnvironment()
+    fetchIndexInfo()
   }
 })
 
