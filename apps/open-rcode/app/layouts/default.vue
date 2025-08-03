@@ -23,17 +23,31 @@ useSeoMeta({
   description,
   ogTitle: title,
   ogDescription: description,
-  ogImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
-  twitterImage: 'https://assets.hub.nuxt.com/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJodHRwczovL3VpLXByby1zdGFydGVyLm51eHQuZGV2IiwiaWF0IjoxNzM5NDYzMzk4fQ.XLzPkSW6nRbPW07QO1RkMwz_RAPA4KfeyrWrK3li9YI.jpg?theme=light',
+  ogImage: 'https://open-rcode.com/_og.png',
+  twitterImage: 'https://open-rcode.com/_og.png',
   twitterCard: 'summary_large_image'
 })
 
 const open = ref(false)
 const collapsed = ref(false)
 
+const pageTitle = usePageTitle()
+const navbarBadge = useNavbarBadge()
+
 defineShortcuts({
   c: () => collapsed.value = !collapsed.value
 })
+
+watch(() => route.path, (newPath) => {
+  // Reset badge on any navigation
+  navbarBadge.value = null
+
+  const pathSegments = newPath.split('/').filter(Boolean)
+  const lastSegment = pathSegments.pop() || 'dashboard'
+  
+  // Capitalize first letter
+  pageTitle.value = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1)
+}, { immediate: true })
 
 // Reactive data for recent tasks
 const recentTasks = ref([])
@@ -227,6 +241,11 @@ onMounted(() => {
       <UDashboardNavbar>
         <template #leading>
           <UDashboardSidebarCollapse />
+          {{ pageTitle }}
+        </template>
+
+        <template #trailing>
+          <UBadge v-if="navbarBadge" :color="navbarBadge.color" :variant="navbarBadge.variant">{{ navbarBadge.label }}</UBadge>
         </template>
       </UDashboardNavbar>
       <UMain class="h-full overflow-y-auto">

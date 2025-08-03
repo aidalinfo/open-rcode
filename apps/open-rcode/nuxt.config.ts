@@ -5,7 +5,8 @@ export default defineNuxtConfig({
     '@nuxt/ui-pro',
     '@nuxt/icon',
     '@nuxt/scripts',
-    '@nuxtjs/mdc'
+    '@nuxtjs/mdc',
+    '@nuxt/fonts'
   ],
 
   devtools: {
@@ -23,5 +24,11 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  fonts: {
+    families: [
+      { name: 'Roboto', provider: 'google' }
+    ]
   }
 })
