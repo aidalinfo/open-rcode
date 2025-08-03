@@ -80,6 +80,10 @@ source /root/.nvm/nvm.sh
 if [ -n "${CODEX_ENV_NODE_VERSION}" ]; then
     nvm use "${CODEX_ENV_NODE_VERSION}"
 fi
+
+# Install Gemini CLI globally
+echo "Installing Gemini CLI..."
+npm install -g @google/gemini-cli
 # Configure Claude Code with proper settings
 mkdir -p /root/.claude
 
