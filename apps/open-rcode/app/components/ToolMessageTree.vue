@@ -13,7 +13,7 @@ const props = defineProps<Props>()
 
 const parseToolNames = (content: string): string[] => {
   const tools: string[] = []
-  const toolRegex = /🔧\s\*\*([^*]+)\*\*/g
+  const toolRegex = /(?:🔧|🔌)\s\*\*([^*]+)\*\*/g
   let match
   
   while ((match = toolRegex.exec(content)) !== null) {
@@ -46,7 +46,11 @@ const getToolIcon = (toolName: string): string => {
 }
 
 const getToolStatus = (content: string, toolName: string): string => {
-  const toolSection = content.split(`🔧 **${toolName}**`)[1]
+  // Chercher la section avec 🔧 ou 🔌
+  let toolSection = content.split(`🔧 **${toolName}**`)[1]
+  if (!toolSection) {
+    toolSection = content.split(`🔌 **${toolName}**`)[1]
+  }
   if (!toolSection) return ''
   
   if (toolSection.includes('✅')) return '✅'
