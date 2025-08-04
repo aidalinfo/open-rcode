@@ -222,19 +222,7 @@ onMounted(() => {
       </template>
 
       <template #footer="{ collapsed }">
-        <div class="flex items-center justify-between px-4 py-3">
-          <UColorModeButton />
-          <UButton
-            v-if="!collapsed"
-            to="https://github.com/aidalinfo/open-rcode"
-            target="_blank"
-            icon="i-simple-icons-github"
-            aria-label="GitHub"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-          />
-        </div>
+        <UserMenu :collapsed="collapsed" />
       </template>
     </UDashboardSidebar>
 
