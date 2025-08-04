@@ -169,7 +169,7 @@ const isPRLink = (message: any) => {
 const isToolMessage = (message: any) => {
   return message.role === 'assistant' && 
     typeof message.content === 'string' && 
-    message.content.includes('🔧 **')
+    (message.content.includes('🔧 **') || message.content.includes('🔌 **'))
 }
 
 // Function to open GitHub PR
