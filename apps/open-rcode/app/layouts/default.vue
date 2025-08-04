@@ -82,7 +82,15 @@ const getTaskStatusIcon = (status: string) => {
   }
 }
 
-const links = computed(() => [[{
+const links = computed(() => [[
+  {
+  label: 'Dashboard',
+  icon: 'i-heroicons-chart-bar',
+  to: '/app/dashboard',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'New Prompt',
   icon: 'i-heroicons-plus-circle',
   to: '/app',
@@ -106,13 +114,6 @@ const links = computed(() => [[{
     label: 'No recent tasks',
     disabled: true
   }]
-}, {
-  label: 'Dashboard',
-  icon: 'i-heroicons-chart-bar',
-  to: '/app/dashboard',
-  onSelect: () => {
-    open.value = false
-  }
 }, {
   label: 'Settings',
   icon: 'i-heroicons-cog-6-tooth',
