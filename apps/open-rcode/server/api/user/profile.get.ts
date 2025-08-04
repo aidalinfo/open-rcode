@@ -1,4 +1,4 @@
-import { UserModel } from '~/server/models/User'
+import { UserModel } from '../../models/User'
 
 export default defineEventHandler(async (event) => {
   const sessionToken = getCookie(event, 'session')
