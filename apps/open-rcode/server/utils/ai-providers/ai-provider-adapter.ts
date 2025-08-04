@@ -58,7 +58,14 @@ export class AIProviderAdapter {
   formatToolCall(toolCall: any): string {
     const parts: string[] = []
     
-    parts.push(`🔧 **${toolCall.name}**`)
+    // Détection des outils MCP
+    const isMcpTool = toolCall.name.startsWith('mcp__') || toolCall.name.startsWith('mcp_') || toolCall.name.startsWith('mcp')
+    
+    if (isMcpTool) {
+      parts.push(`🔌 **${toolCall.name}** (MCP)`)
+    } else {
+      parts.push(`🔧 **${toolCall.name}**`)
+    }
     
     if (toolCall.input) {
       const inputEntries = Object.entries(toolCall.input)
