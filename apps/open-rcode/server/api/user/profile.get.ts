@@ -1,6 +1,10 @@
 import { UserModel } from '../../models/User'
+import { SessionModel } from '../../models/Session'
+import { connectToDatabase } from '../../utils/db'
 
 export default defineEventHandler(async (event) => {
+  await connectToDatabase()
+  
   const sessionToken = getCookie(event, 'session')
   
   if (!sessionToken) {
@@ -10,7 +14,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const user = await UserModel.findOne({ githubId: sessionToken })
+  const session = await SessionModel.findOne({ sessionToken })
+  if (!session || session.expires < new Date()) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Session expired'
+    })
+  }
+
+  const user = await UserModel.findOne({ githubId: session.userId })
   
   if (!user) {
     throw createError({
