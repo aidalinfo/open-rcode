@@ -1,6 +1,6 @@
 import { UserModel } from '../../models/User'
 import { SessionModel } from '../../models/Session'
-import { connectToDatabase } from '../../utils/db'
+import { connectToDatabase } from '../../utils/database'
 
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
