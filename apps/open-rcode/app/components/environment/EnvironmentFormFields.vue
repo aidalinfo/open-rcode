@@ -61,7 +61,7 @@
       />
       <template #help>
         <p class="text-sm text-gray-500 mt-2">
-          {{ getAiProviderDescription(aiProviderValue) }}
+          {{ getAiProviderDescription(aiProviderValue || '') }}
         </p>
       </template>
     </UFormField>
@@ -79,7 +79,7 @@
       />
       <template #help>
         <p class="text-sm text-gray-500 mt-2">
-          {{ getModelDescription(modelValue) }}
+          {{ getModelDescription(modelValue || '') }}
         </p>
       </template>
     </UFormField>
@@ -91,11 +91,9 @@
         :items="branchOptions"
         placeholder="Select a branch"
         :loading="loadingBranches"
-        value-attribute="value"
-        option-attribute="label"
         size="lg"
         class="w-full"
-        :disabled="!selectedRepositoryValue"
+        :disabled="false"
       />
       <template #help>
         <p class="text-sm text-gray-500 mt-2">
@@ -128,13 +126,13 @@ import type { SelectOption } from '~/types/environment'
 
 interface Props {
   modelValue: {
-    selectedRepository: SelectOption | string
+    selectedRepository: SelectOption | undefined
     name: string
     description: string
-    runtime: SelectOption | string
-    aiProvider: SelectOption | string
-    model: SelectOption | string
-    defaultBranch: SelectOption | string
+    runtime: SelectOption | undefined
+    aiProvider: SelectOption | undefined
+    model: SelectOption | undefined
+    defaultBranch: SelectOption | undefined
     environmentVariables: Array<{ key: string; value: string; description?: string }>
     configurationScript: string
   }
@@ -155,7 +153,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 
-// Data refs
+// Internal refs
 const branches = ref<any[]>([])
 const loadingBranches = ref(false)
 
@@ -185,7 +183,7 @@ const modelOptions: SelectOption[] = [
   { label: 'Claude Opus', value: 'opus' }
 ]
 
-// Computed properties for form fields with v-model
+// Simple v-model computed properties
 const selectedRepository = computed({
   get: () => props.modelValue.selectedRepository,
   set: (value) => emit('update:modelValue', { ...props.modelValue, selectedRepository: value })
@@ -233,18 +231,15 @@ const configurationScript = computed({
 
 // Helper computed properties
 const selectedRepositoryValue = computed(() => {
-  const value = props.modelValue.selectedRepository
-  return typeof value === 'object' ? value?.value : value
+  return selectedRepository.value?.value
 })
 
 const aiProviderValue = computed(() => {
-  const value = props.modelValue.aiProvider
-  return typeof value === 'object' ? value?.value : value
+  return aiProvider.value?.value
 })
 
 const modelValue = computed(() => {
-  const value = props.modelValue.model
-  return typeof value === 'object' ? value?.value : value
+  return model.value?.value
 })
 
 const canSelectModel = computed(() => {
@@ -261,11 +256,27 @@ const repositoryOptions = computed((): SelectOption[] => {
 })
 
 const branchOptions = computed((): SelectOption[] => {
-  return branches.value.map((branch: any) => ({
-    label: branch.name,
-    value: branch.name,
-    description: branch.protected ? 'Protected branch' : undefined
-  }))
+  const options: SelectOption[] = []
+  const selectedValue = props.modelValue.defaultBranch
+  
+  // Toujours inclure la valeur actuelle en premier
+  if (selectedValue && selectedValue.value) {
+    options.push(selectedValue)
+  }
+  
+  // Ajouter les autres branches chargées depuis l'API
+  branches.value.forEach((branch: any) => {
+    // Ne pas dupliquer la branche déjà sélectionnée
+    if (!selectedValue || branch.name !== selectedValue.value) {
+      options.push({
+        label: branch.name,
+        value: branch.name,
+        description: branch.protected ? 'Protected branch' : undefined
+      })
+    }
+  })
+  
+  return options
 })
 
 // Methods
@@ -278,27 +289,31 @@ const fetchBranches = async (repositoryFullName: string) => {
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
     
-    // Automatically select 'main' or 'master' branch by default
-    const defaultBranch = branches.value.find((branch: any) => 
-      branch.name === 'main' || branch.name === 'master'
-    )
-    
-    if (defaultBranch && !props.isEditing) {
-      emit('update:modelValue', {
-        ...props.modelValue,
-        defaultBranch: {
-          label: defaultBranch.name,
-          value: defaultBranch.name
-        }
-      })
-    } else if (branches.value.length > 0 && !props.isEditing) {
-      emit('update:modelValue', {
-        ...props.modelValue,
-        defaultBranch: {
-          label: branches.value[0].name,
-          value: branches.value[0].name
-        }
-      })
+    // En mode édition, ne jamais modifier automatiquement la branche sélectionnée
+    // Les branches chargées serviront juste d'options supplémentaires
+    if (!props.isEditing) {
+      // Automatically select 'main' or 'master' branch by default pour les nouveaux environnements
+      const foundDefaultBranch = branches.value.find((branch: any) => 
+        branch.name === 'main' || branch.name === 'master'
+      )
+      
+      if (foundDefaultBranch) {
+        emit('update:modelValue', {
+          ...props.modelValue,
+          defaultBranch: {
+            label: foundDefaultBranch.name,
+            value: foundDefaultBranch.name
+          }
+        })
+      } else if (branches.value.length > 0) {
+        emit('update:modelValue', {
+          ...props.modelValue,
+          defaultBranch: {
+            label: branches.value[0].name,
+            value: branches.value[0].name
+          }
+        })
+      }
     }
   } catch (error) {
     if (import.meta.dev) console.error('Error fetching branches:', error)
@@ -341,7 +356,7 @@ watch(() => selectedRepositoryValue.value, (newValue) => {
   }
   
   // Fetch branches for selected repository
-  if (newValue && typeof newValue === 'string') {
+  if (newValue) {
     fetchBranches(newValue)
   } else {
     branches.value = []
