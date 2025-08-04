@@ -90,17 +90,10 @@ const links = computed(() => [[{
     open.value = false
   }
 }, {
-  label: 'Dashboard',
-  icon: 'i-heroicons-chart-bar',
-  to: '/app/dashboard',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
   label: 'Recent Tasks',
   icon: 'i-heroicons-clock',
   type: 'trigger',
-  defaultOpen: false,
+  defaultOpen: true,
   children: recentTasks.value.length > 0 ? recentTasks.value.map((task: any) => ({
     label: task.name || `Task ${task._id.substring(0, 8)}`,
     to: `/app/task/${task._id}`,
@@ -114,10 +107,17 @@ const links = computed(() => [[{
     disabled: true
   }]
 }, {
+  label: 'Dashboard',
+  icon: 'i-heroicons-chart-bar',
+  to: '/app/dashboard',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Settings',
   icon: 'i-heroicons-cog-6-tooth',
   type: 'trigger',
-  defaultOpen: false,
+  defaultOpen: true,
   children: [{
     label: 'General',
     to: '/app/settings',

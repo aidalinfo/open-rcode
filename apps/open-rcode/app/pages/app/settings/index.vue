@@ -10,6 +10,53 @@
         </p>
       </div>
 
+      <!-- GitHub App Connection -->
+      <UCard>
+        <template #header>
+          <h2 class="text-xl font-semibold">
+            GitHub App Connection
+          </h2>
+        </template>
+
+        <div v-if="loadingGithubStatus" class="space-y-4">
+          <USkeleton class="h-4 w-full" />
+          <USkeleton class="h-10 w-48" />
+        </div>
+
+        <div v-else class="space-y-4">
+          <UAlert
+            v-if="route.query.success === 'github_app_installed'"
+            color="success"
+            variant="soft"
+            title="Success"
+            description="Your GitHub App has been successfully installed!"
+          />
+          
+          <UAlert
+            v-if="route.query.error === 'github_app_auth_failed'"
+            color="error"
+            variant="soft"
+            title="Error"
+            description="Error connecting to GitHub App. Please try again."
+          />
+
+          <p class="text-gray-600 dark:text-gray-400">
+            {{ hasGithubApp ? 'Modify your GitHub App permissions on your repositories.' : 'Install our GitHub App on your repositories to enable interaction with your projects.' }}
+          </p>
+
+          <UButton
+            @click="installGitHubApp"
+            variant="outline"
+            size="lg"
+            :loading="isInstalling"
+          >
+            <template #leading>
+              <UIcon name="i-simple-icons-github" class="w-5 h-5" />
+            </template>
+            {{ hasGithubApp ? 'Modify GitHub permissions' : 'Install GitHub App' }}
+          </UButton>
+        </div>
+      </UCard>
       <!-- AI Tokens -->
       <UCard>
         <template #header>
@@ -237,53 +284,6 @@
         </div>
       </UCard>
 
-      <!-- GitHub App Connection -->
-      <UCard>
-        <template #header>
-          <h2 class="text-xl font-semibold">
-            GitHub App Connection
-          </h2>
-        </template>
-
-        <div v-if="loadingGithubStatus" class="space-y-4">
-          <USkeleton class="h-4 w-full" />
-          <USkeleton class="h-10 w-48" />
-        </div>
-
-        <div v-else class="space-y-4">
-          <UAlert
-            v-if="route.query.success === 'github_app_installed'"
-            color="success"
-            variant="soft"
-            title="Success"
-            description="Your GitHub App has been successfully installed!"
-          />
-          
-          <UAlert
-            v-if="route.query.error === 'github_app_auth_failed'"
-            color="error"
-            variant="soft"
-            title="Error"
-            description="Error connecting to GitHub App. Please try again."
-          />
-
-          <p class="text-gray-600 dark:text-gray-400">
-            {{ hasGithubApp ? 'Modify your GitHub App permissions on your repositories.' : 'Install our GitHub App on your repositories to enable interaction with your projects.' }}
-          </p>
-
-          <UButton
-            @click="installGitHubApp"
-            variant="outline"
-            size="lg"
-            :loading="isInstalling"
-          >
-            <template #leading>
-              <UIcon name="i-simple-icons-github" class="w-5 h-5" />
-            </template>
-            {{ hasGithubApp ? 'Modify GitHub permissions' : 'Install GitHub App' }}
-          </UButton>
-        </div>
-      </UCard>
 
       <!-- Tableau des environnements -->
       <EnvironnementsTable 
