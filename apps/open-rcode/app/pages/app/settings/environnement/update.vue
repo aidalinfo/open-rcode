@@ -209,20 +209,33 @@ const loadRepositoriesAndBranches = async (environment: any) => {
     }
     
     // Load branches through form fields component
-    if (formFieldsRef.value) {
+    if (formFieldsRef.value && environment.repositoryFullName) {
       await formFieldsRef.value.fetchBranches(environment.repositoryFullName)
       
-      // Find and set the default branch
+      // Wait for branches to be loaded and DOM to update
       await nextTick()
+      
+      // Set the default branch after branches are loaded
       const defaultBranchName = environment.defaultBranch || 'main'
       const branches = formFieldsRef.value.branches || []
       const foundBranch = branches.find((branch: any) => branch.name === defaultBranchName)
       
       if (foundBranch) {
-        form.value.defaultBranch = {
-          label: foundBranch.name,
-          value: foundBranch.name
-        }
+        // Force update with timeout to ensure the select menu is ready
+        setTimeout(() => {
+          form.value.defaultBranch = {
+            label: foundBranch.name,
+            value: foundBranch.name
+          }
+        }, 100)
+      } else if (defaultBranchName) {
+        // If branch not found in list, still set it (might be a deleted branch)
+        setTimeout(() => {
+          form.value.defaultBranch = {
+            label: defaultBranchName,
+            value: defaultBranchName
+          }
+        }, 100)
       }
     }
     
