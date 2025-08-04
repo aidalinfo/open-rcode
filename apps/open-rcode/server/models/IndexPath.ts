@@ -12,7 +12,6 @@ const indexPathSchema = new Schema<IIndexPath>({
   environmentId: {
     type: String,
     required: true,
-    index: true,
   },
   paths: [{
     type: String,
