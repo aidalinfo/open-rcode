@@ -174,7 +174,7 @@ const fetchEnvironment = async () => {
         label: getModelLabel(data.environment.model || 'sonnet'),
         value: data.environment.model || 'sonnet'
       },
-      defaultBranch: { label: 'main', value: 'main' }, // Will be set later
+      defaultBranch: { label: '', value: '' }, // Will be set later
       environmentVariables: data.environment.environmentVariables || [],
       configurationScript: data.environment.configurationScript || ''
     }
@@ -182,8 +182,11 @@ const fetchEnvironment = async () => {
     // Page is ready to display
     isLoadingEnvironment.value = false
     
+    // Store defaultBranch for later use
+    const storedDefaultBranch = data.environment.defaultBranch || 'main'
+    
     // Load repositories and branches in background
-    loadRepositoriesAndBranches(data.environment)
+    loadRepositoriesAndBranches(data.environment, storedDefaultBranch)
     
   } catch (error) {
     if (import.meta.dev) console.error('Error loading environment:', error)
@@ -192,7 +195,7 @@ const fetchEnvironment = async () => {
   }
 }
 
-const loadRepositoriesAndBranches = async (environment: any) => {
+const loadRepositoriesAndBranches = async (environment: any, storedDefaultBranch: string) => {
   try {
     // Load repositories in background
     await fetchRepositories()
@@ -209,20 +212,32 @@ const loadRepositoriesAndBranches = async (environment: any) => {
     }
     
     // Load branches through form fields component
-    if (formFieldsRef.value) {
+    if (formFieldsRef.value && environment.repositoryFullName) {
+      // Set loading state for branch select
+      form.value.defaultBranch = { label: 'Loading branches...', value: '' }
+      
       await formFieldsRef.value.fetchBranches(environment.repositoryFullName)
       
-      // Find and set the default branch
+      // Wait for branches to be loaded
       await nextTick()
-      const defaultBranchName = environment.defaultBranch || 'main'
+      
       const branches = formFieldsRef.value.branches || []
-      const foundBranch = branches.find((branch: any) => branch.name === defaultBranchName)
+      const foundBranch = branches.find((branch: any) => branch.name === storedDefaultBranch)
       
       if (foundBranch) {
         form.value.defaultBranch = {
           label: foundBranch.name,
           value: foundBranch.name
         }
+      } else if (branches.length > 0) {
+        // Fallback to first branch if stored branch not found
+        form.value.defaultBranch = {
+          label: branches[0].name,
+          value: branches[0].name
+        }
+      } else {
+        // No branches found, reset to empty
+        form.value.defaultBranch = { label: '', value: '' }
       }
     }
     
