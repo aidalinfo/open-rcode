@@ -32,8 +32,12 @@ export class ContainerScripts {
     }
     
     return `
-      # Vérifier que ${cliName} est installé
-      which ${cliName} || (echo "${cliName} not found in PATH. Installing..." && npm install -g ${packages[cliName]})
+      # Check if ${cliName} is installed
+      if ! which ${cliName} >/dev/null 2>&1; then
+        echo "${cliName} not found in PATH. Installing..." >&2
+        npm install -g ${packages[cliName]} >/dev/null 2>&1
+        echo "${cliName} installation completed" >&2
+      fi
     `.trim()
   }
 

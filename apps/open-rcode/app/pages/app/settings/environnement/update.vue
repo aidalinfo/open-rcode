@@ -115,13 +115,13 @@ const currentEnvironment = ref<any>(null)
 
 // Form
 const form = ref({
-  selectedRepository: { label: '', value: '', description: '' } as SelectOption,
+  selectedRepository: undefined as SelectOption | undefined,
   name: '',
   description: '',
-  runtime: { label: 'Node.js', value: 'node' } as SelectOption,
-  aiProvider: { label: 'API Anthropic (Claude)', value: 'anthropic-api' } as SelectOption,
-  model: { label: 'Claude Sonnet', value: 'sonnet' } as SelectOption,
-  defaultBranch: { label: 'main', value: 'main' } as SelectOption,
+  runtime: undefined as SelectOption | undefined,
+  aiProvider: undefined as SelectOption | undefined,
+  model: undefined as SelectOption | undefined,
+  defaultBranch: undefined as SelectOption | undefined,
   environmentVariables: [] as Array<{ key: string; value: string; description?: string }>,
   configurationScript: ''
 })
@@ -159,7 +159,7 @@ const fetchEnvironment = async () => {
     
     // Fill form with existing data immediately (without repository/branch for now)
     form.value = {
-      selectedRepository: { label: '', value: '', description: '' }, // Will be set later
+      selectedRepository: undefined, // Will be set later
       name: data.environment.name || '',
       description: data.environment.description || '',
       runtime: {
@@ -174,7 +174,10 @@ const fetchEnvironment = async () => {
         label: getModelLabel(data.environment.model || 'sonnet'),
         value: data.environment.model || 'sonnet'
       },
-      defaultBranch: { label: 'main', value: 'main' }, // Will be set later
+      defaultBranch: {
+        label: data.environment.defaultBranch || 'main',
+        value: data.environment.defaultBranch || 'main'
+      },
       environmentVariables: data.environment.environmentVariables || [],
       configurationScript: data.environment.configurationScript || ''
     }
@@ -208,22 +211,9 @@ const loadRepositoriesAndBranches = async (environment: any) => {
       }
     }
     
-    // Load branches through form fields component
-    if (formFieldsRef.value) {
+    // Charger les branches en arrière-plan pour permettre à l'utilisateur de changer
+    if (formFieldsRef.value && environment.repositoryFullName) {
       await formFieldsRef.value.fetchBranches(environment.repositoryFullName)
-      
-      // Find and set the default branch
-      await nextTick()
-      const defaultBranchName = environment.defaultBranch || 'main'
-      const branches = formFieldsRef.value.branches || []
-      const foundBranch = branches.find((branch: any) => branch.name === defaultBranchName)
-      
-      if (foundBranch) {
-        form.value.defaultBranch = {
-          label: foundBranch.name,
-          value: foundBranch.name
-        }
-      }
     }
     
   } catch (error) {
@@ -264,14 +254,14 @@ const getModelLabel = (model: string) => {
 }
 
 const canSelectModel = computed(() => {
-  const provider = form.value.aiProvider?.value || form.value.aiProvider
+  const provider = form.value.aiProvider?.value
   return provider === 'anthropic-api' || provider === 'claude-oauth'
 })
 
 const submitForm = async () => {
   isSubmitting.value = true
   try {
-    const selectedRepo = form.value.selectedRepository?.value || form.value.selectedRepository
+    const selectedRepo = form.value.selectedRepository?.value
     
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
@@ -283,10 +273,10 @@ const submitForm = async () => {
     }
     
     const [organization, repository] = selectedRepo.split('/')
-    const selectedRuntime = form.value.runtime?.value || form.value.runtime
-    const selectedAiProvider = form.value.aiProvider?.value || form.value.aiProvider
-    const selectedModel = canSelectModel.value ? (form.value.model?.value || form.value.model) : null
-    const selectedDefaultBranch = form.value.defaultBranch?.value || form.value.defaultBranch
+    const selectedRuntime = form.value.runtime?.value
+    const selectedAiProvider = form.value.aiProvider?.value
+    const selectedModel = canSelectModel.value ? form.value.model?.value : null
+    const selectedDefaultBranch = form.value.defaultBranch?.value
     
     const payload = {
       organization,
@@ -297,7 +287,7 @@ const submitForm = async () => {
       aiProvider: selectedAiProvider,
       model: selectedModel,
       defaultBranch: selectedDefaultBranch,
-      environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
+      environmentVariables: form.value.environmentVariables.filter((v: any) => v.key && v.value),
       configurationScript: form.value.configurationScript
     }
 
