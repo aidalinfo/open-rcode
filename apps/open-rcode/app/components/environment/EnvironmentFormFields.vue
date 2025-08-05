@@ -203,7 +203,8 @@ const aiProviderOptions: SelectOption[] = [
 // Model options
 const modelOptions: SelectOption[] = [
   { label: 'Claude Sonnet', value: 'sonnet' },
-  { label: 'Claude Opus', value: 'opus' }
+  { label: 'Claude Opus', value: 'opus' },
+  { label: 'Claude Opus 4.1', value: 'opus-4-1' }
 ]
 
 // Simple v-model computed properties
@@ -417,7 +418,8 @@ const getAiProviderDescription = (provider: string) => {
 const getModelDescription = (model: string) => {
   const descriptions: Record<string, string> = {
     'sonnet': 'Claude Sonnet - Balanced model between performance and speed (recommended).',
-    'opus': 'Claude Opus - Most powerful model for complex tasks.'
+    'opus': 'Claude Opus - Most powerful model for complex tasks.',
+    'opus-4-1': 'Claude Opus 4.1 - Latest version of Opus with improved capabilities.'
   }
   return descriptions[model] || ''
 }
