@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- SubAgent name -->
-    <UFormField label="Name" name="name" required>
+    <UFormGroup label="Name" name="name" required>
       <UInput
         v-model="name"
         placeholder="e.g., Code Reviewer, Test Generator, Documentation Writer"
@@ -13,10 +13,10 @@
           A descriptive name for your SubAgent
         </p>
       </template>
-    </UFormField>
+    </UFormGroup>
 
     <!-- Description -->
-    <UFormField label="Description" name="description">
+    <UFormGroup label="Description" name="description">
       <UTextarea
         v-model="description"
         placeholder="Describe what this SubAgent does and when it should be used"
@@ -29,10 +29,10 @@
           Optional description to help understand the SubAgent's purpose
         </p>
       </template>
-    </UFormField>
+    </UFormGroup>
 
     <!-- Prompt -->
-    <UFormField label="Prompt" name="prompt" required>
+    <UFormGroup label="Prompt" name="prompt" required>
       <UTextarea
         v-model="prompt"
         placeholder="Enter the system prompt that defines how this SubAgent should behave..."
@@ -45,10 +45,10 @@
           The system prompt that will be used to configure the AI behavior for this SubAgent
         </p>
       </template>
-    </UFormField>
+    </UFormGroup>
 
     <!-- Visibility -->
-    <UFormField label="Visibility" name="isPublic">
+    <UFormGroup label="Visibility" name="isPublic">
       <div class="flex items-center gap-3">
         <UToggle
           v-model="isPublic"
@@ -63,7 +63,7 @@
           Public SubAgents can be used by all users of the platform
         </p>
       </template>
-    </UFormField>
+    </UFormGroup>
   </div>
 </template>
 
