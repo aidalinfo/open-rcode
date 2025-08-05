@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
     if (body.defaultBranch) updateData.defaultBranch = body.defaultBranch
     if (body.environmentVariables) updateData.environmentVariables = body.environmentVariables
     if (body.configurationScript !== undefined) updateData.configurationScript = body.configurationScript
+    if (body.subAgents !== undefined) updateData.subAgents = body.subAgents
     if (body.organization && body.repository) {
       updateData.organization = body.organization
       updateData.repository = body.repository
@@ -81,6 +82,7 @@ export default defineEventHandler(async (event) => {
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
+        subAgents: environment.subAgents,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }

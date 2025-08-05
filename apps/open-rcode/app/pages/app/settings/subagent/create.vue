@@ -20,7 +20,7 @@
 
         <UForm :state="form" @submit="submitForm" class="space-y-6">
           <!-- Form Fields Component -->
-          <SubAgentFormFields
+          <SubagentSubAgentFormFields
             v-model="form"
             :is-editing="false"
           />
@@ -92,7 +92,7 @@ const submitForm = async () => {
       isPublic: form.value.isPublic
     }
 
-    await $fetch('/api/subagents', {
+    await $fetch('/api/sub-agents', {
       method: 'POST',
       body: payload
     })

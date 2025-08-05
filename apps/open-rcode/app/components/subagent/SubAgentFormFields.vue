@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-12">
     <!-- SubAgent name -->
-    <UFormGroup label="Name" name="name" required>
+    <UFormField label="Name" name="name" required class="mt-8">
       <UInput
         v-model="name"
         placeholder="e.g., Code Reviewer, Test Generator, Documentation Writer"
@@ -13,10 +13,10 @@
           A descriptive name for your SubAgent
         </p>
       </template>
-    </UFormGroup>
+    </UFormField>
 
     <!-- Description -->
-    <UFormGroup label="Description" name="description">
+    <UFormField label="Description" name="description" class="mt-10">
       <UTextarea
         v-model="description"
         placeholder="Describe what this SubAgent does and when it should be used"
@@ -29,10 +29,10 @@
           Optional description to help understand the SubAgent's purpose
         </p>
       </template>
-    </UFormGroup>
+    </UFormField>
 
     <!-- Prompt -->
-    <UFormGroup label="Prompt" name="prompt" required>
+    <UFormField label="Prompt" name="prompt" required class="mt-10">
       <UTextarea
         v-model="prompt"
         placeholder="Enter the system prompt that defines how this SubAgent should behave..."
@@ -45,14 +45,13 @@
           The system prompt that will be used to configure the AI behavior for this SubAgent
         </p>
       </template>
-    </UFormGroup>
+    </UFormField>
 
     <!-- Visibility -->
-    <UFormGroup label="Visibility" name="isPublic">
+    <UFormField label="Visibility" name="isPublic" class="mt-10">
       <div class="flex items-center gap-3">
-        <UToggle
+        <USwitch
           v-model="isPublic"
-          size="lg"
         />
         <span class="text-sm text-gray-700 dark:text-gray-300">
           {{ isPublic ? 'Public' : 'Private' }} - {{ isPublic ? 'Other users can use this SubAgent' : 'Only you can use this SubAgent' }}
@@ -63,7 +62,7 @@
           Public SubAgents can be used by all users of the platform
         </p>
       </template>
-    </UFormGroup>
+    </UFormField>
   </div>
 </template>
 

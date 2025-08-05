@@ -1,6 +1,7 @@
 import { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
+import { SubAgentModel } from '../models/SubAgent'
 import { PullRequestCreator } from './pull-request-creator'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { CountRequestModel } from '../models/CountRequest'
@@ -185,6 +186,24 @@ export class ClaudeExecutor {
       const aiProvider = (environment.aiProvider || 'anthropic-api') as AIProviderType
       const model = environment.model || 'sonnet'
       this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration')
+
+      // Créer les fichiers de SubAgents si l'environnement en a
+      if (environment.subAgents && environment.subAgents.length > 0) {
+        this.logger.info({ subAgentCount: environment.subAgents.length }, '🤖 Setting up SubAgents for Claude Code');
+        try {
+          await this.setupSubAgents(containerId, environment, task);
+        } catch (subAgentError: any) {
+          this.logger.error({ error: subAgentError.message }, 'SubAgent setup failed');
+          await TaskMessageModel.create({
+            id: uuidv4(),
+            userId: task.userId,
+            taskId: task._id,
+            role: 'assistant',
+            content: `⚠️ **Avertissement lors de la configuration des SubAgents:**\n\`\`\`\n${subAgentError.message}\n\`\`\``
+          });
+          // Ne pas arrêter l'exécution, juste continuer sans SubAgents
+        }
+      }
 
       if (environment.configurationScript && environment.configurationScript.trim()) {
         this.logger.info('Executing configuration script');
@@ -661,5 +680,103 @@ export class ClaudeExecutor {
       default:
         throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
+  }
+
+  private async setupSubAgents(containerId: string, environment: any, task: any): Promise<void> {
+    this.logger.info({ subAgentIds: environment.subAgents }, '🤖 Setting up SubAgents files for Claude Code');
+    
+    try {
+      // Récupérer les SubAgents liés à cet environnement depuis la base de données
+      const subAgents = await SubAgentModel.find({ 
+        _id: { $in: environment.subAgents },
+        $or: [
+          { isPublic: true },
+          { userId: task.userId }
+        ]
+      }).lean();
+
+      if (subAgents.length === 0) {
+        this.logger.warn('No accessible SubAgents found for this task');
+        return;
+      }
+
+      this.logger.info({ foundSubAgents: subAgents.length }, '✅ Found accessible SubAgents');
+
+      // Créer le répertoire ~/.claude/agents/ s'il n'existe pas
+      const setupDirScript = `
+        mkdir -p ~/.claude/agents
+        chmod 755 ~/.claude/agents
+        echo "SubAgents directory created successfully"
+      `;
+
+      const setupResult = await this.executeWithStreamingBash(containerId, setupDirScript);
+      if (setupResult.exitCode !== 0) {
+        throw new Error(`Failed to create SubAgents directory: ${setupResult.stderr}`);
+      }
+
+      // Créer un fichier pour chaque SubAgent
+      const createdAgents: string[] = [];
+      for (const subAgent of subAgents) {
+        const agentFileName = this.sanitizeAgentName(subAgent.name);
+        const agentContent = this.generateAgentFileContent(subAgent);
+        
+        // Créer le fichier de l'agent
+        const createFileScript = `
+          cat > ~/.claude/agents/${agentFileName}.md << 'EOF'
+${agentContent}
+EOF
+          chmod 644 ~/.claude/agents/${agentFileName}.md
+          echo "Agent file created: ${agentFileName}.md"
+        `;
+
+        const createResult = await this.executeWithStreamingBash(containerId, createFileScript);
+        if (createResult.exitCode === 0) {
+          createdAgents.push(agentFileName);
+          this.logger.info({ agentName: agentFileName }, '✅ SubAgent file created successfully');
+        } else {
+          this.logger.error({ agentName: agentFileName, error: createResult.stderr }, '❌ Failed to create SubAgent file');
+        }
+      }
+
+      if (createdAgents.length > 0) {
+        // Créer un message de confirmation
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **SubAgents configurés pour Claude Code:**\n\n${createdAgents.map(name => `- \`${name}\``).join('\n')}\n\nCes SubAgents sont maintenant disponibles pour Claude Code dans cette tâche.`
+        });
+
+        this.logger.info({ createdCount: createdAgents.length }, '✅ SubAgents setup completed successfully');
+      }
+
+    } catch (error: any) {
+      this.logger.error({ error: error.message }, '❌ Error setting up SubAgents');
+      throw error;
+    }
+  }
+
+  private sanitizeAgentName(name: string): string {
+    // Convertir en lowercase et remplacer espaces/caractères spéciaux par des hyphens
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  private generateAgentFileContent(subAgent: any): string {
+    const sanitizedName = this.sanitizeAgentName(subAgent.name);
+    const description = subAgent.description || `SubAgent for ${subAgent.name}`;
+    const prompt = subAgent.prompt || `You are ${subAgent.name}, a specialized assistant.`;
+
+    return `---
+name: ${sanitizedName}
+description: ${description}
+---
+
+${prompt}`;
   }
 }

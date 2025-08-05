@@ -19,6 +19,7 @@ export interface Environment {
   defaultBranch: string; // branche par défaut pour le clonage et les PRs
   environmentVariables: EnvironmentVariable[];
   configurationScript?: string;
+  subAgents: string[]
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +63,10 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   },
   environmentVariables: [environmentVariableSchema],
   configurationScript: { type: String },
+  subAgents: [{ 
+    type: String,
+    ref: 'SubAgent'
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

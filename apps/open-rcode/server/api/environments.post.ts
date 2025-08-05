@@ -79,14 +79,15 @@ export default defineEventHandler(async (event) => {
       model: body.model || 'sonnet',
       defaultBranch: body.defaultBranch,
       environmentVariables: body.environmentVariables || [],
-      configurationScript: body.configurationScript
+      configurationScript: body.configurationScript,
+      subAgents: body.subAgents || []
     })
     
     await environment.save()
     
     return {
       environment: {
-        id: environment._id,
+        _id: environment._id,
         organization: environment.organization,
         repository: environment.repository,
         repositoryFullName: environment.repositoryFullName,
@@ -98,6 +99,7 @@ export default defineEventHandler(async (event) => {
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
+        subAgents: environment.subAgents,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }

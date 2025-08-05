@@ -74,7 +74,8 @@ const form = ref({
   model: 'sonnet' as SelectOption | string,
   defaultBranch: { label: 'main', value: 'main' } as SelectOption,
   environmentVariables: [] as Array<{ key: string; value: string; description?: string }>,
-  configurationScript: ''
+  configurationScript: '',
+  subAgents: [] as string[]
 })
 
 // Methods
@@ -140,7 +141,8 @@ const submitForm = async () => {
       model: selectedModel,
       defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter(v => v.key && v.value),
-      configurationScript: form.value.configurationScript
+      configurationScript: form.value.configurationScript,
+      subAgents: form.value.subAgents
     }
 
     const response = await $fetch('/api/environments', {
@@ -189,7 +191,8 @@ const resetForm = () => {
     model: 'sonnet',
     defaultBranch: { label: 'main', value: 'main' },
     environmentVariables: [],
-    configurationScript: ''
+    configurationScript: '',
+    subAgents: []
   }
 }
 

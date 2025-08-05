@@ -26,14 +26,14 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
+import type { SubAgentsResponse } from '~/types/subagent'
 
-const { data: subagentsResponse, pending: loading, refresh: fetchSubAgents } = await useFetch('/api/subagents', {
+const { data: subagentsResponse, pending: loading, refresh: fetchSubAgents } = await useFetch<SubAgentsResponse>('/api/sub-agents', {
   server: false
 })
 
-const subagents = computed(() => subagentsResponse.value?.subagents || [])
-const total = computed(() => subagentsResponse.value?.total || 0)
+const subagents = computed(() => subagentsResponse.value?.subAgents || [])
+const total = computed(() => subagentsResponse.value?.pagination.total || 0)
 
 // Pagination
 const page = ref(1)

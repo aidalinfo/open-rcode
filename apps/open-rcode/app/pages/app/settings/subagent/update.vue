@@ -34,7 +34,7 @@
 
         <UForm :state="form" @submit="submitForm" class="space-y-6">
           <!-- Form Fields Component -->
-          <SubAgentFormFields
+          <SubagentSubAgentFormFields
             v-model="form"
             :is-editing="true"
           />
@@ -81,6 +81,8 @@
 </template>
 
 <script setup lang="ts">
+import type { SubAgent } from '~/types/subagent'
+
 definePageMeta({ middleware: 'auth' })
 
 const toast = useToast()
@@ -119,15 +121,15 @@ const fetchSubAgent = async () => {
     isLoadingSubAgent.value = true
     
     // Load SubAgent data
-    const data = await $fetch(`/api/subagents/${subagentId.value}`)
-    currentSubAgent.value = data.subagent
+    const data = await $fetch<SubAgent>(`/api/sub-agents/${subagentId.value}`)
+    currentSubAgent.value = data
     
     // Fill form with existing data
     form.value = {
-      name: data.subagent.name || '',
-      description: data.subagent.description || '',
-      prompt: data.subagent.prompt || '',
-      isPublic: data.subagent.isPublic || false
+      name: data.name || '',
+      description: data.description || '',
+      prompt: data.prompt || '',
+      isPublic: data.isPublic || false
     }
     
     isLoadingSubAgent.value = false
@@ -167,7 +169,7 @@ const submitForm = async () => {
       isPublic: form.value.isPublic
     }
 
-    await $fetch(`/api/subagents/${subagentId.value}`, {
+    await $fetch(`/api/sub-agents/${subagentId.value}`, {
       method: 'PUT',
       body: payload
     })
@@ -200,7 +202,7 @@ const deleteSubAgent = async () => {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/subagents/${subagentId.value}`, {
+    await $fetch(`/api/sub-agents/${subagentId.value}`, {
       method: 'DELETE'
     })
     

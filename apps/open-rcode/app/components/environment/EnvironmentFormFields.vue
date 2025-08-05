@@ -118,6 +118,26 @@
         class="w-full"
       />
     </UFormField>
+
+    <!-- SubAgents -->
+    <UFormField label="SubAgents" name="subAgents" class="mt-10">
+      <USelectMenu
+        v-model="selectedSubAgents"
+        :items="subAgentOptions"
+        placeholder="Select SubAgents to link to this environment"
+        :loading="loadingSubAgents"
+        multiple
+        value-attribute="value"
+        option-attribute="label"
+        size="lg"
+        class="w-full"
+      />
+      <template #help>
+        <p class="text-sm text-gray-500 mt-2">
+          Select SubAgents that will be available for tasks in this environment. You can select multiple SubAgents.
+        </p>
+      </template>
+    </UFormField>
   </div>
 </template>
 
@@ -135,6 +155,7 @@ interface Props {
     defaultBranch: SelectOption | undefined
     environmentVariables: Array<{ key: string; value: string; description?: string }>
     configurationScript: string
+    subAgents: string[]
   }
   repositories?: any[]
   loadingRepositories?: boolean
@@ -156,6 +177,8 @@ const toast = useToast()
 // Internal refs
 const branches = ref<any[]>([])
 const loadingBranches = ref(false)
+const availableSubAgents = ref<any[]>([])
+const loadingSubAgents = ref(false)
 
 // Runtime options
 const runtimeOptions: SelectOption[] = [
@@ -229,6 +252,34 @@ const configurationScript = computed({
   set: (value) => emit('update:modelValue', { ...props.modelValue, configurationScript: value })
 })
 
+const subAgents = computed({
+  get: () => props.modelValue.subAgents,
+  set: (value) => emit('update:modelValue', { ...props.modelValue, subAgents: value })
+})
+
+const selectedSubAgents = computed({
+  get: () => {
+    // Convert string[] to SelectOption[] for the USelectMenu
+    return props.modelValue.subAgents.map(subAgentId => {
+      const subAgent = availableSubAgents.value.find(s => s._id === subAgentId)
+      return subAgent ? {
+        label: subAgent.name,
+        value: subAgent._id,
+        description: subAgent.description || (subAgent.isPublic ? 'Public SubAgent' : 'Private SubAgent')
+      } : {
+        label: `SubAgent ${subAgentId}`,
+        value: subAgentId,
+        description: 'SubAgent not found'
+      }
+    })
+  },
+  set: (value: any[]) => {
+    // Convert SelectOption[] back to string[] for the model
+    const subAgentIds = value.map(option => option.value)
+    emit('update:modelValue', { ...props.modelValue, subAgents: subAgentIds })
+  }
+})
+
 // Helper computed properties
 const selectedRepositoryValue = computed(() => {
   return selectedRepository.value?.value
@@ -277,6 +328,14 @@ const branchOptions = computed((): SelectOption[] => {
   })
   
   return options
+})
+
+const subAgentOptions = computed(() => {
+  return availableSubAgents.value.map((subAgent: any) => ({
+    label: subAgent.name,
+    value: subAgent._id,
+    description: subAgent.description || (subAgent.isPublic ? 'Public SubAgent' : 'Private SubAgent')
+  }))
 })
 
 // Methods
@@ -328,6 +387,24 @@ const fetchBranches = async (repositoryFullName: string) => {
   }
 }
 
+const fetchSubAgents = async () => {
+  loadingSubAgents.value = true
+  try {
+    const data = await $fetch('/api/sub-agents')
+    availableSubAgents.value = data.subAgents || []
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching SubAgents:', error)
+    toast.add({
+      title: 'Error',
+      description: 'Unable to fetch SubAgents',
+      color: 'error'
+    })
+    availableSubAgents.value = []
+  } finally {
+    loadingSubAgents.value = false
+  }
+}
+
 const getAiProviderDescription = (provider: string) => {
   const descriptions: Record<string, string> = {
     'anthropic-api': 'Uses your Anthropic API key to call Claude directly via API.',
@@ -367,6 +444,11 @@ watch(() => selectedRepositoryValue.value, (newValue) => {
       })
     }
   }
+})
+
+// Load SubAgents on component mount
+onMounted(() => {
+  fetchSubAgents()
 })
 
 // Expose methods for parent components

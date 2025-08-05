@@ -88,7 +88,7 @@
           <!-- Actions -->
           <div class="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
             <UButton
-              :to="`/app/settings/subagent/update?edit=${item.id}`"
+              :to="`/app/settings/subagent/update?edit=${item._id}`"
               variant="soft"
               size="sm"
               icon="i-lucide-pencil"
@@ -101,7 +101,7 @@
               variant="soft"
               size="sm"
               icon="i-lucide-trash"
-              @click="deleteSubAgent(item.id)"
+              @click="deleteSubAgent(item._id)"
             >
               Delete
             </UButton>
@@ -123,7 +123,7 @@ const UBadge = resolveComponent('UBadge')
 const UIcon = resolveComponent('UIcon')
 
 interface SubAgent {
-  id: string
+  _id: string
   name: string
   description?: string
   prompt: string
@@ -217,13 +217,13 @@ const columns = computed((): TableColumn<SubAgent>[] => [
     cell: ({ row }: { row: Row<SubAgent> }) => {
       return h('div', { class: 'flex items-center gap-2' }, [
         h(UButton, {
-          to: `/app/settings/subagent/update?edit=${row.original.id}`,
+          to: `/app/settings/subagent/update?edit=${row.original._id}`,
           variant: 'ghost',
           size: 'xs',
           icon: 'i-heroicons-pencil-square'
         }, () => 'Edit'),
         h(UButton, {
-          onClick: () => deleteSubAgent(row.original.id),
+          onClick: () => deleteSubAgent(row.original._id),
           color: 'error',
           variant: 'ghost',
           size: 'xs',
@@ -238,7 +238,7 @@ const columns = computed((): TableColumn<SubAgent>[] => [
 const deleteSubAgent = async (id: string) => {
   if (confirm('Are you sure you want to delete this SubAgent?')) {
     try {
-      await $fetch(`/api/subagents/${id}`, {
+      await $fetch(`/api/sub-agents/${id}`, {
         method: 'DELETE'
       })
       toast.add({
