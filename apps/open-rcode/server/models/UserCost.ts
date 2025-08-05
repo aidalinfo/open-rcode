@@ -5,7 +5,7 @@ export interface UserCost {
   userId: string;
   taskId: string;
   costUsd: number;
-  model: 'opus' | 'sonnet';
+  model: 'opus' | 'sonnet' | 'opus-4-1';
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
   createdAt: Date;
   updatedAt: Date;
@@ -20,7 +20,7 @@ const userCostSchema = new Schema<UserCostDocument>({
   costUsd: { type: Number, required: true },
   model: {
     type: String,
-    enum: ['opus', 'sonnet'],
+    enum: ['opus', 'sonnet', 'opus-4-1'],
     required: true
   },
   aiProvider: {

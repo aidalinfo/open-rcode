@@ -15,7 +15,7 @@ export interface Environment {
   description?: string;
   runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php';
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
-  model: 'opus' | 'sonnet';
+  model: 'opus' | 'sonnet' | 'opus-4-1';
   defaultBranch: string; // branche par défaut pour le clonage et les PRs
   environmentVariables: EnvironmentVariable[];
   configurationScript?: string;
@@ -52,7 +52,7 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   },
   model: {
     type: String,
-    enum: ['opus', 'sonnet'],
+    enum: ['opus', 'sonnet', 'opus-4-1'],
     default: 'sonnet',
     required: true
   },

@@ -59,10 +59,10 @@ export default defineEventHandler(async (event) => {
     }
     
     // Validation du modèle si fourni
-    if (body.model && !['opus', 'sonnet'].includes(body.model)) {
+    if (body.model && !['opus', 'sonnet', 'opus-4-1'].includes(body.model)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'model must be one of: opus, sonnet'
+        statusMessage: 'model must be one of: opus, sonnet, opus-4-1'
       })
     }
     
