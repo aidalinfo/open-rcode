@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 ENV NUXT_UI_PRO_LICENSE=${NUXT_UI_PRO_LICENSE}
 
 # Build the application with increased memory limit
-RUN pnpm run build
+RUN NODE_OPTIONS="--max_old_space_size=4096"  pnpm run build
 
 # Production stage
 FROM node:lts-alpine AS runner
