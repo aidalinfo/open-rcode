@@ -427,10 +427,11 @@ const getModelDescription = (model: string) => {
 // Watch for repository changes
 watch(() => selectedRepositoryValue.value, (newValue) => {
   if (newValue && !props.modelValue.name && !props.isEditing) {
-    // Auto-fill name for new environments
+    // Auto-fill name with repository name for new environments
+    const repoName = newValue.split('/')[1] || newValue
     emit('update:modelValue', {
       ...props.modelValue,
-      name: 'Production'
+      name: repoName
     })
   }
   
