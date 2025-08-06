@@ -56,11 +56,8 @@ import type { TaskCard } from '~/shared/types/task'
 
 const toast = useToast()
 const router = useRouter()
-
-definePageMeta({
-  middleware: 'auth',
-})
-
+const pageTitle = usePageTitle()
+pageTitle.value = "Prompting"
 // États réactifs
 const input = ref('')
 const loading = ref(false)
