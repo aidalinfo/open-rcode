@@ -104,7 +104,8 @@ cat > /root/.claude/settings.json << EOF
       "NotebookRead(*)",
       "Task(*)",
       "TodoWrite(*)",
-      "WebSearch(*)"
+      "WebSearch(*)",
+      "mcp(*)"
     ],
     "defaultMode": "acceptEdits"
   },

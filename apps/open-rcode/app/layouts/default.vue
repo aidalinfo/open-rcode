@@ -138,7 +138,21 @@ const links = computed(() => [[
     onSelect: () => {
       open.value = false
     }
-  }]
+  }
+  // , {
+  //   label: 'SubAgents',
+  //   to: '/app/settings/subagent',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }, {
+  //   label: 'Create SubAgent',
+  //   to: '/app/settings/subagent/create',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }
+]
 }], [{
   label: 'GitHub',
   icon: 'i-simple-icons-github',
@@ -222,19 +236,7 @@ onMounted(() => {
       </template>
 
       <template #footer="{ collapsed }">
-        <div class="flex items-center justify-between px-4 py-3">
-          <UColorModeButton />
-          <UButton
-            v-if="!collapsed"
-            to="https://github.com/aidalinfo/open-rcode"
-            target="_blank"
-            icon="i-simple-icons-github"
-            aria-label="GitHub"
-            color="neutral"
-            variant="ghost"
-            size="sm"
-          />
-        </div>
+        <UserMenu :collapsed="collapsed" />
       </template>
     </UDashboardSidebar>
 

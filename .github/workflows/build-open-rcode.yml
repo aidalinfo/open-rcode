@@ -1,4 +1,4 @@
-name: Build and Push Open-rcode Docker Image
+name: Build and Release Open-rcode
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: open-rcode
 
 jobs:
-  build-and-push:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,6 +37,59 @@ jobs:
             exit 1
           fi
           echo "Tag v${{ steps.version.outputs.version }} does not exist, continuing"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        working-directory: ./apps/open-rcode
+        run: pnpm install
+
+      - name: Build Nuxt application
+        working-directory: ./apps/open-rcode
+        env:
+          NUXT_UI_PRO_LICENSE: ${{ secrets.NUXT_UI_PRO_LICENSE }}
+        run: pnpm build
+
+      - name: Create build archives
+        working-directory: ./apps/open-rcode
+        run: |
+          # Create deployment directory structure
+          mkdir -p deployment-package
+          cp -r .output deployment-package/
+          cp package.json deployment-package/
+          cp nuxt.config.ts deployment-package/
+          
+          # Create ZIP archive
+          cd deployment-package
+          zip -r ../open-rcode-${{ steps.version.outputs.version }}.zip .
+          
+          # Create TAR.GZ archive
+          tar -czf ../open-rcode-${{ steps.version.outputs.version }}.tar.gz .
+          
+          cd ..
+          ls -la *.zip *.tar.gz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -79,3 +132,34 @@ jobs:
           git config --local user.name "GitHub Action"
           git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
           git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Create GitHub Release
+        uses: ncipollo/create-release@v1
+        with:
+          tag: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: |
+            ## Release Notes for ${{ steps.version.outputs.tag }}
+            
+            ### What's included
+            - 📦 **Docker Image**: `${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}`
+            - 🗜️ **ZIP Archive**: `open-rcode-${{ steps.version.outputs.version }}.zip` - Ready-to-deploy build files
+            - 📂 **TAR.GZ Archive**: `open-rcode-${{ steps.version.outputs.version }}.tar.gz` - Ready-to-deploy build files
+            
+            ### Deployment without Docker
+            1. Download either the ZIP or TAR.GZ archive
+            2. Extract the files
+            3. Install dependencies: `npm install --production`
+            4. Set your environment variables
+            5. Start the application: `node .output/server/index.mjs`
+            
+            ### Docker Deployment
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ```
+            
+            Built from commit: ${{ github.sha }}
+          artifacts: ./apps/open-rcode/open-rcode-${{ steps.version.outputs.version }}.zip,./apps/open-rcode/open-rcode-${{ steps.version.outputs.version }}.tar.gz
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+          token: ${{ secrets.GITHUB_TOKEN }}

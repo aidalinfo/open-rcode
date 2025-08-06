@@ -59,10 +59,10 @@ export default defineEventHandler(async (event) => {
     }
     
     // Validation du modèle si fourni
-    if (body.model && !['opus', 'sonnet'].includes(body.model)) {
+    if (body.model && !['opus', 'sonnet', 'opus-4-1'].includes(body.model)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'model must be one of: opus, sonnet'
+        statusMessage: 'model must be one of: opus, sonnet, opus-4-1'
       })
     }
     
@@ -79,14 +79,15 @@ export default defineEventHandler(async (event) => {
       model: body.model || 'sonnet',
       defaultBranch: body.defaultBranch,
       environmentVariables: body.environmentVariables || [],
-      configurationScript: body.configurationScript
+      configurationScript: body.configurationScript,
+      subAgents: body.subAgents || []
     })
     
     await environment.save()
     
     return {
       environment: {
-        id: environment._id,
+        _id: environment._id,
         organization: environment.organization,
         repository: environment.repository,
         repositoryFullName: environment.repositoryFullName,
@@ -98,6 +99,7 @@ export default defineEventHandler(async (event) => {
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
+        subAgents: environment.subAgents,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }

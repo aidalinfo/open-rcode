@@ -123,7 +123,8 @@ const form = ref({
   model: undefined as SelectOption | undefined,
   defaultBranch: undefined as SelectOption | undefined,
   environmentVariables: [] as Array<{ key: string; value: string; description?: string }>,
-  configurationScript: ''
+  configurationScript: '',
+  subAgents: [] as string[]
 })
 
 // Methods
@@ -179,7 +180,8 @@ const fetchEnvironment = async () => {
         value: data.environment.defaultBranch || 'main'
       },
       environmentVariables: data.environment.environmentVariables || [],
-      configurationScript: data.environment.configurationScript || ''
+      configurationScript: data.environment.configurationScript || '',
+      subAgents: data.environment.subAgents || []
     }
     
     // Page is ready to display
@@ -288,7 +290,8 @@ const submitForm = async () => {
       model: selectedModel,
       defaultBranch: selectedDefaultBranch,
       environmentVariables: form.value.environmentVariables.filter((v: any) => v.key && v.value),
-      configurationScript: form.value.configurationScript
+      configurationScript: form.value.configurationScript,
+      subAgents: form.value.subAgents
     }
 
     await $fetch(`/api/environments/${environmentId.value}`, {

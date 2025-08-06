@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
         defaultBranch: environment.defaultBranch,
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
+        subAgents: environment.subAgents,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }

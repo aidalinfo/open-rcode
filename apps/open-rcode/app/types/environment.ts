@@ -3,3 +3,10 @@ export interface SelectOption {
   value: string
   description?: string
 }
+
+export interface SubAgentOption {
+  _id: string
+  name: string
+  description?: string
+  isPublic: boolean
+}
