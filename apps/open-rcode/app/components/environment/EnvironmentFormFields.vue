@@ -120,7 +120,7 @@
     </UFormField>
 
     <!-- SubAgents -->
-    <UFormField label="SubAgents" name="subAgents" class="mt-10">
+    <!-- <UFormField label="SubAgents" name="subAgents" class="mt-10">
       <USelectMenu
         v-model="selectedSubAgents"
         :items="subAgentOptions"
@@ -137,7 +137,7 @@
           Select SubAgents that will be available for tasks in this environment. You can select multiple SubAgents.
         </p>
       </template>
-    </UFormField>
+    </UFormField> -->
   </div>
 </template>
 

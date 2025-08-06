@@ -138,19 +138,21 @@ const links = computed(() => [[
     onSelect: () => {
       open.value = false
     }
-  }, {
-    label: 'SubAgents',
-    to: '/app/settings/subagent',
-    onSelect: () => {
-      open.value = false
-    }
-  }, {
-    label: 'Create SubAgent',
-    to: '/app/settings/subagent/create',
-    onSelect: () => {
-      open.value = false
-    }
-  }]
+  }
+  // , {
+  //   label: 'SubAgents',
+  //   to: '/app/settings/subagent',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }, {
+  //   label: 'Create SubAgent',
+  //   to: '/app/settings/subagent/create',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // }
+]
 }], [{
   label: 'GitHub',
   icon: 'i-simple-icons-github',
