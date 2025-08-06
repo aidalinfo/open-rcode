@@ -38,10 +38,6 @@ const items = computed<DropdownMenuItem[][]>(() => {
     label: userDisplay.value.name,
     avatar: userDisplay.value.avatar
   }], [{
-    label: 'Profile',
-    icon: 'i-lucide-user',
-    description: `@${user.value.username}`
-  }, {
     label: 'Settings',
     icon: 'i-lucide-settings',
     to: '/app/settings'
