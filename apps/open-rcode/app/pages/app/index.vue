@@ -4,34 +4,47 @@
       <UContainer>
         <AppSkeleton v-if="isInitialLoading" />
         
-        <div v-else>
-          <WelcomeModal v-model="showWelcomeModal" />
-          
-          <ChatPrompt
-            v-model:input="input"
-            v-model:selectedEnvironment="selectedEnvironment"
-            :environments="environments"
-            :loading="loading"
-            @submit="onSubmit"
-          />
+        <div v-else class="min-h-screen flex mt-12 justify-center">
+          <div class="w-full max-w-4xl space-y-8">
+            <WelcomeModal v-model="showWelcomeModal" />
+            
+            <!-- Recent Tasks Cards -->
+            <div v-if="recentTasks.length > 0" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TaskCard 
+                  v-for="(task, index) in recentTasks" 
+                  :key="task._id"
+                  :task="task"
+                  :class="{ 'hidden lg:block': index === 2 }"
+                  @click="navigateToTask(task._id)"
+                />
+              </div>
+            </div>
+            
+            <ChatPrompt
+              v-model:input="input"
+              v-model:selectedEnvironment="selectedEnvironment"
+              :environments="environments"
+              :loading="loading"
+              @submit="onSubmit"
+            />
 
-          <div v-if="environments.length === 0" class="text-center py-8">
-            <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No configured environments
-            </h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
-              Create your first environment to start using the chat.
-            </p>
-            <UButton
-              to="/app/settings/environnement/create"
-              icon="i-heroicons-plus"
-            >
-              Create an environment
-            </UButton>
+            <div v-if="environments.length === 0" class="text-center py-8">
+              <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No configured environments
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Create your first environment to start using the chat.
+              </p>
+              <UButton
+                to="/app/settings/environnement/create"
+                icon="i-heroicons-plus"
+              >
+                Create an environment
+              </UButton>
+            </div>
           </div>
-
-          <TaskTable v-if="environments.length > 0" />
         </div>
       </UContainer>
     </template>
@@ -39,6 +52,8 @@
 </template>
 
 <script setup lang="ts">
+import type { TaskCard } from '~/shared/types/task'
+
 const toast = useToast()
 const router = useRouter()
 
@@ -53,6 +68,7 @@ const environments = ref<any[]>([])
 const selectedEnvironment = ref('')
 const isInitialLoading = ref(true)
 const showWelcomeModal = ref(false)
+const recentTasks = ref<TaskCard[]>([])
 
 // Méthodes
 const fetchEnvironments = async () => {
@@ -66,9 +82,20 @@ const fetchEnvironments = async () => {
     }
   } catch (error) {
     if (import.meta.dev) console.error('Error fetching environments:', error)
-  } finally {
-    isInitialLoading.value = false
   }
+}
+
+const fetchRecentTasks = async () => {
+  try {
+    const data = await $fetch<{ tasks: TaskCard[] }>('/api/tasks?limit=3&page=1')
+    recentTasks.value = data.tasks
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching recent tasks:', error)
+  }
+}
+
+const navigateToTask = (taskId: string) => {
+  router.push(`/app/task/${taskId}`)
 }
 
 const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
@@ -109,6 +136,10 @@ const onSubmit = async (data: { message: string; environmentId: string; task?: a
 
 // Initial loading
 onBeforeMount(async () => {
-  await fetchEnvironments()
+  await Promise.all([
+    fetchEnvironments(),
+    fetchRecentTasks()
+  ])
+  isInitialLoading.value = false
 })
 </script>
