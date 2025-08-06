@@ -250,7 +250,8 @@ const getAiProviderLabel = (provider: string) => {
 const getModelLabel = (model: string) => {
   const labels = {
     'sonnet': 'Claude Sonnet',
-    'opus': 'Claude Opus'
+    'opus': 'Claude Opus',
+    'opus-4-1': 'Claude Opus 4.1 (Legacy)' // Support legacy model for existing envs
   }
   return labels[model as keyof typeof labels] || model
 }
