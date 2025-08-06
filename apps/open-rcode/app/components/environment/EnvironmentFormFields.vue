@@ -201,11 +201,19 @@ const aiProviderOptions: SelectOption[] = [
 ]
 
 // Model options
-const modelOptions: SelectOption[] = [
-  { label: 'Claude Sonnet', value: 'sonnet' },
-  { label: 'Claude Opus', value: 'opus' },
-  { label: 'Claude Opus 4.1', value: 'opus-4-1' }
-]
+const modelOptions = computed((): SelectOption[] => {
+  const baseOptions: SelectOption[] = [
+    { label: 'Claude Sonnet', value: 'sonnet' },
+    { label: 'Claude Opus', value: 'opus' }
+  ]
+  
+  // In edit mode, if the current model is opus-4-1, add it as a legacy option
+  if (props.isEditing && modelValue.value === 'opus-4-1') {
+    baseOptions.push({ label: 'Claude Opus 4.1 (Legacy)', value: 'opus-4-1' })
+  }
+  
+  return baseOptions
+})
 
 // Simple v-model computed properties
 const selectedRepository = computed({
@@ -419,7 +427,7 @@ const getModelDescription = (model: string) => {
   const descriptions: Record<string, string> = {
     'sonnet': 'Claude Sonnet - Balanced model between performance and speed (recommended).',
     'opus': 'Claude Opus - Most powerful model for complex tasks.',
-    'opus-4-1': 'Claude Opus 4.1 - Latest version of Opus with improved capabilities.'
+    'opus-4-1': 'Claude Opus 4.1 - Legacy model, consider migrating to newer models.'
   }
   return descriptions[model] || ''
 }
@@ -427,10 +435,11 @@ const getModelDescription = (model: string) => {
 // Watch for repository changes
 watch(() => selectedRepositoryValue.value, (newValue) => {
   if (newValue && !props.modelValue.name && !props.isEditing) {
-    // Auto-fill name for new environments
+    // Auto-fill name with repository name for new environments
+    const repoName = newValue.split('/')[1] || newValue
     emit('update:modelValue', {
       ...props.modelValue,
-      name: 'Production'
+      name: repoName
     })
   }
   
