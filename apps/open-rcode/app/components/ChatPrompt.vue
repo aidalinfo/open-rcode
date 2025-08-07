@@ -147,6 +147,12 @@ const workflowOptions = computed(() => [{
   onSelect() {
     selectedWorkflow.value = 'Plan Mode Workflow'
   }
+}, {
+  label: 'Auto PR with Merge',
+  icon: 'i-heroicons-arrow-path-rounded-square',
+  onSelect() {
+    selectedWorkflow.value = 'Auto PR with Merge'
+  }
 }])
 
 // Workflow methods
@@ -173,7 +179,8 @@ const handleSubmit = async () => {
       body: {
         environmentId: localSelectedEnvironment.value,
         message: localInput.value,
-        planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+        planMode: selectedWorkflow.value === 'Plan Mode Workflow',
+        autoMerge: selectedWorkflow.value === 'Auto PR with Merge'
       }
     })
 
@@ -188,7 +195,8 @@ const handleSubmit = async () => {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task,
-      planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+      planMode: selectedWorkflow.value === 'Plan Mode Workflow',
+      autoMerge: selectedWorkflow.value === 'Auto PR with Merge'
     })
 
     // Clear input after emitting event
