@@ -141,6 +141,11 @@ Les modifications ont été poussées et une Pull Request a été créée automa
       
       logger.info({ taskId: task._id, prUrl }, 'Pull request created successfully')
       
+      // Auto-merge si activé
+      if (task.autoMerge) {
+        await this.autoMergePullRequest(prUrl, environment.repositoryFullName, githubToken, task)
+      }
+      
     } catch (error) {
       logger.error({ error, taskId: task._id }, 'Error creating pull request')
       
@@ -364,5 +369,103 @@ Pour créer une PR manuellement, installez la GitHub App sur ce repository.`
     }
     
     return cleanedResponse
+  }
+
+  private async autoMergePullRequest(
+    prUrl: string, 
+    repoFullName: string, 
+    token: string, 
+    task: any
+  ): Promise<void> {
+    try {
+      logger.info({ taskId: task._id, prUrl }, 'Starting auto-merge for pull request')
+      
+      // Extraire le numéro de PR de l'URL
+      const prNumber = prUrl.match(/pull\/(\d+)/)?.[1]
+      if (!prNumber) {
+        throw new Error('Could not extract PR number from URL')
+      }
+      
+      const [owner, repo] = repoFullName.split('/')
+      
+      // Attendre quelques secondes pour que les checks se lancent
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      
+      // Récupérer les informations de la PR
+      const prResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      })
+      
+      if (!prResponse.ok) {
+        throw new Error(`Failed to get PR info: ${prResponse.status}`)
+      }
+      
+      const prData = await prResponse.json()
+      
+      // Vérifier si la PR peut être mergée
+      if (!prData.mergeable) {
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `⚠️ **Auto-merge impossible:** La PR a des conflits ou ne peut pas être mergée automatiquement.`
+        })
+        return
+      }
+      
+      // Merger la PR
+      const mergeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/merge`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          commit_title: `Merge pull request #${prNumber} from ${prData.head.ref}`,
+          commit_message: `Auto-merged by open-rcode\n\n${prData.title}`,
+          merge_method: 'merge' // ou 'squash' ou 'rebase' selon la préférence
+        })
+      })
+      
+      if (mergeResponse.ok) {
+        await TaskModel.findByIdAndUpdate(task._id, { 
+          merged: true,
+          updatedAt: new Date()
+        })
+        
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🎉 **Pull Request mergée automatiquement!**
+          
+La PR #${prNumber} a été mergée avec succès dans la branche principale.`
+        })
+        
+        logger.info({ taskId: task._id, prNumber }, 'Pull request auto-merged successfully')
+      } else {
+        const errorData = await mergeResponse.json()
+        throw new Error(`Merge failed: ${errorData.message || 'Unknown error'}`)
+      }
+      
+    } catch (error) {
+      logger.error({ error, taskId: task._id }, 'Error auto-merging pull request')
+      
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: `❌ **Erreur lors du merge automatique:** ${(error as any).message}
+        
+La PR a été créée mais nécessite un merge manuel.`
+      })
+    }
   }
 }

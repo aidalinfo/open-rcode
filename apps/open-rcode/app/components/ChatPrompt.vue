@@ -24,30 +24,48 @@
         />
         
         <div class="flex items-center gap-3 w-full sm:w-auto">
-          <UDropdownMenu :items="workflowOptions">
-            <UButton
-              variant="ghost"
-              icon="i-heroicons-cog-6-tooth"
-              size="sm"
-            >
-              Workflow
-            </UButton>
-          </UDropdownMenu>
+          <USelectMenu
+            v-model="selectedWorkflows"
+            :items="workflowItems"
+            multiple
+            placeholder="Select workflows"
+            variant="ghost"
+            class="w-full sm:w-auto min-w-[160px]"
+          >
+            <template #trigger>
+              <UButton
+                variant="ghost"
+                icon="i-heroicons-cog-6-tooth"
+                size="sm"
+                class="justify-between"
+              >
+                {{ selectedWorkflows.length > 0 ? `${selectedWorkflows.length} Workflow${selectedWorkflows.length > 1 ? 's' : ''}` : 'Workflows' }}
+              </UButton>
+            </template>
+            <template #item="{ item }">
+              <div class="flex flex-col">
+                <span>{{ item.label }}</span>
+                <span class="text-xs text-gray-500">{{ item.description }}</span>
+              </div>
+            </template>
+          </USelectMenu>
           
-          <div v-if="selectedWorkflow" class="flex items-center">
+          <div v-if="selectedWorkflows.length > 0" class="flex flex-wrap items-center gap-2">
             <UBadge
+              v-for="workflow in selectedWorkflows"
+              :key="workflow"
               color="primary"
               variant="solid"
               size="sm"
               class="flex items-center gap-1 pr-1"
             >
-              {{ selectedWorkflow }}
+              {{ getWorkflowLabel(workflow) }}
               <UButton
                 variant="ghost"
                 size="2xs"
                 icon="i-heroicons-x-mark"
-                class="ml-2 h-4 w-4 p-0 text-white dark:text-black"
-                @click="removeWorkflow"
+                class="ml-1 h-4 w-4 p-0 text-white dark:text-black"
+                @click="removeWorkflow(workflow)"
               />
             </UBadge>
           </div>
@@ -88,7 +106,7 @@ interface Props {
 interface Emits {
   (e: 'update:input', value: string): void
   (e: 'update:selectedEnvironment', value: string): void
-  (e: 'submit', data: { message: string; environmentId: string; task?: any; planMode?: boolean }): void
+  (e: 'submit', data: { message: string; environmentId: string; task?: any; planMode?: boolean; autoMerge?: boolean }): void
 }
 
 const props = defineProps<Props>()
@@ -97,7 +115,7 @@ const emit = defineEmits<Emits>()
 const toast = useToast()
 
 // Workflow state
-const selectedWorkflow = ref('')
+const selectedWorkflows = ref<string[]>([])
 
 // File path autocomplete state
 const showFileMenu = ref(false)
@@ -140,18 +158,42 @@ const filteredFilePaths = computed(() => {
     .slice(0, 10) // Limit to 10 results
 })
 
-// Options for workflow dropdown
-const workflowOptions = computed(() => [{
-  label: 'Plan Mode Workflow',
-  icon: 'i-heroicons-cpu-chip',
-  onSelect() {
-    selectedWorkflow.value = 'Plan Mode Workflow'
+// Workflow options
+const workflowItems = [
+  { 
+    label: 'Plan Mode', 
+    value: 'planMode',
+    description: 'Generate a plan before execution',
+    icon: 'i-heroicons-cpu-chip'
+  },
+  { 
+    label: 'Auto Merge PR', 
+    value: 'autoMerge',
+    description: 'Automatically merge the pull request after creation',
+    icon: 'i-heroicons-arrow-path-rounded-square'
   }
-}])
+]
 
 // Workflow methods
-const removeWorkflow = () => {
-  selectedWorkflow.value = ''
+const toggleWorkflow = (workflow: string) => {
+  const index = selectedWorkflows.value.indexOf(workflow)
+  if (index > -1) {
+    selectedWorkflows.value.splice(index, 1)
+  } else {
+    selectedWorkflows.value.push(workflow)
+  }
+}
+
+const removeWorkflow = (workflow: string) => {
+  const index = selectedWorkflows.value.indexOf(workflow)
+  if (index > -1) {
+    selectedWorkflows.value.splice(index, 1)
+  }
+}
+
+const getWorkflowLabel = (value: string) => {
+  const item = workflowItems.find(w => w.value === value)
+  return item?.label || value
 }
 
 const handleSubmit = async () => {
@@ -173,7 +215,8 @@ const handleSubmit = async () => {
       body: {
         environmentId: localSelectedEnvironment.value,
         message: localInput.value,
-        planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+        planMode: selectedWorkflows.value.includes('planMode'),
+        autoMerge: selectedWorkflows.value.includes('autoMerge')
       }
     })
 
@@ -188,7 +231,7 @@ const handleSubmit = async () => {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task,
-      planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+      planMode: selectedWorkflows.value.includes('planMode')
     })
 
     // Clear input after emitting event

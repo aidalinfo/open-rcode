@@ -19,6 +19,7 @@ export interface Task {
   executed: boolean;
   error?: string;
   planMode?: boolean;
+  autoMerge?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +43,7 @@ const taskSchema = new Schema<TaskDocument>({
   executed: { type: Boolean, default: false },
   error: { type: String },
   planMode: { type: Boolean, default: false },
+  autoMerge: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
