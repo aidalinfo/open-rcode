@@ -18,6 +18,7 @@ export interface TaskCard {
   dockerId?: string
   error?: string
   planMode?: boolean
+  autoMerge?: boolean
 }
 
 export interface TasksResponse {
