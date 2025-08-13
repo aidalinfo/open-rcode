@@ -28,6 +28,8 @@
             v-model="selectedWorkflows"
             :items="workflowItems"
             multiple
+            value-attribute="value"
+            option-attribute="label"
             placeholder="Select workflows"
             variant="ghost"
             class="w-full sm:w-auto min-w-[160px]"
