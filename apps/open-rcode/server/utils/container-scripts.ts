@@ -30,7 +30,7 @@ export class ContainerScripts {
       claude: '@anthropic-ai/claude-code',
       gemini: '@google/gemini-cli'
     }
-    
+
     return `
       # Check if ${cliName} is installed
       if ! which ${cliName} >/dev/null 2>&1; then
@@ -77,14 +77,14 @@ export class ContainerScripts {
       this.installCLI(cliName),
       this.setupEnvironment(envSetup)
     ]
-    
+
     // Add Claude settings cleanup only for Claude CLI
     if (cliName === 'claude') {
       parts.push(this.cleanClaudeSettings())
     }
-    
+
     parts.push(aiCommand)
-    
+
     return this.buildFullScript(parts)
   }
 

@@ -18,7 +18,11 @@
           </h2>
         </template>
 
-        <UForm :state="form" @submit="submitForm" class="space-y-6">
+        <UForm
+          :state="form"
+          class="space-y-6"
+          @submit="submitForm"
+        >
           <!-- Form Fields Component -->
           <SubagentSubAgentFormFields
             v-model="form"
@@ -96,7 +100,7 @@ const submitForm = async () => {
       method: 'POST',
       body: payload
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'SubAgent created successfully',
@@ -104,7 +108,6 @@ const submitForm = async () => {
     })
 
     router.push('/app/settings/subagent')
-    
   } catch (error) {
     toast.add({
       title: 'Error',

@@ -15,12 +15,24 @@
       </div>
     </template>
 
-    <div v-if="loading" class="flex justify-center py-8">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary-500" />
+    <div
+      v-if="loading"
+      class="flex justify-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-arrow-path"
+        class="w-6 h-6 animate-spin text-primary-500"
+      />
     </div>
 
-    <div v-else-if="environments.length === 0" class="text-center py-8">
-      <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+    <div
+      v-else-if="environments.length === 0"
+      class="text-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-cube"
+        class="w-12 h-12 mx-auto text-gray-400 mb-4"
+      />
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
         No environments
       </h3>
@@ -50,7 +62,10 @@
               <h4 class="font-medium text-gray-900 dark:text-white">
                 {{ item.name }}
               </h4>
-              <p v-if="item.description" class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p
+                v-if="item.description"
+                class="text-sm text-gray-600 dark:text-gray-400 mt-1"
+              >
                 {{ item.description }}
               </p>
             </div>
@@ -65,23 +80,33 @@
           <!-- Informations -->
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-git-branch" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-git-branch"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 {{ item.repositoryFullName }}
               </span>
             </div>
 
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-git-commit" class="w-4 h-4 text-gray-400" />
-              <UBadge variant="soft" size="xs" color="neutral">
+              <UIcon
+                name="i-lucide-git-commit"
+                class="w-4 h-4 text-gray-400"
+              />
+              <UBadge
+                variant="soft"
+                size="xs"
+                color="neutral"
+              >
                 {{ item.defaultBranch || 'main' }}
               </UBadge>
             </div>
 
             <div class="flex items-center gap-2 text-sm">
-              <UIcon 
-                :name="getAiProviderIcon(item.aiProvider)" 
-                :class="`w-4 h-4 ${getAiProviderColor(item.aiProvider)}`" 
+              <UIcon
+                :name="getAiProviderIcon(item.aiProvider)"
+                :class="`w-4 h-4 ${getAiProviderColor(item.aiProvider)}`"
               />
               <span class="text-gray-600 dark:text-gray-400">
                 {{ getAiProviderLabel(item.aiProvider) }}
@@ -89,14 +114,20 @@
             </div>
 
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-variable" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-variable"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 {{ item.environmentVariables?.length || 0 }} variable{{ (item.environmentVariables?.length || 0) > 1 ? 's' : '' }}
               </span>
             </div>
 
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-calendar"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 {{ formatDate(item.createdAt) }}
               </span>
@@ -148,7 +179,7 @@ interface Environment {
   runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php'
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli'
   defaultBranch: string
-  environmentVariables: Array<{ key: string; value: string; description?: string }>
+  environmentVariables: Array<{ key: string, value: string, description?: string }>
   createdAt: string
   updatedAt: string
 }
@@ -164,8 +195,8 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-  refresh: []
-  delete: [id: string]
+  'refresh': []
+  'delete': [id: string]
   'update:page': [page: number]
 }>()
 
@@ -213,7 +244,7 @@ const columns = computed((): TableColumn<Environment>[] => [
     accessorKey: 'repositoryFullName',
     header: 'Repository',
     cell: ({ row }: { row: Row<Environment> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' },
         row.original.repositoryFullName
       )
     }
@@ -247,7 +278,7 @@ const columns = computed((): TableColumn<Environment>[] => [
     header: 'Variables',
     cell: ({ row }: { row: Row<Environment> }) => {
       const count = row.original.environmentVariables?.length || 0
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' },
         `${count} variable${count > 1 ? 's' : ''}`
       )
     }
@@ -256,7 +287,7 @@ const columns = computed((): TableColumn<Environment>[] => [
     accessorKey: 'createdAt',
     header: 'Created on',
     cell: ({ row }: { row: Row<Environment> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' },
         formatDate(row.original.createdAt)
       )
     }

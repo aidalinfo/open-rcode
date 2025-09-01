@@ -11,8 +11,8 @@ const developmentTransport = {
     colorize: true,
     ignore: 'pid,hostname',
     translateTime: 'HH:MM:ss',
-    messageFormat: '{msg}',
-  },
+    messageFormat: '{msg}'
+  }
 }
 
 // Créer le logger avec configuration conditionnelle
@@ -20,17 +20,17 @@ export const logger = pino({
   level: logLevel,
   // Pretty-print en développement, JSON en production
   ...(isDevelopment && {
-    transport: developmentTransport,
+    transport: developmentTransport
   }),
   // Ajouter des champs par défaut
   base: {
-    env: process.env.NODE_ENV,
+    env: process.env.NODE_ENV
   },
   // Formater les erreurs pour une meilleure lisibilité
   serializers: {
     err: pino.stdSerializers.err,
-    error: pino.stdSerializers.err,
-  },
+    error: pino.stdSerializers.err
+  }
 })
 
 // Créer des loggers enfants pour différents modules
@@ -49,5 +49,5 @@ export const LogLevel = {
   INFO: 'info',
   WARN: 'warn',
   ERROR: 'error',
-  FATAL: 'fatal',
+  FATAL: 'fatal'
 } as const

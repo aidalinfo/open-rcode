@@ -5,12 +5,12 @@ import { requireUserId } from '../../utils/auth'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const { id } = getRouterParams(event)
     const userId = await requireUserId(event)
-    
+
     const body = await readBody(event)
-    
+
     // Validation du runtime si fourni
     if (body.runtime && !['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'].includes(body.runtime)) {
       throw createError({
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Runtime must be one of: node, python, bun, java, swift, ruby, rust, go, php'
       })
     }
-    
+
     // Validation du provider AI si fourni
     if (body.aiProvider && !['anthropic-api', 'claude-oauth', 'gemini-cli'].includes(body.aiProvider)) {
       throw createError({
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'aiProvider must be one of: anthropic-api, claude-oauth, gemini-cli'
       })
     }
-    
+
     // Validation du modèle si fourni
     if (body.model && !['opus', 'sonnet', 'opus-4-1'].includes(body.model)) {
       throw createError({
@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'model must be one of: opus, sonnet, opus-4-1'
       })
     }
-    
+
     // Construire l'objet de mise à jour
     const updateData: any = {}
     if (body.name) updateData.name = body.name
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
       updateData.repository = body.repository
       updateData.repositoryFullName = `${body.organization}/${body.repository}`
     }
-    
+
     const environment = await EnvironmentModel.findOneAndUpdate(
       {
         _id: id,
@@ -60,14 +60,14 @@ export default defineEventHandler(async (event) => {
       updateData,
       { new: true, lean: true }
     )
-    
+
     if (!environment) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Environment not found'
       })
     }
-    
+
     return {
       environment: {
         id: environment._id,

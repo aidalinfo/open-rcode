@@ -1,5 +1,6 @@
 import { DockerManager } from '../docker'
-import { BaseContainerManager, BaseContainerOptions, BaseExecuteOptions, BaseContainerInfo, ExecuteResult, BaseConnectionOptions } from './base-container-manager'
+import type { BaseContainerOptions, BaseExecuteOptions, BaseContainerInfo, ExecuteResult, BaseConnectionOptions } from './base-container-manager'
+import { BaseContainerManager } from './base-container-manager'
 
 export class DockerAdapter extends BaseContainerManager {
   private dockerManager: DockerManager
@@ -29,7 +30,7 @@ export class DockerAdapter extends BaseContainerManager {
       autoRemove: options.autoRemove,
       restartPolicy: options.restartPolicy as 'no' | 'always' | 'unless-stopped' | 'on-failure'
     }
-    
+
     return this.dockerManager.createContainer(dockerOptions)
   }
 
@@ -41,7 +42,7 @@ export class DockerAdapter extends BaseContainerManager {
       environment: options.environment,
       user: options.user
     }
-    
+
     return this.dockerManager.executeInContainer(dockerOptions)
   }
 

@@ -25,16 +25,16 @@ const periodOptions = [
   { key: 'total' as const, label: 'Total', period: 'daily' as const, days: 30 }
 ]
 
-const currentPeriodConfig = computed(() => 
+const currentPeriodConfig = computed(() =>
   periodOptions.find(p => p.key === selectedPeriod.value)!
 )
 
 const stats = computed<Stat[]>(() => {
   if (!statsData.value?.stats) return []
-  
+
   const statsValue = statsData.value.stats as any
   const { taskCount, totalCostUSD, pullRequestCount, environmentCount } = statsValue
-  
+
   return [
     {
       title: 'Tasks',
@@ -62,14 +62,22 @@ const stats = computed<Stat[]>(() => {
 
 <template>
   <div class="container mx-auto p-6">
-    <div v-if="pending" class="flex justify-center items-center h-32">
-      <div class="text-muted-foreground">Loading stats...</div>
+    <div
+      v-if="pending"
+      class="flex justify-center items-center h-32"
+    >
+      <div class="text-muted-foreground">
+        Loading stats...
+      </div>
     </div>
-    
-    <div v-else-if="error" class="text-red-500">
+
+    <div
+      v-else-if="error"
+      class="text-red-500"
+    >
       Error loading stats: {{ error.message }}
     </div>
-    
+
     <div v-else>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div
@@ -89,15 +97,20 @@ const stats = computed<Stat[]>(() => {
               </div>
             </div>
             <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-full">
-              <Icon :name="stat.icon" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <Icon
+                :name="stat.icon"
+                class="w-5 h-5 text-blue-600 dark:text-blue-400"
+              />
             </div>
           </div>
         </div>
       </div>
-      
+
       <div class="mt-8">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-semibold">Cost Analysis</h2>
+          <h2 class="text-xl font-semibold">
+            Cost Analysis
+          </h2>
           <div class="flex gap-2">
             <UButton
               v-for="option in periodOptions"
@@ -110,7 +123,7 @@ const stats = computed<Stat[]>(() => {
             />
           </div>
         </div>
-        <LazyHomeChart 
+        <LazyHomeChart
           :period="currentPeriodConfig.period"
           :days="currentPeriodConfig.days"
         />

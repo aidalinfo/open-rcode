@@ -6,7 +6,7 @@ import { KanbanProjectModel } from '../../models/KanbanProject'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     const projectId = getRouterParam(event, 'id')
     if (!projectId) {
       throw createError({
@@ -38,10 +38,10 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Project ID is required'
       })
     }
-    
+
     const body = await readBody(event)
     const { name, description } = body
-    
+
     const project = await KanbanProjectModel.findById(projectId)
     if (!project || project.userId !== user.githubId) {
       throw createError({
@@ -49,12 +49,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Project not found or access denied'
       })
     }
-    
+
     if (name !== undefined) project.name = name
     if (description !== undefined) project.description = description
-    
+
     await project.save()
-    
+
     return {
       project: {
         _id: project._id,
@@ -68,11 +68,11 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     console.error('Error updating kanban project:', error)
-    
+
     if (error.statusCode) {
       throw error
     }
-    
+
     throw createError({
       statusCode: 500,
       statusMessage: `Failed to update kanban project: ${error.message}`

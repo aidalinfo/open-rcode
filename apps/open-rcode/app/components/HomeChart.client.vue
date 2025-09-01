@@ -33,7 +33,7 @@ watch([currentPeriod, currentDays], () => {
 
 const data = computed<DataRecord[]>(() => {
   if (!costsData.value?.costs) return []
-  
+
   return costsData.value.costs.map((c: any) => ({
     date: new Date(c.date),
     amount: c.amount
@@ -46,10 +46,10 @@ const y = (d: DataRecord) => d.amount
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
 const formatNumber = (value: number) => {
-  return value.toLocaleString('en-US', { 
-    style: 'currency', 
-    currency: 'USD', 
-    maximumFractionDigits: 2 
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
   })
 }
 
@@ -65,19 +65,19 @@ const formatDate = (date: Date): string => {
 
 const xTicks = (i: number) => {
   if (!data.value[i]) return ''
-  
+
   const totalTicks = data.value.length
   const maxTicks = 6
-  
+
   if (totalTicks <= maxTicks) {
     return formatDate(data.value[i].date)
   }
-  
+
   const interval = Math.floor(totalTicks / maxTicks)
   if (i % interval === 0 || i === totalTicks - 1) {
     return formatDate(data.value[i].date)
   }
-  
+
   return ''
 }
 
@@ -85,7 +85,10 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
 </script>
 
 <template>
-  <UCard ref="cardRef" :ui="{ root: 'overflow-visible', body: '!px-0 !pt-0 !pb-3' }">
+  <UCard
+    ref="cardRef"
+    :ui="{ root: 'overflow-visible', body: '!px-0 !pt-0 !pb-3' }"
+  >
     <template #header>
       <div>
         <p class="text-xs text-muted uppercase mb-1.5">
@@ -100,10 +103,13 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
       </div>
     </template>
 
-    <div v-if="pending" class="h-96 flex items-center justify-center text-muted">
+    <div
+      v-if="pending"
+      class="h-96 flex items-center justify-center text-muted"
+    >
       Loading...
     </div>
-    
+
     <VisXYContainer
       v-else-if="data.length > 0"
       :data="data"
@@ -130,7 +136,7 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
         :tick-text-angle="0"
         :tick-text-anchor="'middle'"
       />
-      
+
       <VisAxis
         type="y"
         :y="y"
@@ -144,8 +150,11 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
 
       <VisTooltip />
     </VisXYContainer>
-    
-    <div v-else class="h-96 flex items-center justify-center text-muted">
+
+    <div
+      v-else
+      class="h-96 flex items-center justify-center text-muted"
+    >
       No cost data available
     </div>
   </UCard>

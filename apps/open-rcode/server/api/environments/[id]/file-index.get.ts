@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   if (!environmentId) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Environment ID is required',
+      statusMessage: 'Environment ID is required'
     })
   }
 
@@ -18,30 +18,30 @@ export default defineEventHandler(async (event) => {
   if (!sessionToken) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Unauthorized',
+      statusMessage: 'Unauthorized'
     })
   }
 
-     const session = await SessionModel.findOne({ sessionToken })
-     if (!session || session.expires < new Date()) {
-       throw createError({
-         statusCode: 401,
-         statusMessage: 'Session expired'
-       })
-     }
+  const session = await SessionModel.findOne({ sessionToken })
+  if (!session || session.expires < new Date()) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Session expired'
+    })
+  }
 
   const environment = await EnvironmentModel.findById(environmentId)
   if (!environment) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Environment not found',
+      statusMessage: 'Environment not found'
     })
   }
 
   if (environment.userId !== session.userId) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Forbidden',
+      statusMessage: 'Forbidden'
     })
   }
 
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     return {
       indexed: false,
       paths: [],
-      indexedAt: null,
+      indexedAt: null
     }
   }
 
@@ -60,6 +60,6 @@ export default defineEventHandler(async (event) => {
     indexed: true,
     paths: indexInfo.paths,
     indexedAt: indexInfo.indexedAt,
-    totalFiles: indexInfo.paths.length,
+    totalFiles: indexInfo.paths.length
   }
 })

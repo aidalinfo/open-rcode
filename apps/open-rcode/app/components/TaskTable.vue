@@ -5,16 +5,31 @@
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
           Recent tasks
         </h3>
-        <UIcon name="i-heroicons-clock" class="w-5 h-5 text-gray-400" />
+        <UIcon
+          name="i-heroicons-clock"
+          class="w-5 h-5 text-gray-400"
+        />
       </div>
     </template>
 
-    <div v-if="loading" class="flex justify-center py-8">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary-500" />
+    <div
+      v-if="loading"
+      class="flex justify-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-arrow-path"
+        class="w-6 h-6 animate-spin text-primary-500"
+      />
     </div>
 
-    <div v-else-if="tasks.length === 0" class="text-center py-8">
-      <UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+    <div
+      v-else-if="tasks.length === 0"
+      class="text-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-document-text"
+        class="w-12 h-12 mx-auto text-gray-400 mb-4"
+      />
       <p class="text-gray-600 dark:text-gray-400">
         No tasks have been executed yet.
       </p>
@@ -52,21 +67,33 @@
           <!-- Infos de la tâche -->
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-folder" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-folder"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400 truncate">
                 {{ item.environment?.name || 'N/A' }}
               </span>
             </div>
 
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-calendar"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 {{ formatDate(item.createdAt) }}
               </span>
             </div>
 
-            <div v-if="item.pr" class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-git-pull-request" class="w-4 h-4 text-gray-400" />
+            <div
+              v-if="item.pr"
+              class="flex items-center gap-2 text-sm"
+            >
+              <UIcon
+                name="i-lucide-git-pull-request"
+                class="w-4 h-4 text-gray-400"
+              />
               <ULink
                 :to="item.pr.url"
                 target="_blank"
@@ -148,7 +175,7 @@ const columns = computed((): TableColumn<Task>[] => [
     accessorKey: 'name',
     header: 'Task',
     cell: ({ row }: { row: Row<Task> }) => {
-      return h('div', { class: 'font-medium text-gray-900 dark:text-white truncate max-w-xs' }, 
+      return h('div', { class: 'font-medium text-gray-900 dark:text-white truncate max-w-xs' },
         row.original.name
       )
     }
@@ -169,7 +196,7 @@ const columns = computed((): TableColumn<Task>[] => [
     id: 'environment',
     header: 'Environment',
     cell: ({ row }: { row: Row<Task> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 truncate max-w-xs' },
         row.original.environment?.name || 'N/A'
       )
     }
@@ -179,7 +206,7 @@ const columns = computed((): TableColumn<Task>[] => [
     accessorKey: 'createdAt',
     header: 'Created on',
     cell: ({ row }: { row: Row<Task> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' },
         formatDate(row.original.createdAt)
       )
     }

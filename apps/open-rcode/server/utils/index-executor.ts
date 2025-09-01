@@ -7,7 +7,6 @@ import { decrypt } from './crypto'
 import { generateInstallationToken } from './github-app'
 
 export class IndexExecutor {
-
   async executeIndexing(environmentId: string, userId: string): Promise<void> {
     console.log(`🔍 Starting file indexing for environment: ${environmentId}`)
 
@@ -31,10 +30,10 @@ export class IndexExecutor {
         image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest',
         name: `openrcode-index-${environmentId}-${Date.now()}`,
         environment: {
-          'OPENRCODE_TYPE': 'index',
-          'OPENRCODE_ENVIRONMENT': environmentId,
-          'OPENRCODE_USER': userId,
-        },
+          OPENRCODE_TYPE: 'index',
+          OPENRCODE_ENVIRONMENT: environmentId,
+          OPENRCODE_USER: userId
+        }
       })
       console.log(`📦 Created container: ${containerId}`)
 
@@ -53,13 +52,13 @@ export class IndexExecutor {
 
       console.log(`🌳 Indexing files in: ${repoPath}`)
       const findCommand = `cd "${repoPath}" && find . -type f -not -path '*/\\.*' -not -path '*/node_modules/*' -not -path '*/vendor/*' -not -path '*/dist/*' -not -path '*/build/*' | sort`
-      
+
       const result = await containerManager.executeInContainer({
         containerId,
         command: ['sh', '-c', findCommand],
-        user: 'root',
+        user: 'root'
       })
-      
+
       const paths = result.stdout
         .split('\n')
         .filter(path => path.trim() !== '')
@@ -72,11 +71,11 @@ export class IndexExecutor {
         {
           environmentId,
           paths,
-          indexedAt: new Date(),
+          indexedAt: new Date()
         },
         {
           upsert: true,
-          new: true,
+          new: true
         }
       )
 

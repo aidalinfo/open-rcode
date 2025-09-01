@@ -1,5 +1,5 @@
 import { DockerManager } from './docker'
-import { BaseContainerManager } from './container/base-container-manager'
+import type { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
 import { createLogger } from './logger'
 
@@ -20,7 +20,7 @@ export class ContainerCleanup {
 
       await this.stopAndRemoveContainer(task.dockerId)
       await this.cleanupWorkspaceFiles(taskId)
-      
+
       // Supprimer la référence du conteneur de la tâche
       task.dockerId = null
       await task.save()
@@ -42,12 +42,12 @@ export class ContainerCleanup {
 
   private async cleanupWorkspaceFiles(taskId: string): Promise<void> {
     const hostWorkspaceDir = `/tmp/openrcode-workspaces/${taskId}`
-    
+
     try {
       const { exec } = await import('child_process')
       const { promisify } = await import('util')
       const execAsync = promisify(exec)
-      
+
       await execAsync(`rm -rf ${hostWorkspaceDir}`)
     } catch (error) {
       this.logger.warn({ directory: hostWorkspaceDir }, 'Failed to cleanup workspace directory')

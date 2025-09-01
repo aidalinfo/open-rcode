@@ -1,23 +1,39 @@
 <template>
   <UDashboardPanel>
-    
     <template #body>
       <UContainer class="flex flex-col h-full px-4">
-        <div v-if="loading" class="flex-1 flex items-center justify-center">
+        <div
+          v-if="loading"
+          class="flex-1 flex items-center justify-center"
+        >
           <div class="text-center">
-            <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
-            <p class="mt-2">Loading task...</p>
+            <UIcon
+              name="i-heroicons-arrow-path"
+              class="w-8 h-8 mx-auto text-gray-400 animate-spin"
+            />
+            <p class="mt-2">
+              Loading task...
+            </p>
           </div>
         </div>
 
-        <div v-else-if="error" class="flex-1 flex items-center justify-center">
+        <div
+          v-else-if="error"
+          class="flex-1 flex items-center justify-center"
+        >
           <div class="text-center text-red-500">
-            <UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 mx-auto mb-2" />
+            <UIcon
+              name="i-heroicons-exclamation-triangle"
+              class="w-8 h-8 mx-auto mb-2"
+            />
             <p>{{ error }}</p>
           </div>
         </div>
 
-        <div v-else-if="task" class="flex flex-col h-full">
+        <div
+          v-else-if="task"
+          class="flex flex-col h-full"
+        >
           <UChatMessages
             :assistant="{
               side: 'left',
@@ -50,17 +66,26 @@
             class="flex-1"
           >
             <template #content="{ message }">
-              <div v-if="isPRLink(message)" class="pr-link-message">
+              <div
+                v-if="isPRLink(message)"
+                class="pr-link-message"
+              >
                 <div class="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                   <div class="flex items-center gap-3">
-                    <UIcon name="i-lucide-git-branch" class="w-5 h-5 text-green-600" />
+                    <UIcon
+                      name="i-lucide-git-branch"
+                      class="w-5 h-5 text-green-600"
+                    />
                     <div class="flex-1">
-                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Pull Request created</p>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ message.content }}</p>
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Pull Request created
+                      </p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ message.content }}
+                      </p>
                     </div>
                   </div>
                   <UButton
-                    @click="openGitHubPR(message.content)"
                     icon="i-simple-icons-github"
                     size="sm"
                     color="neutral"
@@ -68,11 +93,20 @@
                     label="Open"
                     target="_blank"
                     class="w-full sm:w-auto"
+                    @click="openGitHubPR(message.content)"
                   />
                 </div>
               </div>
-              <ToolMessageTree v-else-if="message.type === 'tools'" :message="message.content" />
-              <MDC v-else :value="message.content" :cache-key="message.id" unwrap="p" />
+              <ToolMessageTree
+                v-else-if="message.type === 'tools'"
+                :message="message.content"
+              />
+              <MDC
+                v-else
+                :value="message.content"
+                :cache-key="message.id"
+                unwrap="p"
+              />
             </template>
           </UChatMessages>
         </div>
@@ -82,7 +116,6 @@
 </template>
 
 <script setup lang="ts">
-
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
@@ -112,7 +145,7 @@ const chatStatus = computed(() => {
 const formattedMessages = computed(() => {
   const grouped: any[] = []
   let currentToolGroup: any = null
-  
+
   for (const message of messages.value) {
     if (isToolMessage(message)) {
       // Si c'est un message outil
@@ -135,7 +168,7 @@ const formattedMessages = computed(() => {
         grouped.push(currentToolGroup)
         currentToolGroup = null
       }
-      
+
       // Ajouter le message normal
       grouped.push({
         id: message._id || Math.random(),
@@ -146,30 +179,30 @@ const formattedMessages = computed(() => {
       })
     }
   }
-  
+
   // Finaliser le dernier groupe d'outils si nécessaire
   if (currentToolGroup) {
     grouped.push(currentToolGroup)
   }
-  
+
   return grouped
 })
 
 // Helper function to detect PR links
 const isPRLink = (message: any) => {
   return message.type === 'pr_link' || (
-    message.role === 'assistant' && 
-    typeof message.content === 'string' && 
-    message.content.includes('github.com') && 
-    message.content.includes('/pull/')
+    message.role === 'assistant'
+    && typeof message.content === 'string'
+    && message.content.includes('github.com')
+    && message.content.includes('/pull/')
   )
 }
 
 // Helper function to detect tool messages
 const isToolMessage = (message: any) => {
-  return message.role === 'assistant' && 
-    typeof message.content === 'string' && 
-    (message.content.includes('🔧 **') || message.content.includes('🔌 **'))
+  return message.role === 'assistant'
+    && typeof message.content === 'string'
+    && (message.content.includes('🔧 **') || message.content.includes('🔌 **'))
 }
 
 // Function to open GitHub PR
@@ -237,7 +270,6 @@ const fetchTaskAndMessages = async () => {
       isTaskRunning.value = false
       if (pollInterval) clearInterval(pollInterval)
     }
-
   } catch (err) {
     if (import.meta.dev) console.error('Error fetching data:', err)
     error.value = 'Unable to load task information.'
@@ -259,4 +291,3 @@ onUnmounted(() => {
   navbarBadge.value = null
 })
 </script>
-

@@ -1,4 +1,4 @@
-import { BaseAIProvider, AIProviderType } from './base-ai-provider'
+import type { BaseAIProvider, AIProviderType } from './base-ai-provider'
 import { ClaudeProvider } from './claude-provider'
 import { GeminiProvider } from './gemini-provider'
 
@@ -8,11 +8,11 @@ export class AIProviderFactory {
       case 'anthropic-api':
       case 'claude-oauth':
         return new ClaudeProvider(providerType)
-      
+
       case 'gemini-cli':
       case 'admin-gemini':
         return new GeminiProvider(providerType)
-      
+
       default:
         throw new Error(`Unsupported AI provider: ${providerType}`)
     }

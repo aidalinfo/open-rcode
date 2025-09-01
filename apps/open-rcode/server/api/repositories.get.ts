@@ -7,7 +7,7 @@ import { logger } from '../utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -31,20 +31,20 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     logger.debug({ userId: user.githubId, installationIds: user.githubAppInstallationIds }, 'User installation IDs in DB')
-    
+
     if (!user.githubAppInstallationIds || user.githubAppInstallationIds.length === 0) {
       throw createError({
         statusCode: 400,
         statusMessage: 'GitHub App not installed'
       })
     }
-    
+
     // Récupérer les repositories de toutes les installations
     const allRepositories = []
     let totalCount = 0
-    
+
     for (const installationId of user.githubAppInstallationIds) {
       try {
         const repositories = await getInstallationRepositories(installationId)
@@ -55,9 +55,9 @@ export default defineEventHandler(async (event) => {
         logger.error({ error, installationId }, 'Error fetching repositories for installation')
       }
     }
-    
+
     logger.info({ totalCount, repositories: allRepositories.map((r: any) => r.full_name) }, 'Total repositories found across all installations')
-    
+
     return {
       repositories: allRepositories.map((repo: any) => ({
         id: repo.id,

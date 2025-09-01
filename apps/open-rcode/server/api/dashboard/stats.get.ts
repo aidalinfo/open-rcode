@@ -8,7 +8,7 @@ import { UserCostModel } from '../../models/UserCost'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -32,28 +32,28 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     // Récupérer les statistiques en parallèle
     const [taskCount, totalCost, pullRequestCount, environmentCount] = await Promise.all([
       // Nombre total de tâches
       TaskModel.countDocuments({ userId: user.githubId }),
-      
+
       // Coût total en USD
       UserCostModel.aggregate([
         { $match: { userId: user.githubId } },
         { $group: { _id: null, total: { $sum: '$costUsd' } } }
       ]).then(result => result[0]?.total || 0),
-      
+
       // Nombre de pull requests (tâches avec PR)
-      TaskModel.countDocuments({ 
-        userId: user.githubId, 
-        pr: { $exists: true, $ne: null } 
+      TaskModel.countDocuments({
+        userId: user.githubId,
+        pr: { $exists: true, $ne: null }
       }),
-      
+
       // Nombre d'environnements
       EnvironmentModel.countDocuments({ userId: user.githubId })
     ])
-    
+
     return {
       stats: {
         taskCount,
@@ -64,12 +64,12 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
-    
+
     // Si c'est une erreur createError (déjà formatée)
     if (error.statusCode) {
       throw error
     }
-    
+
     // Erreur générique
     throw createError({
       statusCode: 500,

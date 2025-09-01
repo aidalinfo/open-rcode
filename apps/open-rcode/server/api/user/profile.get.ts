@@ -4,9 +4,9 @@ import { connectToDatabase } from '../../utils/database'
 
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
-  
+
   const sessionToken = getCookie(event, 'session')
-  
+
   if (!sessionToken) {
     throw createError({
       statusCode: 401,
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = await UserModel.findOne({ githubId: session.userId })
-  
+
   if (!user) {
     throw createError({
       statusCode: 404,

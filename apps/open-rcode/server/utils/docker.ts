@@ -37,7 +37,6 @@ export interface ContainerInfo {
   labels?: Record<string, string>
 }
 
-
 export interface DockerConnectionOptions {
   socketPath?: string
   host?: string
@@ -203,12 +202,12 @@ export class DockerManager {
       if (options.ports) {
         const exposedPorts: any = {}
         const portBindings: any = {}
-        
+
         Object.entries(options.ports).forEach(([containerPort, hostPort]) => {
           exposedPorts[`${containerPort}/tcp`] = {}
           portBindings[`${containerPort}/tcp`] = [{ HostPort: hostPort }]
         })
-        
+
         createOptions.ExposedPorts = exposedPorts
         createOptions.HostConfig.PortBindings = portBindings
       }
@@ -220,13 +219,13 @@ export class DockerManager {
 
       // Créer le conteneur
       const container = await this.docker.createContainer(createOptions)
-      
+
       // Démarrer le conteneur
       await container.start()
-      
+
       const containerInfo = await container.inspect()
       this.logger.info({ containerId: containerInfo.Id }, 'Container created and started')
-      
+
       return containerInfo.Id
     } catch (error) {
       this.logger.error({ error }, 'Error creating container')
@@ -268,10 +267,10 @@ export class DockerManager {
 
       // Créer l'exécution
       const exec = await container.exec(execOptions)
-      
+
       // Démarrer l'exécution
       const stream = await exec.start({ hijack: true, stdin: false })
-      
+
       let stdout = ''
       let stderr = ''
 
@@ -282,13 +281,13 @@ export class DockerManager {
             stdout += chunk.toString()
           }
         }
-        
+
         const stderrStream = {
           write: (chunk: Buffer) => {
             stderr += chunk.toString()
           }
         }
-        
+
         this.docker.modem.demuxStream(stream, stdoutStream as any, stderrStream as any)
 
         stream.on('end', resolve)
@@ -341,17 +340,19 @@ export class DockerManager {
     try {
       const container = this.docker.getContainer(containerId)
       const data = await container.inspect()
-      
+
       return {
         id: data.Id,
         name: data.Name.replace('/', ''),
         image: data.Config.Image,
         status: data.State.Status,
         state: data.State.Status,
-        ports: data.NetworkSettings.Ports ? Object.entries(data.NetworkSettings.Ports).map(([port, bindings]) => ({
-          port,
-          bindings
-        })) : [],
+        ports: data.NetworkSettings.Ports
+          ? Object.entries(data.NetworkSettings.Ports).map(([port, bindings]) => ({
+              port,
+              bindings
+            }))
+          : [],
         created: new Date(data.Created),
         labels: data.Config.Labels
       }
@@ -366,13 +367,13 @@ export class DockerManager {
    */
   async listContainers(all: boolean = false): Promise<ContainerInfo[]> {
     try {
-      const containers = await this.docker.listContainers({ 
+      const containers = await this.docker.listContainers({
         all,
         filters: {
           label: ['openrcode.managed=true']
         }
       })
-      
+
       return containers.map(container => ({
         id: container.Id,
         name: container.Names[0].replace('/', ''),
@@ -405,7 +406,7 @@ export class DockerManager {
         tail,
         timestamps: true
       })
-      
+
       return stream.toString()
     } catch (error) {
       this.logger.error({ error, containerId }, 'Error getting container logs')
@@ -419,19 +420,19 @@ export class DockerManager {
   async copyToContainer(containerId: string, sourcePath: string, destPath: string): Promise<void> {
     try {
       const container = this.docker.getContainer(containerId)
-      
+
       // Créer un stream depuis le fichier source
       const fs = await import('fs')
       const path = await import('path')
       const tar = await import('tar-stream') as any
-      
+
       const pack = tar.pack()
       const fileName = path.basename(sourcePath)
       const fileContent = fs.readFileSync(sourcePath)
-      
+
       pack.entry({ name: fileName }, fileContent)
       pack.finalize()
-      
+
       await container.putArchive(pack, { path: destPath })
       this.logger.debug({ sourcePath, destPath, containerId }, 'Files copied to container')
     } catch (error) {
@@ -461,7 +462,7 @@ export class DockerManager {
     try {
       const containers = await this.listContainers(true)
       const stoppedContainers = containers.filter(c => c.state !== 'running')
-      
+
       let cleanedCount = 0
       for (const container of stoppedContainers) {
         try {
@@ -471,7 +472,7 @@ export class DockerManager {
           this.logger.warn({ containerId: container.id, error }, 'Failed to remove container during cleanup')
         }
       }
-      
+
       this.logger.info({ cleanedCount }, 'Cleaned up containers')
       return cleanedCount
     } catch (error) {

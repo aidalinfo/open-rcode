@@ -12,8 +12,8 @@
         </div>
       </div>
 
-      <EnvironnementsTable 
-        :environments="environments" 
+      <EnvironnementsTable
+        :environments="environments"
         :loading="loading"
         :total="total"
         :page="page"

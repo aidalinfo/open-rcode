@@ -18,7 +18,11 @@
           </h2>
         </template>
 
-        <UForm :state="form" @submit="submitForm" class="space-y-12">
+        <UForm
+          :state="form"
+          class="space-y-12"
+          @submit="submitForm"
+        >
           <!-- Form Fields Component -->
           <EnvironmentFormFields
             v-model="form"
@@ -45,7 +49,6 @@
           </div>
         </UForm>
       </UCard>
-
     </div>
   </UContainer>
 </template>
@@ -73,7 +76,7 @@ const form = ref({
   aiProvider: 'anthropic-api' as SelectOption | string,
   model: 'sonnet' as SelectOption | string,
   defaultBranch: { label: 'main', value: 'main' } as SelectOption,
-  environmentVariables: [] as Array<{ key: string; value: string; description?: string }>,
+  environmentVariables: [] as Array<{ key: string, value: string, description?: string }>,
   configurationScript: '',
   subAgents: [] as string[]
 })
@@ -105,7 +108,7 @@ const submitForm = async () => {
   try {
     const selectedRepo = form.value.selectedRepository?.value || form.value.selectedRepository
     if (import.meta.dev) console.log('selectedRepository:', selectedRepo, typeof selectedRepo)
-    
+
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
         title: 'Error',
@@ -114,12 +117,12 @@ const submitForm = async () => {
       })
       return
     }
-    
+
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = typeof form.value.runtime === 'object' ? form.value.runtime.value : form.value.runtime
     const selectedAiProvider = typeof form.value.aiProvider === 'object' ? form.value.aiProvider.value : form.value.aiProvider
     const selectedModel = canSelectModel.value ? (typeof form.value.model === 'object' ? form.value.model.value : form.value.model) : null
-    
+
     if (import.meta.dev) {
       console.log('FORM VALUES:')
       console.log('- form.value:', form.value)
@@ -128,9 +131,9 @@ const submitForm = async () => {
       console.log('- selectedModel:', selectedModel, typeof selectedModel)
       console.log('- form.value.aiProvider:', form.value.aiProvider)
     }
-    
+
     const selectedDefaultBranch = typeof form.value.defaultBranch === 'object' ? form.value.defaultBranch.value : form.value.defaultBranch
-    
+
     const payload = {
       organization,
       repository,
@@ -149,10 +152,10 @@ const submitForm = async () => {
       method: 'POST',
       body: payload
     })
-    
+
     // Store the created environment ID for indexation
     createdEnvironmentId.value = response.environment._id
-    
+
     toast.add({
       title: 'Success',
       description: 'Environment created successfully',
@@ -161,14 +164,13 @@ const submitForm = async () => {
 
     // Reset form but keep showing the indexation section
     resetForm()
-    
+
     // Optionally redirect after a delay to allow indexation
     setTimeout(() => {
       if (!createdEnvironmentId.value || !document.querySelector('.indexing')) {
         router.push('/app/settings')
       }
     }, 3000)
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error submitting form:', error)
     toast.add({

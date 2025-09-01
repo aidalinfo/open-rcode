@@ -1,7 +1,12 @@
 <template>
   <div class="space-y-12">
     <!-- SubAgent name -->
-    <UFormField label="Name" name="name" required class="mt-8">
+    <UFormField
+      label="Name"
+      name="name"
+      required
+      class="mt-8"
+    >
       <UInput
         v-model="name"
         placeholder="e.g., Code Reviewer, Test Generator, Documentation Writer"
@@ -16,7 +21,11 @@
     </UFormField>
 
     <!-- Description -->
-    <UFormField label="Description" name="description" class="mt-10">
+    <UFormField
+      label="Description"
+      name="description"
+      class="mt-10"
+    >
       <UTextarea
         v-model="description"
         placeholder="Describe what this SubAgent does and when it should be used"
@@ -32,7 +41,12 @@
     </UFormField>
 
     <!-- Prompt -->
-    <UFormField label="Prompt" name="prompt" required class="mt-10">
+    <UFormField
+      label="Prompt"
+      name="prompt"
+      required
+      class="mt-10"
+    >
       <UTextarea
         v-model="prompt"
         placeholder="Enter the system prompt that defines how this SubAgent should behave..."
@@ -48,7 +62,11 @@
     </UFormField>
 
     <!-- Visibility -->
-    <UFormField label="Visibility" name="isPublic" class="mt-10">
+    <UFormField
+      label="Visibility"
+      name="isPublic"
+      class="mt-10"
+    >
       <div class="flex items-center gap-3">
         <USwitch
           v-model="isPublic"
@@ -88,21 +106,21 @@ const emit = defineEmits<{
 // Simple v-model computed properties
 const name = computed({
   get: () => props.modelValue.name,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, name: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, name: value })
 })
 
 const description = computed({
   get: () => props.modelValue.description,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, description: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, description: value })
 })
 
 const prompt = computed({
   get: () => props.modelValue.prompt,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, prompt: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, prompt: value })
 })
 
 const isPublic = computed({
   get: () => props.modelValue.isPublic,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, isPublic: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, isPublic: value })
 })
 </script>

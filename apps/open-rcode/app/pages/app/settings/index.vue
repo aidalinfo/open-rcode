@@ -18,12 +18,18 @@
           </h2>
         </template>
 
-        <div v-if="loadingGithubStatus" class="space-y-4">
+        <div
+          v-if="loadingGithubStatus"
+          class="space-y-4"
+        >
           <USkeleton class="h-4 w-full" />
           <USkeleton class="h-10 w-48" />
         </div>
 
-        <div v-else class="space-y-4">
+        <div
+          v-else
+          class="space-y-4"
+        >
           <UAlert
             v-if="route.query.success === 'github_app_installed'"
             color="success"
@@ -31,7 +37,7 @@
             title="Success"
             description="Your GitHub App has been successfully installed!"
           />
-          
+
           <UAlert
             v-if="route.query.error === 'github_app_auth_failed'"
             color="error"
@@ -45,13 +51,16 @@
           </p>
 
           <UButton
-            @click="installGitHubApp"
             variant="outline"
             size="lg"
             :loading="isInstalling"
+            @click="installGitHubApp"
           >
             <template #leading>
-              <UIcon name="i-simple-icons-github" class="w-5 h-5" />
+              <UIcon
+                name="i-simple-icons-github"
+                class="w-5 h-5"
+              />
             </template>
             {{ hasGithubApp ? 'Modify GitHub permissions' : 'Install GitHub App' }}
           </UButton>
@@ -70,7 +79,10 @@
           </div>
         </template>
 
-        <div v-if="loadingAITokens" class="space-y-6">
+        <div
+          v-if="loadingAITokens"
+          class="space-y-6"
+        >
           <!-- Anthropic API Key Skeleton -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
@@ -80,9 +92,9 @@
             <USkeleton class="h-4 w-full" />
             <USkeleton class="h-10 w-full" />
           </div>
-          
+
           <USeparator />
-          
+
           <!-- Claude OAuth Token Skeleton -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
@@ -92,9 +104,9 @@
             <USkeleton class="h-4 w-full" />
             <USkeleton class="h-10 w-full" />
           </div>
-          
+
           <USeparator />
-          
+
           <!-- Gemini API Key Skeleton -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
@@ -106,19 +118,33 @@
           </div>
         </div>
 
-        <div v-else class="space-y-6">
+        <div
+          v-else
+          class="space-y-6"
+        >
           <!-- API Key Anthropic -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-cpu-chip" class="text-purple-500" />
-              <h3 class="text-lg font-medium">Anthropic API Key</h3>
+              <UIcon
+                name="i-heroicons-cpu-chip"
+                class="text-purple-500"
+              />
+              <h3 class="text-lg font-medium">
+                Anthropic API Key
+              </h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
               {{ hasAnthropicKey ? 'Your Anthropic API key is configured and securely encrypted.' : 'Configure your Anthropic API key to use Claude via API.' }}
             </p>
 
-            <div v-if="!hasAnthropicKey" class="space-y-4">
-              <UFormField label="Anthropic API Key" name="anthropicKey">
+            <div
+              v-if="!hasAnthropicKey"
+              class="space-y-4"
+            >
+              <UFormField
+                label="Anthropic API Key"
+                name="anthropicKey"
+              >
                 <div class="flex gap-2">
                   <UInput
                     v-model="anthropicKeyInput"
@@ -129,10 +155,10 @@
                     :disabled="savingApiKey"
                   />
                   <UButton
-                    @click="saveAnthropicKey"
                     :loading="savingApiKey"
                     :disabled="!anthropicKeyInput || !anthropicKeyInput.startsWith('sk-ant-')"
                     size="lg"
+                    @click="saveAnthropicKey"
                   >
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
@@ -143,18 +169,24 @@
               </UFormField>
             </div>
 
-            <div v-else class="flex items-center justify-between">
+            <div
+              v-else
+              class="flex items-center justify-between"
+            >
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <UIcon
+                  name="i-heroicons-shield-check"
+                  class="text-green-500"
+                />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
                   API Key configured
                 </span>
               </div>
               <UButton
-                @click="resetAnthropicKey"
                 variant="ghost"
                 size="sm"
                 color="error"
+                @click="resetAnthropicKey"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -169,15 +201,26 @@
           <!-- Token OAuth Claude -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-identification" class="text-blue-500" />
-              <h3 class="text-lg font-medium">Claude Code OAuth Token</h3>
+              <UIcon
+                name="i-heroicons-identification"
+                class="text-blue-500"
+              />
+              <h3 class="text-lg font-medium">
+                Claude Code OAuth Token
+              </h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
               {{ hasClaudeOAuth ? 'Your Claude Code OAuth token is configured and securely encrypted.' : 'Configure your OAuth token to use Claude Code CLI. (use claude setup-token command  to obtain the OAuth token.)' }}
             </p>
 
-            <div v-if="!hasClaudeOAuth" class="space-y-4">
-              <UFormField label="Claude Code OAuth Token" name="claudeOAuthToken">
+            <div
+              v-if="!hasClaudeOAuth"
+              class="space-y-4"
+            >
+              <UFormField
+                label="Claude Code OAuth Token"
+                name="claudeOAuthToken"
+              >
                 <div class="flex gap-2">
                   <UInput
                     v-model="claudeOAuthTokenInput"
@@ -188,10 +231,10 @@
                     :disabled="savingOAuthToken"
                   />
                   <UButton
-                    @click="saveClaudeOAuthToken"
                     :loading="savingOAuthToken"
                     :disabled="!claudeOAuthTokenInput"
                     size="lg"
+                    @click="saveClaudeOAuthToken"
                   >
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
@@ -202,18 +245,24 @@
               </UFormField>
             </div>
 
-            <div v-else class="flex items-center justify-between">
+            <div
+              v-else
+              class="flex items-center justify-between"
+            >
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <UIcon
+                  name="i-heroicons-shield-check"
+                  class="text-green-500"
+                />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
                   OAuth Token configured
                 </span>
               </div>
               <UButton
-                @click="resetClaudeOAuthToken"
                 variant="ghost"
                 size="sm"
                 color="error"
+                @click="resetClaudeOAuthToken"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -228,15 +277,26 @@
           <!-- API Key Gemini -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-sparkles" class="text-amber-500" />
-              <h3 class="text-lg font-medium">Google Gemini API Key</h3>
+              <UIcon
+                name="i-heroicons-sparkles"
+                class="text-amber-500"
+              />
+              <h3 class="text-lg font-medium">
+                Google Gemini API Key
+              </h3>
             </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm">
               {{ hasGeminiKey ? 'Your Gemini API key is configured and securely encrypted.' : 'Configure your API key to use Google Gemini CLI.' }}
             </p>
 
-            <div v-if="!hasGeminiKey" class="space-y-4">
-              <UFormField label="Google Gemini API Key" name="geminiApiKey">
+            <div
+              v-if="!hasGeminiKey"
+              class="space-y-4"
+            >
+              <UFormField
+                label="Google Gemini API Key"
+                name="geminiApiKey"
+              >
                 <div class="flex gap-2">
                   <UInput
                     v-model="geminiApiKeyInput"
@@ -247,10 +307,10 @@
                     :disabled="savingGeminiKey"
                   />
                   <UButton
-                    @click="saveGeminiApiKey"
                     :loading="savingGeminiKey"
                     :disabled="!geminiApiKeyInput"
                     size="lg"
+                    @click="saveGeminiApiKey"
                   >
                     <template #leading>
                       <UIcon name="i-heroicons-key" />
@@ -261,18 +321,24 @@
               </UFormField>
             </div>
 
-            <div v-else class="flex items-center justify-between">
+            <div
+              v-else
+              class="flex items-center justify-between"
+            >
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-shield-check" class="text-green-500" />
+                <UIcon
+                  name="i-heroicons-shield-check"
+                  class="text-green-500"
+                />
                 <span class="text-sm font-medium text-green-700 dark:text-green-400">
                   API Key configured
                 </span>
               </div>
               <UButton
-                @click="resetGeminiApiKey"
                 variant="ghost"
                 size="sm"
                 color="error"
+                @click="resetGeminiApiKey"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -284,10 +350,9 @@
         </div>
       </UCard>
 
-
       <!-- Tableau des environnements -->
-      <EnvironnementsTable 
-        :environments="environments" 
+      <EnvironnementsTable
+        :environments="environments"
         :loading="loading"
         :total="totalEnvironments"
         :page="currentPage"
@@ -347,7 +412,6 @@ const fetchEnvironments = async () => {
   }
 }
 
-
 const installGitHubApp = () => {
   isInstalling.value = true
   window.location.href = '/api/auth/github-app'
@@ -395,7 +459,7 @@ const checkAllAITokens = async () => {
   try {
     await Promise.all([
       checkAnthropicKey(),
-      checkClaudeOAuthToken(), 
+      checkClaudeOAuthToken(),
       checkGeminiApiKey()
     ])
   } finally {
@@ -419,13 +483,13 @@ const saveAnthropicKey = async () => {
       method: 'PUT',
       body: { anthropicKey: anthropicKeyInput.value }
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'API key saved successfully',
       color: 'success'
     })
-    
+
     hasAnthropicKey.value = true
     anthropicKeyInput.value = ''
   } catch (error) {
@@ -446,13 +510,13 @@ const resetAnthropicKey = async () => {
         method: 'PUT',
         body: { anthropicKey: '' }
       })
-      
+
       toast.add({
         title: 'Success',
         description: 'API key deleted successfully',
         color: 'success'
       })
-      
+
       hasAnthropicKey.value = false
     } catch (error) {
       toast.add({
@@ -480,13 +544,13 @@ const saveClaudeOAuthToken = async () => {
       method: 'PUT',
       body: { claudeOAuthToken: claudeOAuthTokenInput.value }
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'OAuth token saved successfully',
       color: 'success'
     })
-    
+
     hasClaudeOAuth.value = true
     claudeOAuthTokenInput.value = ''
   } catch (error) {
@@ -507,13 +571,13 @@ const resetClaudeOAuthToken = async () => {
         method: 'PUT',
         body: { claudeOAuthToken: '' }
       })
-      
+
       toast.add({
         title: 'Success',
         description: 'OAuth token deleted successfully',
         color: 'success'
       })
-      
+
       hasClaudeOAuth.value = false
     } catch (error) {
       toast.add({
@@ -541,13 +605,13 @@ const saveGeminiApiKey = async () => {
       method: 'PUT',
       body: { geminiApiKey: geminiApiKeyInput.value }
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'Gemini API key saved successfully',
       color: 'success'
     })
-    
+
     hasGeminiKey.value = true
     geminiApiKeyInput.value = ''
   } catch (error) {
@@ -568,13 +632,13 @@ const resetGeminiApiKey = async () => {
         method: 'PUT',
         body: { geminiApiKey: '' }
       })
-      
+
       toast.add({
         title: 'Success',
         description: 'Gemini API key deleted successfully',
         color: 'success'
       })
-      
+
       hasGeminiKey.value = false
     } catch (error) {
       toast.add({

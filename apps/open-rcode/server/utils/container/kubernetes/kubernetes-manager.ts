@@ -17,8 +17,8 @@ export interface KubernetesContainerOptions {
   restartPolicy?: 'Never' | 'OnFailure' | 'Always'
   serviceAccount?: string
   resources?: {
-    requests?: { cpu?: string; memory?: string }
-    limits?: { cpu?: string; memory?: string }
+    requests?: { cpu?: string, memory?: string }
+    limits?: { cpu?: string, memory?: string }
   }
 }
 
@@ -50,7 +50,6 @@ export interface ContainerStatus {
   restartCount: number
 }
 
-
 export interface KubernetesConnectionOptions {
   kubeconfig?: string
   context?: string
@@ -70,7 +69,7 @@ export class KubernetesManager {
     this.defaultNamespace = options?.namespace || 'default'
     this.context = options?.context
     this.kubeconfig = options?.kubeconfig
-    
+
     this.logger.info({
       namespace: this.defaultNamespace,
       context: this.context,
@@ -110,66 +109,66 @@ export class KubernetesManager {
 
   private buildKubectlCommand(args: string[]): string {
     let cmd = 'kubectl'
-    
+
     if (this.kubeconfig) {
       cmd += ` --kubeconfig="${this.kubeconfig}"`
     }
-    
+
     if (this.context) {
       cmd += ` --context="${this.context}"`
     }
-    
+
     return `${cmd} ${args.join(' ')}`
   }
 
-  private async executeKubectlWithStdin(args: string[], input: string): Promise<{ stdout: string; stderr: string }> {
+  private async executeKubectlWithStdin(args: string[], input: string): Promise<{ stdout: string, stderr: string }> {
     this.logger.debug({ args }, '🔧 Executing kubectl with stdin')
-    
+
     return new Promise((resolve, reject) => {
       const kubectlArgs = ['kubectl']
-      
+
       if (this.kubeconfig) {
         kubectlArgs.push(`--kubeconfig=${this.kubeconfig}`)
       }
-      
+
       if (this.context) {
         kubectlArgs.push(`--context=${this.context}`)
       }
-      
+
       kubectlArgs.push(...args)
 
       const process = spawn(kubectlArgs[0], kubectlArgs.slice(1))
-      
+
       let stdout = ''
       let stderr = ''
-      
+
       process.stdout.on('data', (data) => {
         stdout += data.toString()
       })
-      
+
       process.stderr.on('data', (data) => {
         stderr += data.toString()
       })
-      
+
       process.on('close', (code) => {
-        this.logger.debug({ 
-          code, 
+        this.logger.debug({
+          code,
           stdoutLength: stdout.length,
-          stderrLength: stderr.length 
+          stderrLength: stderr.length
         }, '📊 kubectl process closed')
-        
+
         if (code === 0) {
           resolve({ stdout, stderr })
         } else {
           reject(new Error(`kubectl command failed with code ${code}: ${stderr}`))
         }
       })
-      
+
       process.on('error', (error) => {
         this.logger.error({ error }, '❌ kubectl process error')
         reject(error)
       })
-      
+
       // Envoyer les données en stdin
       process.stdin.write(input)
       process.stdin.end()
@@ -215,14 +214,18 @@ export class KubernetesManager {
           name: 'main',
           image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest',
           workingDir: options.workdir,
-          env: options.environment ? Object.entries(options.environment).map(
-            ([name, value]) => ({ name, value })
-          ) : undefined,
+          env: options.environment
+            ? Object.entries(options.environment).map(
+                ([name, value]) => ({ name, value })
+              )
+            : undefined,
           command: options.command,
-          ports: options.ports ? Object.keys(options.ports).map(port => ({
-            containerPort: parseInt(port),
-            protocol: 'TCP'
-          })) : undefined,
+          ports: options.ports
+            ? Object.keys(options.ports).map(port => ({
+                containerPort: parseInt(port),
+                protocol: 'TCP'
+              }))
+            : undefined,
           resources: options.resources
         }],
         serviceAccount: options.serviceAccount
@@ -239,10 +242,10 @@ export class KubernetesManager {
       const manifestJson = JSON.stringify(manifest)
       const podName = manifest.metadata.name
       const namespace = manifest.metadata.namespace
-      
+
       this.logger.info({ podName, namespace }, '☸️ Creating Kubernetes pod')
       this.logger.debug({ image: 'ghcr.io/aidalinfo/open-rcoder-worker:latest' }, '📦 Using image')
-      
+
       // Appliquer le manifest
       try {
         await this.executeKubectlWithStdin(['apply', '-f', '-'], manifestJson)
@@ -251,11 +254,11 @@ export class KubernetesManager {
         this.logger.error({ error: applyError }, '❌ Failed to apply pod manifest')
         throw applyError
       }
-      
+
       // Attendre que le pod soit prêt
       this.logger.info('⏳ Waiting for pod to be ready...')
       await this.waitForPodReady(podName, namespace)
-      
+
       this.logger.info({ podName }, '🚀 Pod created and ready')
       return podName
     } catch (error) {
@@ -267,18 +270,18 @@ export class KubernetesManager {
   private async waitForPodReady(podName: string, namespace: string, timeout: number = 900): Promise<void> {
     const startTime = Date.now()
     let lastStatus = ''
-    
+
     while (Date.now() - startTime < timeout * 1000) {
       try {
         const podInfo = await this.getPodInfo(podName, namespace)
         if (podInfo) {
           const currentStatus = `${podInfo.phase}${podInfo.containers.length > 0 ? ` (${podInfo.containers.filter(c => c.ready).length}/${podInfo.containers.length} ready)` : ''}`
-          
+
           if (currentStatus !== lastStatus) {
             this.logger.debug({ status: currentStatus }, '📊 Pod status')
             lastStatus = currentStatus
           }
-          
+
           if (podInfo.phase === 'Running') {
             const readyContainers = podInfo.containers.filter(c => c.ready).length
             if (readyContainers === podInfo.containers.length) {
@@ -287,13 +290,13 @@ export class KubernetesManager {
             }
           }
         }
-        
+
         await new Promise(resolve => setTimeout(resolve, 2000))
       } catch (error) {
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
-    
+
     this.logger.error({ podName, timeout }, '⏰ Timeout: Pod did not become ready')
     throw new Error(`Pod ${podName} did not become ready within ${timeout} seconds`)
   }
@@ -302,32 +305,32 @@ export class KubernetesManager {
     return new Promise((resolve, reject) => {
       const namespace = options.namespace || this.defaultNamespace
       const container = options.container || 'main'
-      
-      this.logger.info({ 
-        podName: options.podName, 
+
+      this.logger.info({
+        podName: options.podName,
         command: options.command,
-        namespace 
+        namespace
       }, '🔧 Executing command in pod (streaming)')
       this.logger.debug('⏳ Command may take up to 30 minutes to complete...')
-      
+
       const kubectlArgs = ['kubectl']
-      
+
       if (this.kubeconfig) {
         kubectlArgs.push(`--kubeconfig=${this.kubeconfig}`)
       }
-      
+
       if (this.context) {
         kubectlArgs.push(`--context=${this.context}`)
       }
-      
+
       kubectlArgs.push('exec', options.podName, '-n', namespace, '-c', container, '--')
       kubectlArgs.push(...options.command)
 
       const process = spawn(kubectlArgs[0], kubectlArgs.slice(1))
-      
+
       let stdout = ''
       let stderr = ''
-      
+
       process.stdout.on('data', (data) => {
         const output = data.toString()
         stdout += output
@@ -335,7 +338,7 @@ export class KubernetesManager {
           onOutput(output)
         }
       })
-      
+
       process.stderr.on('data', (data) => {
         const output = data.toString()
         stderr += output
@@ -343,7 +346,7 @@ export class KubernetesManager {
           onOutput(output)
         }
       })
-      
+
       const timeout = setTimeout(() => {
         process.kill('SIGTERM')
         resolve({
@@ -352,24 +355,24 @@ export class KubernetesManager {
           exitCode: 124
         })
       }, 1800000) // 30 minutes timeout
-      
+
       process.on('close', (code) => {
         clearTimeout(timeout)
         this.logger.debug({ code }, '📊 kubectl process closed')
-        
+
         if (code === 0) {
           this.logger.debug('✅ Command executed successfully')
         } else {
           this.logger.warn({ exitCode: code }, '⚠️ Command failed')
         }
-        
+
         resolve({
           stdout,
           stderr,
           exitCode: code || 0
         })
       })
-      
+
       process.on('error', (error) => {
         clearTimeout(timeout)
         this.logger.error({ error }, '❌ kubectl process error')
@@ -382,49 +385,48 @@ export class KubernetesManager {
     try {
       const namespace = options.namespace || this.defaultNamespace
       const container = options.container || 'main'
-      
-      this.logger.info({ 
-        podName: options.podName, 
+
+      this.logger.info({
+        podName: options.podName,
         command: options.command,
-        namespace 
+        namespace
       }, '🔧 Executing command in pod')
       this.logger.debug('⏳ Command may take up to 30 minutes to complete...')
-      
+
       let execArgs = ['exec', options.podName, '-n', namespace, '-c', container, '--']
       execArgs = execArgs.concat(options.command)
-      
+
       const cmd = this.buildKubectlCommand(execArgs)
-      
-      
+
       try {
         // Use spawn instead of execAsync to handle complex commands properly
         const result = await new Promise<ExecuteResult>((resolve, reject) => {
           const kubectlArgs = ['kubectl']
-          
+
           if (this.kubeconfig) {
             kubectlArgs.push(`--kubeconfig=${this.kubeconfig}`)
           }
-          
+
           if (this.context) {
             kubectlArgs.push(`--context=${this.context}`)
           }
-          
+
           kubectlArgs.push('exec', options.podName, '-n', namespace, '-c', container, '--')
           kubectlArgs.push(...options.command)
 
           const process = spawn(kubectlArgs[0], kubectlArgs.slice(1))
-          
+
           let stdout = ''
           let stderr = ''
-          
+
           process.stdout.on('data', (data) => {
             stdout += data.toString()
           })
-          
+
           process.stderr.on('data', (data) => {
             stderr += data.toString()
           })
-          
+
           const timeout = setTimeout(() => {
             process.kill('SIGTERM')
             resolve({
@@ -433,7 +435,7 @@ export class KubernetesManager {
               exitCode: 124
             })
           }, 1800000) // 30 minutes timeout
-          
+
           process.on('close', (code) => {
             clearTimeout(timeout)
             this.logger.debug({ code }, '✅ kubectl process closed')
@@ -443,7 +445,7 @@ export class KubernetesManager {
               exitCode: code || 0
             })
           })
-          
+
           process.on('error', (error) => {
             clearTimeout(timeout)
             this.logger.error({ error }, '❌ kubectl process error')
@@ -481,9 +483,9 @@ export class KubernetesManager {
       const ns = namespace || this.defaultNamespace
       const cmd = this.buildKubectlCommand(['get', 'pod', podName, '-n', ns, '-o', 'json'])
       const { stdout } = await execAsync(cmd)
-      
+
       const podData = JSON.parse(stdout)
-      
+
       return {
         name: podData.metadata.name,
         namespace: podData.metadata.namespace,
@@ -509,19 +511,19 @@ export class KubernetesManager {
   async listPods(namespace?: string, labelSelector?: string): Promise<PodInfo[]> {
     try {
       const ns = namespace || this.defaultNamespace
-      let args = ['get', 'pods', '-n', ns, '-o', 'json']
-      
+      const args = ['get', 'pods', '-n', ns, '-o', 'json']
+
       if (labelSelector) {
         args.push('-l', labelSelector)
       } else {
         args.push('-l', 'openrcode.managed=true')
       }
-      
+
       const cmd = this.buildKubectlCommand(args)
       const { stdout } = await execAsync(cmd)
-      
+
       const podsData = JSON.parse(stdout)
-      
+
       return podsData.items.map((pod: any) => ({
         name: pod.metadata.name,
         namespace: pod.metadata.namespace,
@@ -547,15 +549,15 @@ export class KubernetesManager {
   async getPodLogs(podName: string, namespace?: string, tail: number = 100, container?: string): Promise<string> {
     try {
       const ns = namespace || this.defaultNamespace
-      let args = ['logs', podName, '-n', ns, `--tail=${tail}`, '--timestamps']
-      
+      const args = ['logs', podName, '-n', ns, `--tail=${tail}`, '--timestamps']
+
       if (container) {
         args.push('-c', container)
       }
-      
+
       const cmd = this.buildKubectlCommand(args)
       const { stdout } = await execAsync(cmd)
-      
+
       return stdout
     } catch (error) {
       this.logger.error({ error, podName }, 'Error getting pod logs')
@@ -563,27 +565,26 @@ export class KubernetesManager {
     }
   }
 
-
   async restartPod(podName: string, namespace?: string): Promise<void> {
     try {
       // Dans Kubernetes, on ne peut pas redémarrer un pod directement
       // On doit le supprimer et le recréer (si géré par un déploiement)
       // ou utiliser kubectl rollout restart pour les déploiements
       const ns = namespace || this.defaultNamespace
-      
+
       // Obtenir le manifest du pod existant
       const getCmd = this.buildKubectlCommand(['get', 'pod', podName, '-n', ns, '-o', 'yaml'])
       const { stdout } = await execAsync(getCmd)
-      
+
       // Supprimer le pod
       await this.deletePod(podName, namespace)
-      
+
       // Attendre un peu
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
+
       // Recréer le pod
       await this.executeKubectlWithStdin(['apply', '-f', '-'], stdout)
-      
+
       this.logger.info({ podName }, 'Pod restarted')
     } catch (error) {
       this.logger.error({ error, podName }, 'Error restarting pod')
@@ -595,12 +596,12 @@ export class KubernetesManager {
     try {
       const pods = await this.listPods(namespace)
       // Only clean up pods that are truly stopped/completed, not pending or running ones
-      const stoppedPods = pods.filter(p => 
-        p.phase === 'Succeeded' || 
-        p.phase === 'Failed' || 
-        p.phase === 'Unknown'
+      const stoppedPods = pods.filter(p =>
+        p.phase === 'Succeeded'
+        || p.phase === 'Failed'
+        || p.phase === 'Unknown'
       )
-      
+
       let cleanedCount = 0
       for (const pod of stoppedPods) {
         try {
@@ -610,7 +611,7 @@ export class KubernetesManager {
           this.logger.warn({ podName: pod.name, error }, 'Failed to remove pod during cleanup')
         }
       }
-      
+
       this.logger.info({ cleanedCount }, 'Cleaned up pods')
       return cleanedCount
     } catch (error) {
@@ -623,7 +624,7 @@ export class KubernetesManager {
     try {
       const ns = namespace || this.defaultNamespace
       const serviceName = `${podName}-service`
-      
+
       const serviceManifest = {
         apiVersion: 'v1',
         kind: 'Service',
@@ -646,10 +647,10 @@ export class KubernetesManager {
           type: 'ClusterIP'
         }
       }
-      
+
       const manifestJson = JSON.stringify(serviceManifest)
       await this.executeKubectlWithStdin(['apply', '-f', '-'], manifestJson)
-      
+
       this.logger.info({ serviceName }, 'Service created')
       return serviceName
     } catch (error) {

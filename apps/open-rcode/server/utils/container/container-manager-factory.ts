@@ -1,6 +1,6 @@
 import { DockerAdapter } from './docker-adapter'
 import { KubernetesAdapter } from './kubernetes-adapter'
-import { BaseContainerManager, BaseConnectionOptions } from './base-container-manager'
+import type { BaseContainerManager, BaseConnectionOptions } from './base-container-manager'
 import { logger } from '../logger'
 
 export type ContainerMode = 'docker' | 'kubernetes'

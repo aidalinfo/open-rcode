@@ -15,10 +15,12 @@ const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
 const userDisplay = computed(() => ({
   name: user.value?.name || user.value?.username || 'User',
-  avatar: user.value?.avatar ? {
-    src: user.value.avatar,
-    alt: user.value.name || user.value.username
-  } : undefined
+  avatar: user.value?.avatar
+    ? {
+        src: user.value.avatar,
+        alt: user.value.name || user.value.username
+      }
+    : undefined
 }))
 
 const handleLogout = async () => {
@@ -32,7 +34,7 @@ const handleLogout = async () => {
 
 const items = computed<DropdownMenuItem[][]>(() => {
   if (!user.value) return []
-  
+
   return [[{
     type: 'label',
     label: userDisplay.value.name,
@@ -187,6 +189,9 @@ const items = computed<DropdownMenuItem[][]>(() => {
       />
     </template>
   </UDropdownMenu>
-  
-  <USkeleton v-else class="h-10 w-full" />
+
+  <USkeleton
+    v-else
+    class="h-10 w-full"
+  />
 </template>

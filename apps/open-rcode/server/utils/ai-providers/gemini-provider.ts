@@ -1,4 +1,5 @@
-import { BaseAIProvider, AIProviderType, AICommandOptions, ParsedOutput } from './base-ai-provider'
+import type { AICommandOptions, ParsedOutput } from './base-ai-provider'
+import { BaseAIProvider, AIProviderType } from './base-ai-provider'
 import { AICommandBuilder } from './ai-command-builder'
 
 export class GeminiProvider extends BaseAIProvider {
@@ -15,7 +16,7 @@ export class GeminiProvider extends BaseAIProvider {
 
   buildCommand(options: AICommandOptions, prompt: string): string {
     const builder = AICommandBuilder.create('gemini')
-    
+
     builder.withModel(options.model)
     builder.withPrompt(prompt)
 

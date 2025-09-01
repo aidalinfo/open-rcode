@@ -44,7 +44,7 @@ watch(() => route.path, (newPath) => {
 
   const pathSegments = newPath.split('/').filter(Boolean)
   const lastSegment = pathSegments.pop() || 'dashboard'
-  
+
   // Capitalize first letter
   pageTitle.value = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1)
 }, { immediate: true })
@@ -84,76 +84,78 @@ const getTaskStatusIcon = (status: string) => {
 
 const links = computed(() => [[
   {
-  label: 'Dashboard',
-  icon: 'i-heroicons-chart-bar',
-  to: '/app/dashboard',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'New Prompt',
-  icon: 'i-heroicons-plus-circle',
-  to: '/app',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'Recent Tasks',
-  icon: 'i-heroicons-clock',
-  type: 'trigger',
-  defaultOpen: true,
-  children: recentTasks.value.length > 0 ? recentTasks.value.map((task: any) => ({
-    label: task.name || `Task ${task._id.substring(0, 8)}`,
-    to: `/app/task/${task._id}`,
-    description: `${task.environment?.name || 'N/A'} • ${new Date(task.createdAt).toLocaleDateString()}`,
-    icon: getTaskStatusIcon(task.status),
-    onSelect: () => {
-      open.value = false
-    }
-  })) : [{
-    label: 'No recent tasks',
-    disabled: true
-  }]
-}, {
-  label: 'Settings',
-  icon: 'i-heroicons-cog-6-tooth',
-  type: 'trigger',
-  defaultOpen: true,
-  children: [{
-    label: 'General',
-    to: '/app/settings',
-    exact: true,
+    label: 'Dashboard',
+    icon: 'i-heroicons-chart-bar',
+    to: '/app/dashboard',
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Environments',
-    to: '/app/settings/environnement',
+    label: 'New Prompt',
+    icon: 'i-heroicons-plus-circle',
+    to: '/app',
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Create Environment',
-    to: '/app/settings/environnement/create',
-    onSelect: () => {
-      open.value = false
+    label: 'Recent Tasks',
+    icon: 'i-heroicons-clock',
+    type: 'trigger',
+    defaultOpen: true,
+    children: recentTasks.value.length > 0
+      ? recentTasks.value.map((task: any) => ({
+          label: task.name || `Task ${task._id.substring(0, 8)}`,
+          to: `/app/task/${task._id}`,
+          description: `${task.environment?.name || 'N/A'} • ${new Date(task.createdAt).toLocaleDateString()}`,
+          icon: getTaskStatusIcon(task.status),
+          onSelect: () => {
+            open.value = false
+          }
+        }))
+      : [{
+          label: 'No recent tasks',
+          disabled: true
+        }]
+  }, {
+    label: 'Settings',
+    icon: 'i-heroicons-cog-6-tooth',
+    type: 'trigger',
+    defaultOpen: true,
+    children: [{
+      label: 'General',
+      to: '/app/settings',
+      exact: true,
+      onSelect: () => {
+        open.value = false
+      }
+    }, {
+      label: 'Environments',
+      to: '/app/settings/environnement',
+      onSelect: () => {
+        open.value = false
+      }
+    }, {
+      label: 'Create Environment',
+      to: '/app/settings/environnement/create',
+      onSelect: () => {
+        open.value = false
+      }
     }
-  }
-  // , {
-  //   label: 'SubAgents',
-  //   to: '/app/settings/subagent',
-  //   onSelect: () => {
-  //     open.value = false
-  //   }
-  // }, {
-  //   label: 'Create SubAgent',
-  //   to: '/app/settings/subagent/create',
-  //   onSelect: () => {
-  //     open.value = false
-  //   }
-  // }
-]
-}], [{
+      // , {
+      //   label: 'SubAgents',
+      //   to: '/app/settings/subagent',
+      //   onSelect: () => {
+      //     open.value = false
+      //   }
+      // }, {
+      //   label: 'Create SubAgent',
+      //   to: '/app/settings/subagent/create',
+      //   onSelect: () => {
+      //     open.value = false
+      //   }
+      // }
+    ]
+  }], [{
   label: 'GitHub',
   icon: 'i-simple-icons-github',
   to: 'https://github.com/aidalinfo/open-rcode',
@@ -188,7 +190,7 @@ definePageMeta({
 // Load recent tasks on mount
 onMounted(() => {
   fetchRecentTasks()
-  
+
   // Refresh tasks every 30 seconds (only in browser)
   if (import.meta.client) {
     setInterval(() => {
@@ -199,7 +201,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <UDashboardGroup unit="rem" class="min-h-screen">
+  <UDashboardGroup
+    unit="rem"
+    class="min-h-screen"
+  >
     <UDashboardSidebar
       id="default"
       v-model:open="open"
@@ -210,13 +215,19 @@ onMounted(() => {
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
       <template #header="{ collapsed }">
-        <NuxtLink to="/app" >
-          <LogoPro class="w-auto h-16 shrink-0" v-if="!collapsed"/>
+        <NuxtLink to="/app">
+          <LogoPro
+            v-if="!collapsed"
+            class="w-auto h-16 shrink-0"
+          />
         </NuxtLink>
       </template>
 
       <template #default="{ collapsed }">
-        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />
+        <UDashboardSearchButton
+          :collapsed="collapsed"
+          class="bg-transparent ring-default"
+        />
 
         <UNavigationMenu
           :collapsed="collapsed"
@@ -248,7 +259,13 @@ onMounted(() => {
         </template>
 
         <template #trailing>
-          <UBadge v-if="navbarBadge" :color="navbarBadge.color" :variant="navbarBadge.variant">{{ navbarBadge.label }}</UBadge>
+          <UBadge
+            v-if="navbarBadge"
+            :color="navbarBadge.color"
+            :variant="navbarBadge.variant"
+          >
+            {{ navbarBadge.label }}
+          </UBadge>
         </template>
       </UDashboardNavbar>
       <UMain class="h-full overflow-y-auto">

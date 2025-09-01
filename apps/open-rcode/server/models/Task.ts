@@ -1,27 +1,28 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 export interface Task {
-  userId: string;
-  environmentId: string;
-  name: string;
-  status: TaskStatus;
+  userId: string
+  environmentId: string
+  name: string
+  status: TaskStatus
   messages: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: Date;
-    type?: string;
-  }>;
-  dockerId?: string;
-  pr?: string;
-  merged: boolean;
-  executed: boolean;
-  error?: string;
-  planMode?: boolean;
-  autoMerge?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+    role: 'user' | 'assistant'
+    content: string
+    timestamp: Date
+    type?: string
+  }>
+  dockerId?: string
+  pr?: string
+  merged: boolean
+  executed: boolean
+  error?: string
+  planMode?: boolean
+  autoMerge?: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface TaskDocument extends Task, Document {}
@@ -46,9 +47,9 @@ const taskSchema = new Schema<TaskDocument>({
   autoMerge: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+})
 
-taskSchema.pre('save', function() {
+taskSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

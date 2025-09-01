@@ -1,11 +1,12 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface Session {
-  userId: string;
-  sessionToken: string;
-  expires: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  userId: string
+  sessionToken: string
+  expires: Date
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface SessionDocument extends Session, Document {}
@@ -18,7 +19,7 @@ const sessionSchema = new Schema<SessionDocument>({
   updatedAt: { type: Date, default: Date.now }
 })
 
-sessionSchema.pre('save', function() {
+sessionSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

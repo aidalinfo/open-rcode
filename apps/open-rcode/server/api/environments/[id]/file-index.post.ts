@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   if (!environmentId) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Environment ID is required',
+      statusMessage: 'Environment ID is required'
     })
   }
 
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   if (!sessionToken) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'Unauthorized',
+      statusMessage: 'Unauthorized'
     })
   }
 
@@ -37,14 +37,14 @@ export default defineEventHandler(async (event) => {
   if (!environment) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Environment not found',
+      statusMessage: 'Environment not found'
     })
   }
 
   if (environment.userId !== userId) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Forbidden',
+      statusMessage: 'Forbidden'
     })
   }
 
@@ -58,6 +58,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     message: 'Indexing started',
-    environmentId,
+    environmentId
   }
 })

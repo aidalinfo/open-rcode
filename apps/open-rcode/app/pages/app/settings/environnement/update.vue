@@ -11,8 +11,14 @@
       </div>
 
       <!-- Loading state -->
-      <div v-if="isLoadingEnvironment" class="flex justify-center py-8">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
+      <div
+        v-if="isLoadingEnvironment"
+        class="flex justify-center py-8"
+      >
+        <UIcon
+          name="i-heroicons-arrow-path"
+          class="w-8 h-8 animate-spin text-gray-500"
+        />
       </div>
 
       <!-- Error state -->
@@ -32,14 +38,18 @@
           </h2>
         </template>
 
-        <UForm :state="form" @submit="submitForm" class="space-y-12">
+        <UForm
+          :state="form"
+          class="space-y-12"
+          @submit="submitForm"
+        >
           <!-- Form Fields Component -->
           <EnvironmentFormFields
+            ref="formFieldsRef"
             v-model="form"
             :repositories="repositories"
             :loading-repositories="loadingRepositories"
             :is-editing="true"
-            ref="formFieldsRef"
           />
 
           <!-- File Indexation Section -->
@@ -51,21 +61,21 @@
           <!-- Action buttons -->
           <div class="flex justify-between gap-3 mt-12">
             <UButton
-              @click="goBack"
               variant="ghost"
+              @click="goBack"
             >
               <template #leading>
                 <UIcon name="i-heroicons-arrow-left" />
               </template>
               Back
             </UButton>
-            
+
             <div class="flex gap-3">
               <UButton
-                @click="deleteEnvironment"
                 color="error"
                 variant="outline"
                 :loading="isDeleting"
+                @click="deleteEnvironment"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -122,7 +132,7 @@ const form = ref({
   aiProvider: undefined as SelectOption | undefined,
   model: undefined as SelectOption | undefined,
   defaultBranch: undefined as SelectOption | undefined,
-  environmentVariables: [] as Array<{ key: string; value: string; description?: string }>,
+  environmentVariables: [] as Array<{ key: string, value: string, description?: string }>,
   configurationScript: '',
   subAgents: [] as string[]
 })
@@ -153,11 +163,11 @@ const fetchEnvironment = async () => {
 
   try {
     isLoadingEnvironment.value = true
-    
+
     // Load environment data first for immediate display
     const data = await $fetch(`/api/environments/${environmentId.value}`)
     currentEnvironment.value = data.environment
-    
+
     // Fill form with existing data immediately (without repository/branch for now)
     form.value = {
       selectedRepository: undefined, // Will be set later
@@ -183,13 +193,12 @@ const fetchEnvironment = async () => {
       configurationScript: data.environment.configurationScript || '',
       subAgents: data.environment.subAgents || []
     }
-    
+
     // Page is ready to display
     isLoadingEnvironment.value = false
-    
+
     // Load repositories and branches in background
     loadRepositoriesAndBranches(data.environment)
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error loading environment:', error)
     loadError.value = 'Unable to load environment'
@@ -201,7 +210,7 @@ const loadRepositoriesAndBranches = async (environment: any) => {
   try {
     // Load repositories in background
     await fetchRepositories()
-    
+
     // Find and set the repository
     await nextTick()
     const foundRepo = repositories.value.find(repo => repo.full_name === environment.repositoryFullName)
@@ -212,12 +221,11 @@ const loadRepositoriesAndBranches = async (environment: any) => {
         description: foundRepo.description || 'No description'
       }
     }
-    
+
     // Charger les branches en arrière-plan pour permettre à l'utilisateur de changer
     if (formFieldsRef.value && environment.repositoryFullName) {
       await formFieldsRef.value.fetchBranches(environment.repositoryFullName)
     }
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error loading repositories/branches:', error)
   }
@@ -225,15 +233,15 @@ const loadRepositoriesAndBranches = async (environment: any) => {
 
 const getRuntimeLabel = (runtime: string) => {
   const labels = {
-    'node': 'Node.js',
-    'python': 'Python',
-    'bun': 'Bun',
-    'java': 'Java',
-    'swift': 'Swift',
-    'ruby': 'Ruby',
-    'rust': 'Rust',
-    'go': 'Go',
-    'php': 'PHP'
+    node: 'Node.js',
+    python: 'Python',
+    bun: 'Bun',
+    java: 'Java',
+    swift: 'Swift',
+    ruby: 'Ruby',
+    rust: 'Rust',
+    go: 'Go',
+    php: 'PHP'
   }
   return labels[runtime as keyof typeof labels] || runtime
 }
@@ -265,7 +273,7 @@ const submitForm = async () => {
   isSubmitting.value = true
   try {
     const selectedRepo = form.value.selectedRepository?.value
-    
+
     if (!selectedRepo || typeof selectedRepo !== 'string') {
       toast.add({
         title: 'Error',
@@ -274,13 +282,13 @@ const submitForm = async () => {
       })
       return
     }
-    
+
     const [organization, repository] = selectedRepo.split('/')
     const selectedRuntime = form.value.runtime?.value
     const selectedAiProvider = form.value.aiProvider?.value
     const selectedModel = canSelectModel.value ? form.value.model?.value : null
     const selectedDefaultBranch = form.value.defaultBranch?.value
-    
+
     const payload = {
       organization,
       repository,
@@ -299,16 +307,15 @@ const submitForm = async () => {
       method: 'PUT',
       body: payload
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'Environment updated successfully',
       color: 'success'
     })
-    
+
     // Redirect to settings page
     router.push('/app/settings')
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error updating environment:', error)
     toast.add({
@@ -331,16 +338,15 @@ const deleteEnvironment = async () => {
     await $fetch(`/api/environments/${environmentId.value}`, {
       method: 'DELETE'
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'Environment deleted successfully',
       color: 'success'
     })
-    
+
     // Redirect to settings page
     router.push('/app/settings')
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error deleting environment:', error)
     toast.add({

@@ -28,60 +28,60 @@ useSeoMeta({
 </script>
 
 <template>
-    <UHeader>
-      <template #left>
-        <NuxtLink to="/app">
-          <LogoPro class="w-auto h-24 shrink-0" />
-        </NuxtLink>
-      </template>
+  <UHeader>
+    <template #left>
+      <NuxtLink to="/app">
+        <LogoPro class="w-auto h-24 shrink-0" />
+      </NuxtLink>
+    </template>
 
-      <UNavigationMenu
-        variant="link"
+    <UNavigationMenu
+      variant="link"
+    />
+
+    <template #right>
+      <UColorModeButton />
+
+      <UButton
+        to="https://github.com/aidalinfo/open-rcode"
+        target="_blank"
+        icon="i-simple-icons-github"
+        aria-label="GitHub"
+        color="neutral"
+        variant="ghost"
       />
+    </template>
 
-      <template #right>
-        <UColorModeButton />
+    <template #body>
+      <UNavigationMenu
+        orientation="vertical"
+        class="-mx-2.5"
+      />
+    </template>
+  </UHeader>
 
-        <UButton
-          to="https://github.com/aidalinfo/open-rcode"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
+  <UMain>
+    <slot />
+  </UMain>
 
-      <template #body>
-        <UNavigationMenu
-          orientation="vertical"
-          class="-mx-2.5"
-        />
-      </template>
-    </UHeader>
+  <USeparator />
 
-    <UMain>
-      <slot />
-    </UMain>
+  <UFooter>
+    <template #left>
+      <p class="text-sm text-muted">
+        Copyright © {{ new Date().getFullYear() }}
+      </p>
+    </template>
 
-    <USeparator />
-
-    <UFooter>
-      <template #left>
-        <p class="text-sm text-muted">
-          Copyright © {{ new Date().getFullYear() }}
-        </p>
-      </template>
-
-      <template #right>
-        <UButton
-          to="https://github.com/aidalinfo/open-rcode"
-          target="_blank"
-          icon="i-simple-icons-github"
-          aria-label="GitHub"
-          color="neutral"
-          variant="ghost"
-        />
-      </template>
-    </UFooter>
+    <template #right>
+      <UButton
+        to="https://github.com/aidalinfo/open-rcode"
+        target="_blank"
+        icon="i-simple-icons-github"
+        aria-label="GitHub"
+        color="neutral"
+        variant="ghost"
+      />
+    </template>
+  </UFooter>
 </template>

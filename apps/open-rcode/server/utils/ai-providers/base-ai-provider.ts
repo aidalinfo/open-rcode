@@ -32,7 +32,7 @@ export abstract class BaseAIProvider {
   abstract parseOutput(rawOutput: string): ParsedOutput
   abstract supportsStreaming(): boolean
   abstract supportsPlanMode(): boolean
-  
+
   getCliInstallCommand(): string {
     if (this.providerType === 'gemini-cli' || this.providerType === 'admin-gemini') {
       return 'which gemini || (echo "Gemini not found in PATH. Installing..." && npm install -g @google/gemini-cli)'

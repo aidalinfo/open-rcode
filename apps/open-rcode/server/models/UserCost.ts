@@ -1,14 +1,15 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface UserCost {
-  environmentId: string;
-  userId: string;
-  taskId: string;
-  costUsd: number;
-  model: 'opus' | 'sonnet' | 'opus-4-1';
-  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
-  createdAt: Date;
-  updatedAt: Date;
+  environmentId: string
+  userId: string
+  taskId: string
+  costUsd: number
+  model: 'opus' | 'sonnet' | 'opus-4-1'
+  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli'
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface UserCostDocument extends UserCost, Document {}
@@ -32,7 +33,7 @@ const userCostSchema = new Schema<UserCostDocument>({
   updatedAt: { type: Date, default: Date.now }
 })
 
-userCostSchema.pre('save', function() {
+userCostSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

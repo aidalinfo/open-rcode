@@ -6,7 +6,7 @@ import { requireUser } from '../../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
-  
+
   const user = await requireUser(event)
   const taskId = event.context.params?.id
 

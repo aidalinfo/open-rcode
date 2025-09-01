@@ -11,8 +11,14 @@
       </div>
 
       <!-- Loading state -->
-      <div v-if="isLoadingSubAgent" class="flex justify-center py-8">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
+      <div
+        v-if="isLoadingSubAgent"
+        class="flex justify-center py-8"
+      >
+        <UIcon
+          name="i-heroicons-arrow-path"
+          class="w-8 h-8 animate-spin text-gray-500"
+        />
       </div>
 
       <!-- Error state -->
@@ -32,7 +38,11 @@
           </h2>
         </template>
 
-        <UForm :state="form" @submit="submitForm" class="space-y-6">
+        <UForm
+          :state="form"
+          class="space-y-6"
+          @submit="submitForm"
+        >
           <!-- Form Fields Component -->
           <SubagentSubAgentFormFields
             v-model="form"
@@ -42,21 +52,21 @@
           <!-- Action buttons -->
           <div class="flex justify-between gap-3 mt-6">
             <UButton
-              @click="goBack"
               variant="ghost"
+              @click="goBack"
             >
               <template #leading>
                 <UIcon name="i-heroicons-arrow-left" />
               </template>
               Back
             </UButton>
-            
+
             <div class="flex gap-3">
               <UButton
-                @click="deleteSubAgent"
                 color="error"
                 variant="outline"
                 :loading="isDeleting"
+                @click="deleteSubAgent"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -119,11 +129,11 @@ const fetchSubAgent = async () => {
 
   try {
     isLoadingSubAgent.value = true
-    
+
     // Load SubAgent data
     const data = await $fetch<SubAgent>(`/api/sub-agents/${subagentId.value}`)
     currentSubAgent.value = data
-    
+
     // Fill form with existing data
     form.value = {
       name: data.name || '',
@@ -131,9 +141,8 @@ const fetchSubAgent = async () => {
       prompt: data.prompt || '',
       isPublic: data.isPublic || false
     }
-    
+
     isLoadingSubAgent.value = false
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error loading SubAgent:', error)
     loadError.value = 'Unable to load SubAgent'
@@ -173,16 +182,15 @@ const submitForm = async () => {
       method: 'PUT',
       body: payload
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'SubAgent updated successfully',
       color: 'success'
     })
-    
+
     // Redirect to SubAgents list
     router.push('/app/settings/subagent')
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error updating SubAgent:', error)
     toast.add({
@@ -205,16 +213,15 @@ const deleteSubAgent = async () => {
     await $fetch(`/api/sub-agents/${subagentId.value}`, {
       method: 'DELETE'
     })
-    
+
     toast.add({
       title: 'Success',
       description: 'SubAgent deleted successfully',
       color: 'success'
     })
-    
+
     // Redirect to SubAgents list
     router.push('/app/settings/subagent')
-    
   } catch (error) {
     if (import.meta.dev) console.error('Error deleting SubAgent:', error)
     toast.add({
