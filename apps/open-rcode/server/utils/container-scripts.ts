@@ -45,6 +45,13 @@ export class ContainerScripts {
     return envSetup
   }
 
+  static cleanClaudeSettings(): string {
+    return `
+      # Clean Claude settings to avoid conflicts
+      rm -f ~/.claude/settings.json || true
+    `.trim()
+  }
+
   static wrapConfigurationScript(script: string): string {
     return `
       echo "=== Executing configuration script ==="
@@ -63,14 +70,22 @@ export class ContainerScripts {
     cliName: 'claude' | 'gemini',
     aiCommand: string
   ): string {
-    return this.buildFullScript([
+    const parts = [
       this.createWorkspace(workdir),
       this.configureGit(workdir),
       this.loadNodeEnvironment(),
       this.installCLI(cliName),
-      this.setupEnvironment(envSetup),
-      aiCommand
-    ])
+      this.setupEnvironment(envSetup)
+    ]
+    
+    // Add Claude settings cleanup only for Claude CLI
+    if (cliName === 'claude') {
+      parts.push(this.cleanClaudeSettings())
+    }
+    
+    parts.push(aiCommand)
+    
+    return this.buildFullScript(parts)
   }
 
   static buildConfigurationScript(workdir: string, configScript: string): string {
