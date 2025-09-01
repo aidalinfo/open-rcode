@@ -194,7 +194,7 @@ const removeWorkflow = (workflow: string) => {
 }
 
 const getWorkflowLabel = (value: string) => {
-  const item = workflowItems.find(w => w.value === value)
+  const item = workflowItems.find(w => w.value === value.value)
   return item?.label || value
 }
 
@@ -233,7 +233,8 @@ const handleSubmit = async () => {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task,
-      planMode: selectedWorkflows.value.includes('planMode')
+      planMode: selectedWorkflows.value.includes('planMode'),
+      autoMerge: selectedWorkflows.value.includes('autoMerge')
     })
 
     // Clear input after emitting event
