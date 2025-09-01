@@ -35,7 +35,7 @@ export class ClaudeProvider extends BaseAIProvider {
     builder.withAppendSystemPrompt(securityPrompt)
 
     // Restreindre les outils disponibles à Edit uniquement
-    builder.withAllowedTools('Edit')
+    builder.withAllowedTools('Edit, Bash, MultiEdit, Read, WebFetch, Glob, Grep, LS, Task, TodoWrite, WebSearch, mcp')
 
     if (options.permissionMode) {
       builder.withPermissionMode(options.permissionMode)
