@@ -670,9 +670,9 @@ export class ClaudeExecutor {
     
     switch (aiProvider) {
       case 'anthropic-api':
-        return `claude --verbose --output-format stream-json${modelParam} -p`
+        return `claude --verbose --output-format stream-json${modelParam} --allowedTools "Edit" -p`
       case 'claude-oauth':
-        return `claude --verbose --output-format stream-json${modelParam} -p`
+        return `claude --verbose --output-format stream-json${modelParam} --allowedTools "Edit" -p`
       case 'gemini-cli':
         return `gemini${modelParam} -p`
       case 'admin-gemini':
