@@ -1,16 +1,21 @@
 <template>
   <div class="p-6">
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Kanbans</h1>
+      <h1 class="text-2xl font-bold">
+        Kanbans
+      </h1>
       <NuxtLink to="/app/kanban/create">
-        <UButton icon="i-heroicons-plus" size="sm">
+        <UButton
+          icon="i-heroicons-plus"
+          size="sm"
+        >
           Créer un kanban
         </UButton>
       </NuxtLink>
     </div>
 
     <UCard>
-      <UTable 
+      <UTable
         :columns="columns"
         :rows="kanbanProjects"
         :loading="pending"
@@ -18,7 +23,11 @@
       >
         <template #actions-data="{ row }">
           <UDropdown :items="getActions(row)">
-            <UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal-20-solid" />
+            <UButton
+              color="gray"
+              variant="ghost"
+              icon="i-heroicons-ellipsis-horizontal-20-solid"
+            />
           </UDropdown>
         </template>
       </UTable>
@@ -30,19 +39,19 @@
 const columns = [
   {
     key: 'name',
-    label: 'Nom',
+    label: 'Nom'
   },
   {
     key: 'description',
-    label: 'Description',
+    label: 'Description'
   },
   {
     key: 'createdAt',
-    label: 'Créé le',
+    label: 'Créé le'
   },
   {
     key: 'actions',
-    label: 'Actions',
+    label: 'Actions'
   }
 ]
 

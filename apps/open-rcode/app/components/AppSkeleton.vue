@@ -4,7 +4,12 @@
       <!-- Recent Tasks skeleton -->
       <div class="space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="i in 3" :key="i" :class="{ 'hidden lg:block': i === 3 }" class="space-y-3">
+          <div
+            v-for="i in 3"
+            :key="i"
+            :class="{ 'hidden lg:block': i === 3 }"
+            class="space-y-3"
+          >
             <UCard>
               <template #header>
                 <div class="flex items-center justify-between">
@@ -15,7 +20,7 @@
                   <USkeleton class="h-4 w-12" />
                 </div>
               </template>
-              
+
               <div class="space-y-3">
                 <!-- Nom de la tâche -->
                 <USkeleton class="h-4 w-full" />

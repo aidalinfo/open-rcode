@@ -3,16 +3,22 @@
     <template #body>
       <UContainer>
         <AppSkeleton v-if="isInitialLoading" />
-        
-        <div v-else class="min-h-screen flex mt-12 justify-center">
+
+        <div
+          v-else
+          class="min-h-screen flex mt-12 justify-center"
+        >
           <div class="w-full max-w-4xl space-y-8">
             <WelcomeModal v-model="showWelcomeModal" />
-            
+
             <!-- Recent Tasks Cards -->
-            <div v-if="recentTasks.length > 0" class="space-y-4">
+            <div
+              v-if="recentTasks.length > 0"
+              class="space-y-4"
+            >
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <TaskCard 
-                  v-for="(task, index) in recentTasks" 
+                <TaskCard
+                  v-for="(task, index) in recentTasks"
                   :key="task._id"
                   :task="task"
                   :class="{ 'hidden lg:block': index === 2 }"
@@ -20,17 +26,23 @@
                 />
               </div>
             </div>
-            
+
             <ChatPrompt
               v-model:input="input"
-              v-model:selectedEnvironment="selectedEnvironment"
+              v-model:selected-environment="selectedEnvironment"
               :environments="environments"
               :loading="loading"
               @submit="onSubmit"
             />
 
-            <div v-if="environments.length === 0" class="text-center py-8">
-              <UIcon name="i-heroicons-cube" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <div
+              v-if="environments.length === 0"
+              class="text-center py-8"
+            >
+              <UIcon
+                name="i-heroicons-cube"
+                class="w-12 h-12 mx-auto text-gray-400 mb-4"
+              />
               <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 No configured environments
               </h3>
@@ -57,7 +69,7 @@ import type { TaskCard } from '~/shared/types/task'
 const toast = useToast()
 const router = useRouter()
 const pageTitle = usePageTitle()
-pageTitle.value = "Prompting"
+pageTitle.value = 'Prompting'
 // États réactifs
 const input = ref('')
 const loading = ref(false)
@@ -72,7 +84,7 @@ const fetchEnvironments = async () => {
   try {
     const data = await $fetch<{ environments: any[] }>('/api/environments')
     environments.value = data.environments
-    
+
     // Show welcome modal if no environments
     if (data.environments.length === 0) {
       showWelcomeModal.value = true
@@ -95,7 +107,7 @@ const navigateToTask = (taskId: string) => {
   router.push(`/app/task/${taskId}`)
 }
 
-const onSubmit = async (data: { message: string; environmentId: string; task?: any }) => {
+const onSubmit = async (data: { message: string, environmentId: string, task?: any }) => {
   if (!data.task || !data.task.id) {
     toast.add({ title: 'Error', description: 'Task creation failed.', color: 'error' })
     return

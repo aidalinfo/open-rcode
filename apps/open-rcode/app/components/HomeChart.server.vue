@@ -15,7 +15,9 @@
     </template>
 
     <div class="h-96 flex items-center justify-center">
-      <div class="text-muted">Loading chart...</div>
+      <div class="text-muted">
+        Loading chart...
+      </div>
     </div>
   </UCard>
 </template>

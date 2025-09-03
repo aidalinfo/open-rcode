@@ -16,7 +16,7 @@ export interface ContainerConfig {
  */
 export function getContainerConfig(): ContainerConfig {
   const mode = getContainerMode()
-  
+
   const config: ContainerConfig = {
     mode
   }
@@ -38,11 +38,11 @@ export function getContainerConfig(): ContainerConfig {
  */
 export function getContainerMode(): 'docker' | 'kubernetes' {
   const mode = process.env.CONTAINER_MODE?.toLowerCase()
-  
+
   if (mode === 'kubernetes' || mode === 'k8s') {
     return 'kubernetes'
   }
-  
+
   return 'docker'
 }
 
@@ -60,19 +60,18 @@ export function isDockerMode(): boolean {
   return getContainerMode() === 'docker'
 }
 
-
 /**
  * Variables d'environnement supportées pour la configuration des conteneurs
  */
 export const SUPPORTED_ENV_VARS = {
   // Mode de conteneur
   CONTAINER_MODE: 'Mode de conteneur: "docker" ou "kubernetes"',
-  
+
   // Configuration Kubernetes
   KUBERNETES_NAMESPACE: 'Namespace Kubernetes par défaut (défaut: "default")',
   KUBECONFIG: 'Chemin vers le fichier kubeconfig',
   KUBERNETES_CONTEXT: 'Contexte Kubernetes à utiliser',
-  
+
   // Configuration Docker
   DOCKER_HOST: 'Host Docker (ex: tcp://localhost:2376)',
   DOCKER_PORT: 'Port Docker (défaut: 2376 pour HTTPS, 2375 pour HTTP)',

@@ -1,7 +1,12 @@
 <template>
   <div class="space-y-12">
     <!-- Repository selection -->
-    <UFormField label="Repository" name="repository" required class="mt-8">
+    <UFormField
+      label="Repository"
+      name="repository"
+      required
+      class="mt-8"
+    >
       <USelectMenu
         v-model="selectedRepository"
         :items="repositoryOptions"
@@ -15,7 +20,12 @@
     </UFormField>
 
     <!-- Environment name -->
-    <UFormField label="Name" name="name" required class="mt-10">
+    <UFormField
+      label="Name"
+      name="name"
+      required
+      class="mt-10"
+    >
       <UInput
         v-model="name"
         placeholder="ex: Production, Staging, Development"
@@ -25,7 +35,11 @@
     </UFormField>
 
     <!-- Description -->
-    <UFormField label="Description" name="description" class="mt-10">
+    <UFormField
+      label="Description"
+      name="description"
+      class="mt-10"
+    >
       <UTextarea
         v-model="description"
         placeholder="Environment description"
@@ -36,7 +50,12 @@
     </UFormField>
 
     <!-- Runtime -->
-    <UFormField label="Runtime" name="runtime" required class="mt-10">
+    <UFormField
+      label="Runtime"
+      name="runtime"
+      required
+      class="mt-10"
+    >
       <USelectMenu
         v-model="runtime"
         :items="runtimeOptions"
@@ -49,7 +68,12 @@
     </UFormField>
 
     <!-- AI Provider -->
-    <UFormField label="Artificial Intelligence Provider" name="aiProvider" required class="mt-10">
+    <UFormField
+      label="Artificial Intelligence Provider"
+      name="aiProvider"
+      required
+      class="mt-10"
+    >
       <USelectMenu
         v-model="aiProvider"
         :items="aiProviderOptions"
@@ -67,7 +91,13 @@
     </UFormField>
 
     <!-- AI Model -->
-    <UFormField v-if="canSelectModel" label="Artificial Intelligence Model" name="model" required class="mt-10">
+    <UFormField
+      v-if="canSelectModel"
+      label="Artificial Intelligence Model"
+      name="model"
+      required
+      class="mt-10"
+    >
       <USelectMenu
         v-model="model"
         :items="modelOptions"
@@ -85,7 +115,12 @@
     </UFormField>
 
     <!-- Default branch -->
-    <UFormField label="Default branch" name="defaultBranch" required class="mt-10">
+    <UFormField
+      label="Default branch"
+      name="defaultBranch"
+      required
+      class="mt-10"
+    >
       <USelectMenu
         v-model="defaultBranch"
         :items="branchOptions"
@@ -109,7 +144,11 @@
     />
 
     <!-- Configuration script -->
-    <UFormField label="Configuration script" name="configurationScript" class="mt-10">
+    <UFormField
+      label="Configuration script"
+      name="configurationScript"
+      class="mt-10"
+    >
       <UTextarea
         v-model="configurationScript"
         placeholder="e.g.: npm install && npm run build"
@@ -153,7 +192,7 @@ interface Props {
     aiProvider: SelectOption | undefined
     model: SelectOption | undefined
     defaultBranch: SelectOption | undefined
-    environmentVariables: Array<{ key: string; value: string; description?: string }>
+    environmentVariables: Array<{ key: string, value: string, description?: string }>
     configurationScript: string
     subAgents: string[]
   }
@@ -206,80 +245,82 @@ const modelOptions = computed((): SelectOption[] => {
     { label: 'Claude Sonnet', value: 'sonnet' },
     { label: 'Claude Opus', value: 'opus' }
   ]
-  
+
   // In edit mode, if the current model is opus-4-1, add it as a legacy option
   if (props.isEditing && modelValue.value === 'opus-4-1') {
     baseOptions.push({ label: 'Claude Opus 4.1 (Legacy)', value: 'opus-4-1' })
   }
-  
+
   return baseOptions
 })
 
 // Simple v-model computed properties
 const selectedRepository = computed({
   get: () => props.modelValue.selectedRepository,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, selectedRepository: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, selectedRepository: value })
 })
 
 const name = computed({
   get: () => props.modelValue.name,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, name: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, name: value })
 })
 
 const description = computed({
   get: () => props.modelValue.description,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, description: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, description: value })
 })
 
 const runtime = computed({
   get: () => props.modelValue.runtime,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, runtime: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, runtime: value })
 })
 
 const aiProvider = computed({
   get: () => props.modelValue.aiProvider,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, aiProvider: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, aiProvider: value })
 })
 
 const model = computed({
   get: () => props.modelValue.model,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, model: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, model: value })
 })
 
 const defaultBranch = computed({
   get: () => props.modelValue.defaultBranch,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, defaultBranch: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, defaultBranch: value })
 })
 
 const environmentVariables = computed({
   get: () => props.modelValue.environmentVariables,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, environmentVariables: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, environmentVariables: value })
 })
 
 const configurationScript = computed({
   get: () => props.modelValue.configurationScript,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, configurationScript: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, configurationScript: value })
 })
 
 const subAgents = computed({
   get: () => props.modelValue.subAgents,
-  set: (value) => emit('update:modelValue', { ...props.modelValue, subAgents: value })
+  set: value => emit('update:modelValue', { ...props.modelValue, subAgents: value })
 })
 
 const selectedSubAgents = computed({
   get: () => {
     // Convert string[] to SelectOption[] for the USelectMenu
-    return props.modelValue.subAgents.map(subAgentId => {
+    return props.modelValue.subAgents.map((subAgentId) => {
       const subAgent = availableSubAgents.value.find(s => s._id === subAgentId)
-      return subAgent ? {
-        label: subAgent.name,
-        value: subAgent._id,
-        description: subAgent.description || (subAgent.isPublic ? 'Public SubAgent' : 'Private SubAgent')
-      } : {
-        label: `SubAgent ${subAgentId}`,
-        value: subAgentId,
-        description: 'SubAgent not found'
-      }
+      return subAgent
+        ? {
+            label: subAgent.name,
+            value: subAgent._id,
+            description: subAgent.description || (subAgent.isPublic ? 'Public SubAgent' : 'Private SubAgent')
+          }
+        : {
+            label: `SubAgent ${subAgentId}`,
+            value: subAgentId,
+            description: 'SubAgent not found'
+          }
     })
   },
   set: (value: any[]) => {
@@ -318,12 +359,12 @@ const repositoryOptions = computed((): SelectOption[] => {
 const branchOptions = computed((): SelectOption[] => {
   const options: SelectOption[] = []
   const selectedValue = props.modelValue.defaultBranch
-  
+
   // Toujours inclure la valeur actuelle en premier
   if (selectedValue && selectedValue.value) {
     options.push(selectedValue)
   }
-  
+
   // Ajouter les autres branches chargées depuis l'API
   branches.value.forEach((branch: any) => {
     // Ne pas dupliquer la branche déjà sélectionnée
@@ -335,7 +376,7 @@ const branchOptions = computed((): SelectOption[] => {
       })
     }
   })
-  
+
   return options
 })
 
@@ -350,21 +391,21 @@ const subAgentOptions = computed(() => {
 // Methods
 const fetchBranches = async (repositoryFullName: string) => {
   if (!repositoryFullName) return
-  
+
   loadingBranches.value = true
   try {
     const [owner, repo] = repositoryFullName.split('/')
     const data = await $fetch(`/api/repositories/${owner}/${repo}/branches`)
     branches.value = data.branches
-    
+
     // En mode édition, ne jamais modifier automatiquement la branche sélectionnée
     // Les branches chargées serviront juste d'options supplémentaires
     if (!props.isEditing) {
       // Automatically select 'main' or 'master' branch by default pour les nouveaux environnements
-      const foundDefaultBranch = branches.value.find((branch: any) => 
+      const foundDefaultBranch = branches.value.find((branch: any) =>
         branch.name === 'main' || branch.name === 'master'
       )
-      
+
       if (foundDefaultBranch) {
         emit('update:modelValue', {
           ...props.modelValue,
@@ -442,7 +483,7 @@ watch(() => selectedRepositoryValue.value, (newValue) => {
       name: repoName
     })
   }
-  
+
   // Fetch branches for selected repository
   if (newValue) {
     fetchBranches(newValue)

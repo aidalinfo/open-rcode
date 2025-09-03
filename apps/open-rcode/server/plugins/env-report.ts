@@ -36,7 +36,7 @@ function collectEnv() {
 function preview(v?: string) {
   if (!v) return ''
   if (v.length <= 6) return '*'.repeat(v.length)
-  return `${v.slice(0,2)}***${v.slice(-2)}`
+  return `${v.slice(0, 2)}***${v.slice(-2)}`
 }
 
 export default async () => {

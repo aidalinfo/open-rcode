@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export enum UserRole {
   BASIC = 'basic',
@@ -7,21 +8,21 @@ export enum UserRole {
 }
 
 export interface User {
-  githubId: string;
-  username: string;
-  email?: string;
-  name?: string;
-  avatar?: string;
-  bio?: string;
-  location?: string;
-  githubAppInstallationIds?: string[];
-  githubAppInstalledAt?: Date;
-  anthropicKey?: string;
-  claudeOAuthToken?: string;
-  geminiApiKey?: string;
-  role: UserRole;
-  createdAt: Date;
-  updatedAt: Date;
+  githubId: string
+  username: string
+  email?: string
+  name?: string
+  avatar?: string
+  bio?: string
+  location?: string
+  githubAppInstallationIds?: string[]
+  githubAppInstalledAt?: Date
+  anthropicKey?: string
+  claudeOAuthToken?: string
+  geminiApiKey?: string
+  role: UserRole
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface UserDocument extends User, Document {}
@@ -39,16 +40,16 @@ const userSchema = new Schema<UserDocument>({
   anthropicKey: { type: String },
   claudeOAuthToken: { type: String },
   geminiApiKey: { type: String },
-  role: { 
-    type: String, 
+  role: {
+    type: String,
     enum: Object.values(UserRole),
-    default: process.env.BASE_ROLE || UserRole.BASIC 
+    default: process.env.BASE_ROLE || UserRole.BASIC
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })
 
-userSchema.pre('save', function() {
+userSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

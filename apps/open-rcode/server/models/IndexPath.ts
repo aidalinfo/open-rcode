@@ -1,4 +1,5 @@
-import { Document, Schema, model } from 'mongoose'
+import type { Document } from 'mongoose'
+import { Schema, model } from 'mongoose'
 
 export interface IIndexPath extends Document {
   environmentId: string
@@ -11,19 +12,19 @@ export interface IIndexPath extends Document {
 const indexPathSchema = new Schema<IIndexPath>({
   environmentId: {
     type: String,
-    required: true,
+    required: true
   },
   paths: [{
     type: String,
-    required: true,
+    required: true
   }],
   indexedAt: {
     type: Date,
     required: true,
-    default: Date.now,
-  },
+    default: Date.now
+  }
 }, {
-  timestamps: true,
+  timestamps: true
 })
 
 indexPathSchema.index({ environmentId: 1 }, { unique: true })

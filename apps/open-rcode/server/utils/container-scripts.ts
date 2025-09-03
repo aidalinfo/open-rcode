@@ -30,7 +30,7 @@ export class ContainerScripts {
       claude: '@anthropic-ai/claude-code',
       gemini: '@google/gemini-cli'
     }
-    
+
     return `
       # Check if ${cliName} is installed
       if ! which ${cliName} >/dev/null 2>&1; then
@@ -43,6 +43,13 @@ export class ContainerScripts {
 
   static setupEnvironment(envSetup: string): string {
     return envSetup
+  }
+
+  static cleanClaudeSettings(): string {
+    return `
+      # Clean Claude settings to avoid conflicts
+      rm -f ~/.claude/settings.json || true
+    `.trim()
   }
 
   static wrapConfigurationScript(script: string): string {
@@ -63,14 +70,22 @@ export class ContainerScripts {
     cliName: 'claude' | 'gemini',
     aiCommand: string
   ): string {
-    return this.buildFullScript([
+    const parts = [
       this.createWorkspace(workdir),
       this.configureGit(workdir),
       this.loadNodeEnvironment(),
       this.installCLI(cliName),
-      this.setupEnvironment(envSetup),
-      aiCommand
-    ])
+      this.setupEnvironment(envSetup)
+    ]
+
+    // Add Claude settings cleanup only for Claude CLI
+    if (cliName === 'claude') {
+      parts.push(this.cleanClaudeSettings())
+    }
+
+    parts.push(aiCommand)
+
+    return this.buildFullScript(parts)
   }
 
   static buildConfigurationScript(workdir: string, configScript: string): string {

@@ -45,9 +45,14 @@ export class AICommandBuilder {
     return this
   }
 
+  withAllowedTools(tools: string): AICommandBuilder {
+    this.args.push('--allowedTools', `"${tools}"`)
+    return this
+  }
+
   build(): string {
     const fullCommand = [this.command, ...this.args].join(' ')
-    
+
     if (!this.prompt) {
       throw new Error('Prompt is required')
     }

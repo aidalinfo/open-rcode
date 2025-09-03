@@ -6,9 +6,9 @@ import { EnvironmentModel } from '../../models/Environment'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const { id } = getRouterParams(event)
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -32,19 +32,19 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     const environment = await EnvironmentModel.findOneAndDelete({
       _id: id,
       userId: user.githubId
     })
-    
+
     if (!environment) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Environment not found'
       })
     }
-    
+
     return {
       message: 'Environment deleted successfully',
       deletedEnvironment: {

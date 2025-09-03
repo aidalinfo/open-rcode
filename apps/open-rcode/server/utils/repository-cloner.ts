@@ -17,7 +17,7 @@ export class RepositoryCloner {
     }
 
     const installationToken = await this.getInstallationToken(user, environment.repositoryFullName)
-    
+
     if (!installationToken) {
       throw new Error(`No GitHub App token available for repository ${environment.repositoryFullName}. Please install the GitHub App on this repository.`)
     }
@@ -33,7 +33,7 @@ export class RepositoryCloner {
       containerId,
       workspaceDir
     }, 'Cloning repository with GitHub App token in container')
-    
+
     const cloneScript = `
       mkdir -p "${workspaceDir}"
       cd "${workspaceDir}"
@@ -44,7 +44,7 @@ export class RepositoryCloner {
     const result = await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', cloneScript],
-      user: 'root',
+      user: 'root'
     })
 
     if (result.exitCode !== 0) {
@@ -67,14 +67,13 @@ export class RepositoryCloner {
       try {
         const installationRepos = await getInstallationRepositories(installationId)
         const hasRepository = installationRepos.repositories.some(
-          (repo: any) => repo.full_name === repositoryFullName,
+          (repo: any) => repo.full_name === repositoryFullName
         )
 
         if (hasRepository) {
           return await generateInstallationToken(installationId)
         }
-      }
-      catch (error) {
+      } catch (error) {
         logger.warn({ error, installationId }, 'Error checking installation')
         continue
       }
@@ -94,7 +93,7 @@ export class RepositoryCloner {
     await this.containerManager.executeInContainer({
       containerId,
       command: ['bash', '-c', configScript],
-      user: 'root',
+      user: 'root'
     })
   }
 }

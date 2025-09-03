@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     // Vérifier la session
     const userId = await getUserIdFromSession(event)
-    
+
     if (!userId) {
       return { valid: false }
     }

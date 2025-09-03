@@ -7,7 +7,7 @@ import { ClaudeExecutor } from './claude-executor'
 import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
 import { createContainerManager, ContainerManagerFactory } from './container/container-manager-factory'
-import { BaseContainerManager } from './container/base-container-manager'
+import type { BaseContainerManager } from './container/base-container-manager'
 import { DockerAdapter } from './container/docker-adapter'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from './logger'
@@ -20,12 +20,12 @@ export class TaskContainerManager {
 
   constructor(containerOptions?: any) {
     this.containerManager = createContainerManager({ connectionOptions: containerOptions })
-    
+
     // Pour maintenir la compatibilité avec les classes existantes qui attendent DockerManager
-    const dockerManager = this.containerManager instanceof DockerAdapter 
+    const dockerManager = this.containerManager instanceof DockerAdapter
       ? (this.containerManager as DockerAdapter).getDockerManager()
       : new DockerManager(containerOptions) // Fallback pour Kubernetes mode
-    
+
     this.containerSetup = new ContainerSetup(this.containerManager, dockerManager)
     this.claudeExecutor = new ClaudeExecutor(this.containerManager)
     this.containerCleanup = new ContainerCleanup(this.containerManager)
@@ -49,7 +49,7 @@ export class TaskContainerManager {
     if (task) {
       const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Pod Kubernetes' : 'Conteneur Docker'
       const icon = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? '☸️' : '🐳'
-      
+
       await TaskMessageModel.create({
         id: uuidv4(),
         userId: task.userId,
@@ -66,7 +66,7 @@ export class TaskContainerManager {
       task.dockerId = result.containerId
       const containerType = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? 'Pod Kubernetes' : 'Conteneur Docker'
       const icon = process.env.CONTAINER_MODE?.toLowerCase() === 'kubernetes' ? '☸️' : '🐳'
-      
+
       await TaskMessageModel.create({
         id: uuidv4(),
         userId: task.userId,
@@ -77,7 +77,7 @@ export class TaskContainerManager {
       await task.save()
 
       // Exécuter automatiquement le workflow Claude après le setup
-      // Passer le workspaceDir complet avec /repo dans l'objet task temporairement  
+      // Passer le workspaceDir complet avec /repo dans l'objet task temporairement
       const taskWithWorkspace = { ...task.toObject(), workspaceDir: `${result.workspaceDir}/repo` }
       await this.claudeExecutor.executeWorkflow(result.containerId, taskWithWorkspace)
     }

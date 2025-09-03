@@ -1,11 +1,12 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface CountRequest {
-  userId: string;
-  environmentId: string;
-  model: string;
-  taskId: string;
-  createdAt: Date;
+  userId: string
+  environmentId: string
+  model: string
+  taskId: string
+  createdAt: Date
 }
 
 export interface CountRequestDocument extends CountRequest, Document {}
@@ -16,7 +17,7 @@ const countRequestSchema = new Schema<CountRequestDocument>({
   model: { type: String, required: true },
   taskId: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
-});
+})
 
 // Index pour optimiser les requêtes
 countRequestSchema.index({ userId: 1 })

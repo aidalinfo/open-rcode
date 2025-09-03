@@ -15,12 +15,24 @@
       </div>
     </template>
 
-    <div v-if="loading" class="flex justify-center py-8">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary-500" />
+    <div
+      v-if="loading"
+      class="flex justify-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-arrow-path"
+        class="w-6 h-6 animate-spin text-primary-500"
+      />
     </div>
 
-    <div v-else-if="subagents.length === 0" class="text-center py-8">
-      <UIcon name="i-heroicons-cpu-chip" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+    <div
+      v-else-if="subagents.length === 0"
+      class="text-center py-8"
+    >
+      <UIcon
+        name="i-heroicons-cpu-chip"
+        class="w-12 h-12 mx-auto text-gray-400 mb-4"
+      />
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
         No SubAgents
       </h3>
@@ -50,7 +62,10 @@
               <h4 class="font-medium text-gray-900 dark:text-white">
                 {{ item.name }}
               </h4>
-              <p v-if="item.description" class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+              <p
+                v-if="item.description"
+                class="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2"
+              >
                 {{ item.description }}
               </p>
             </div>
@@ -72,13 +87,19 @@
           <!-- Informations -->
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-calendar" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-calendar"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 Created: {{ formatDate(item.createdAt) }}
               </span>
             </div>
             <div class="flex items-center gap-2 text-sm">
-              <UIcon name="i-lucide-user" class="w-4 h-4 text-gray-400" />
+              <UIcon
+                name="i-lucide-user"
+                class="w-4 h-4 text-gray-400"
+              />
               <span class="text-gray-600 dark:text-gray-400">
                 By: {{ item.userId }}
               </span>
@@ -144,8 +165,8 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-  refresh: []
-  delete: [id: string]
+  'refresh': []
+  'delete': [id: string]
   'update:page': [page: number]
 }>()
 
@@ -187,7 +208,7 @@ const columns = computed((): TableColumn<SubAgent>[] => [
     accessorKey: 'description',
     header: 'Description',
     cell: ({ row }: { row: Row<SubAgent> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 max-w-md truncate' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400 max-w-md truncate' },
         row.original.description || 'No description'
       )
     }
@@ -206,7 +227,7 @@ const columns = computed((): TableColumn<SubAgent>[] => [
     accessorKey: 'createdAt',
     header: 'Created on',
     cell: ({ row }: { row: Row<SubAgent> }) => {
-      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, 
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' },
         formatDate(row.original.createdAt)
       )
     }

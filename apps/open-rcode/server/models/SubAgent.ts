@@ -42,7 +42,7 @@ SubAgentSchema.index({ userId: 1, isPublic: 1 })
 SubAgentSchema.index({ isPublic: 1, createdAt: -1 })
 
 // Pre-save hook to update the updatedAt field
-SubAgentSchema.pre('save', function(next) {
+SubAgentSchema.pre('save', function (next) {
   this.updatedAt = new Date()
   next()
 })

@@ -1,27 +1,28 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface EnvironmentVariable {
-  key: string;
-  value: string;
-  description?: string;
+  key: string
+  value: string
+  description?: string
 }
 
 export interface Environment {
-  userId: string;
-  organization: string; // owner du repository (compte GitHub ou organisation)
-  repository: string; // nom du repository
-  repositoryFullName: string; // owner/repository
-  name: string;
-  description?: string;
-  runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php';
-  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli';
-  model: 'opus' | 'sonnet' | 'opus-4-1';
-  defaultBranch: string; // branche par défaut pour le clonage et les PRs
-  environmentVariables: EnvironmentVariable[];
-  configurationScript?: string;
+  userId: string
+  organization: string // owner du repository (compte GitHub ou organisation)
+  repository: string // nom du repository
+  repositoryFullName: string // owner/repository
+  name: string
+  description?: string
+  runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php'
+  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli'
+  model: 'opus' | 'sonnet' | 'opus-4-1'
+  defaultBranch: string // branche par défaut pour le clonage et les PRs
+  environmentVariables: EnvironmentVariable[]
+  configurationScript?: string
   subAgents: string[]
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface EnvironmentDocument extends Environment, Document {}
@@ -39,10 +40,10 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   repositoryFullName: { type: String, required: true },
   name: { type: String, required: true },
   description: { type: String },
-  runtime: { 
-    type: String, 
-    enum: ['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'], 
-    required: true 
+  runtime: {
+    type: String,
+    enum: ['node', 'python', 'bun', 'java', 'swift', 'ruby', 'rust', 'go', 'php'],
+    required: true
   },
   aiProvider: {
     type: String,
@@ -56,14 +57,14 @@ const environmentSchema = new Schema<EnvironmentDocument>({
     default: 'sonnet',
     required: true
   },
-  defaultBranch: { 
-    type: String, 
+  defaultBranch: {
+    type: String,
     required: true,
     default: 'main'
   },
   environmentVariables: [environmentVariableSchema],
   configurationScript: { type: String },
-  subAgents: [{ 
+  subAgents: [{
     type: String,
     ref: 'SubAgent'
   }],
@@ -71,7 +72,7 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   updatedAt: { type: Date, default: Date.now }
 })
 
-environmentSchema.pre('save', function() {
+environmentSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

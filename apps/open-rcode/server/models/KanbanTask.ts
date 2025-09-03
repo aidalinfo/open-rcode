@@ -1,18 +1,19 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
-export type KanbanTaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled';
+export type KanbanTaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'cancelled'
 
 export interface KanbanTask {
-  kanbanProjectId: string;
-  userId: string;
-  taskId?: string;
-  title: string;
-  message?: string;
-  error?: string;
-  status: KanbanTaskStatus;
-  plannifiedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  kanbanProjectId: string
+  userId: string
+  taskId?: string
+  title: string
+  message?: string
+  error?: string
+  status: KanbanTaskStatus
+  plannifiedAt?: Date
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface KanbanTaskDocument extends KanbanTask, Document {}
@@ -24,17 +25,17 @@ const kanbanTaskSchema = new Schema<KanbanTaskDocument>({
   title: { type: String, required: true },
   message: { type: String },
   error: { type: String },
-  status: { 
-    type: String, 
-    enum: ['todo', 'in_progress', 'review', 'done', 'cancelled'], 
-    default: 'todo' 
+  status: {
+    type: String,
+    enum: ['todo', 'in_progress', 'review', 'done', 'cancelled'],
+    default: 'todo'
   },
   plannifiedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+})
 
-kanbanTaskSchema.pre('save', function() {
+kanbanTaskSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

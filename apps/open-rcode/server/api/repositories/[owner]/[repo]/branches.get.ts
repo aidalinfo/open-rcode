@@ -7,9 +7,9 @@ import { logger } from '../../../../utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const { owner, repo } = getRouterParams(event)
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -33,14 +33,14 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     if (!user.githubAppInstallationIds || user.githubAppInstallationIds.length === 0) {
       throw createError({
         statusCode: 400,
         statusMessage: 'GitHub App not installed'
       })
     }
-    
+
     // Essayer de récupérer les branches avec chaque installation ID
     let branches = []
     for (const installationId of user.githubAppInstallationIds) {
@@ -53,14 +53,14 @@ export default defineEventHandler(async (event) => {
         continue
       }
     }
-    
+
     if (branches.length === 0) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Repository not found or no access'
       })
     }
-    
+
     return {
       branches: branches.map((branch: any) => ({
         name: branch.name,

@@ -5,9 +5,9 @@
         Environment variables
       </h3>
       <UButton
-        @click="addVariable"
         variant="outline"
         size="sm"
+        @click="addVariable"
       >
         <template #leading>
           <UIcon name="i-heroicons-plus" />
@@ -15,8 +15,11 @@
         Add
       </UButton>
     </div>
-    
-    <div v-if="variables.length > 0" class="space-y-6 mt-6">
+
+    <div
+      v-if="variables.length > 0"
+      class="space-y-6 mt-6"
+    >
       <div
         v-for="(variable, index) in variables"
         :key="index"
@@ -39,11 +42,11 @@
           />
         </div>
         <UButton
-          @click="removeVariable(index)"
           color="error"
           variant="ghost"
           size="lg"
           class="shrink-0"
+          @click="removeVariable(index)"
         >
           <UIcon name="i-heroicons-trash" />
         </UButton>
@@ -69,7 +72,7 @@ const emit = defineEmits<{
 
 const variables = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  set: value => emit('update:modelValue', value)
 })
 
 const addVariable = () => {

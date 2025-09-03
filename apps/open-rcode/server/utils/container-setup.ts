@@ -1,5 +1,5 @@
 import { DockerManager } from './docker'
-import { BaseContainerManager } from './container/base-container-manager'
+import type { BaseContainerManager } from './container/base-container-manager'
 import { TaskModel } from '../models/Task'
 import { EnvironmentModel } from '../models/Environment'
 import { UserModel } from '../models/User'
@@ -54,7 +54,7 @@ export class ContainerSetup {
     }
 
     // Utiliser le provider AI spécifié dans l'environnement
-    let aiProvider = environment.aiProvider
+    const aiProvider = environment.aiProvider
     let requiredToken: string | null = null
 
     // Vérifier que le provider est spécifié
@@ -71,7 +71,7 @@ export class ContainerSetup {
 
     // Utiliser le provider spécifié avec ses credentials
     logger.info({ aiProvider, userId: task.userId }, 'Using AI provider')
-    
+
     switch (aiProvider) {
       case 'anthropic-api':
         requiredToken = decrypt(user.anthropicKey!)
@@ -171,7 +171,6 @@ export class ContainerSetup {
     return envVars
   }
 
-
   async cloneRepositoryInContainer(task: any, environment: any, containerId: string, workspaceDir?: string): Promise<void> {
     const cloner = new RepositoryCloner(this.containerManager)
     await cloner.cloneInContainer(task, environment, containerId, workspaceDir)
@@ -179,29 +178,28 @@ export class ContainerSetup {
 
   private async waitForContainerReady(containerId: string, maxWaitTime: number = 180000): Promise<void> {
     logger.info({ containerId, maxWaitTime }, 'Waiting for container to be ready')
-    
+
     const startTime = Date.now()
     const checkInterval = 5000
-    
+
     while (Date.now() - startTime < maxWaitTime) {
       try {
         const logs = await this.containerManager.getContainerLogs(containerId, 50)
-        
+
         if (logs.includes('Environment ready') || logs.includes('Dropping you into a bash shell')) {
           logger.info({ containerId }, 'Container is ready!')
           await new Promise(resolve => setTimeout(resolve, 5000))
           return
         }
-        
+
         logger.debug({ containerId, elapsedSeconds: Math.floor((Date.now() - startTime) / 1000) }, 'Container still setting up')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
-        
       } catch (error: any) {
         logger.warn({ error, containerId }, 'Error checking container readiness')
         await new Promise(resolve => setTimeout(resolve, checkInterval))
       }
     }
-    
+
     logger.warn({ containerId, timeoutSeconds: maxWaitTime / 1000 }, 'Container setup timeout, proceeding anyway')
   }
 
@@ -209,7 +207,7 @@ export class ContainerSetup {
     const images = await this.docker.getDockerInstance().listImages({
       filters: { reference: [imageName] }
     })
-    
+
     if (images.length === 0) {
       if (imageName === 'ghcr.io/aidalinfo/open-rcoder-worker:latest') {
         await this.buildCustomDockerImage()
@@ -228,15 +226,15 @@ export class ContainerSetup {
   private async buildCustomDockerImage(): Promise<void> {
     const path = await import('path')
     const tar = await import('tar-fs')
-    
+
     const dockerContextPath = path.resolve(process.cwd(), 'server/utils/docker')
     const dockerContext = tar.pack(dockerContextPath)
-    
+
     const stream = await this.docker.getDockerInstance().buildImage(dockerContext, {
       t: 'openrcode-task-runner:latest',
       dockerfile: 'Dockerfile'
     })
-    
+
     await new Promise((resolve, reject) => {
       this.docker.getDockerInstance().modem.followProgress(stream, (err: any, res: any) => {
         if (err) reject(err)

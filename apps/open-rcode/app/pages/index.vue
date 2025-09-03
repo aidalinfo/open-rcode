@@ -23,14 +23,17 @@
           />
 
           <UButton
-            @click="loginWithGitHub"
             variant="outline"
             size="lg"
             block
             :loading="isLoading"
+            @click="loginWithGitHub"
           >
             <template #leading>
-              <UIcon name="i-simple-icons-github" class="w-5 h-5" />
+              <UIcon
+                name="i-simple-icons-github"
+                class="w-5 h-5"
+              />
             </template>
             Sign in with GitHub
           </UButton>
@@ -42,7 +45,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'no-connected',
+  layout: 'no-connected'
 })
 const route = useRoute()
 const router = useRouter()

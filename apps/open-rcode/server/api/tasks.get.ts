@@ -8,7 +8,7 @@ import { logger } from '../utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const sessionToken = getCookie(event, 'session')
     if (!sessionToken) {
       throw createError({
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No session found'
       })
     }
-    
+
     const session = await SessionModel.findOne({ sessionToken })
     if (!session || session.expires < new Date()) {
       throw createError({
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Session expired'
       })
     }
-    
+
     const user = await UserModel.findOne({ githubId: session.userId })
     if (!user) {
       throw createError({
@@ -32,30 +32,30 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'User not found'
       })
     }
-    
+
     // Récupérer les paramètres de pagination
     const query = getQuery(event)
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 10
     const skip = (page - 1) * limit
-    
+
     // Récupérer le nombre total de tâches pour la pagination
     const total = await TaskModel.countDocuments({ userId: user.githubId })
-    
+
     // Récupérer les tâches de l'utilisateur avec pagination
     const tasks = await TaskModel.find({ userId: user.githubId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec()
-    
+
     // Récupérer tous les environnements en une seule requête
     const environmentIds = tasks.map(task => task.environmentId).filter(Boolean)
     const environments = await EnvironmentModel.find({ _id: { $in: environmentIds } })
     const environmentMap = new Map(environments.map(env => [env._id.toString(), env]))
-    
+
     // Formater les données pour le frontend
-    const formattedTasks = tasks.map(task => {
+    const formattedTasks = tasks.map((task) => {
       // Extraire le numéro de PR de l'URL si elle existe
       let prData = null
       if (task.pr) {
@@ -67,10 +67,10 @@ export default defineEventHandler(async (event) => {
           }
         }
       }
-      
+
       // Récupérer l'environnement depuis le map
       const environment = task.environmentId ? environmentMap.get(task.environmentId) : null
-      
+
       return {
         _id: task._id,
         name: task.name,
@@ -79,16 +79,18 @@ export default defineEventHandler(async (event) => {
         merged: task.merged,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
-        environment: environment ? {
-          name: environment.name
-        } : null,
+        environment: environment
+          ? {
+              name: environment.name
+            }
+          : null,
         pr: prData,
         dockerId: task.dockerId,
         error: task.error,
         planMode: task.planMode
       }
     })
-    
+
     return {
       tasks: formattedTasks,
       total,
@@ -98,12 +100,12 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     logger.error({ error, userId: session?.userId }, 'Error fetching tasks')
-    
+
     // Si c'est une erreur createError (déjà formatée)
     if (error.statusCode) {
       throw error
     }
-    
+
     // Erreur générique
     throw createError({
       statusCode: 500,

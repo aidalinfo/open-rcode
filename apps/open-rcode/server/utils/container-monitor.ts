@@ -2,7 +2,8 @@ import { CronJob } from 'cron'
 import { DockerManager } from './docker'
 import { TaskModel } from '../models/Task'
 import { connectToDatabase } from './database'
-import { createContainerManager, BaseContainerManager } from './container'
+import type { BaseContainerManager } from './container'
+import { createContainerManager } from './container'
 import { createLogger } from './logger'
 
 export class ContainerMonitor {
@@ -88,7 +89,6 @@ export class ContainerMonitor {
           this.logger.error({ taskId: task._id, error }, 'Error checking container')
         }
       }
-
     } catch (error) {
       this.logger.error({ error }, 'Error in container monitoring')
     }
@@ -113,7 +113,7 @@ export class ContainerMonitor {
       // Vérifier l'état du conteneur (compatible Docker et Kubernetes)
       const status = containerInfo.status.toLowerCase()
       const state = containerInfo.state.toLowerCase()
-      
+
       if (status === 'running' || state === 'running') {
         this.logger.debug({ containerId: task.dockerId }, 'Container is running')
       } else if (status === 'exited' || state === 'succeeded' || state === 'failed') {
@@ -125,10 +125,9 @@ export class ContainerMonitor {
       } else {
         this.logger.debug({ containerId: task.dockerId, status, state }, 'Container status')
       }
-
     } catch (error) {
       this.logger.error({ containerId: task.dockerId, error }, 'Error checking container')
-      
+
       // Si le conteneur est introuvable, le marquer comme non trouvé
       if (error.message.includes('No such container')) {
         await this.handleContainerNotFound(task)
@@ -141,7 +140,7 @@ export class ContainerMonitor {
    */
   private async handleContainerNotFound(task: any): Promise<void> {
     this.logger.info({ taskId: task._id }, 'Marking task as completed - container not found')
-    
+
     task.executed = true
     task.error = 'Container not found - may have been auto-removed'
     task.messages.push({
@@ -149,7 +148,7 @@ export class ContainerMonitor {
       content: '⚠️ Le conteneur a été supprimé automatiquement.',
       timestamp: new Date()
     })
-    
+
     await task.save()
   }
 
@@ -160,18 +159,18 @@ export class ContainerMonitor {
     try {
       // Récupérer les logs du conteneur
       const logs = await this.containerManager.getContainerLogs(task.dockerId, 1000)
-      
+
       this.logger.info({ taskId: task._id }, 'Container exited, updating with logs')
-      
+
       task.executed = true
       task.messages.push({
         role: 'assistant',
         content: `✅ Exécution terminée.\n\n**Logs:**\n\`\`\`\n${logs}\n\`\`\``,
         timestamp: new Date()
       })
-      
+
       await task.save()
-      
+
       // Nettoyer le conteneur
       try {
         await this.containerManager.removeContainer(task.dockerId, true)
@@ -179,10 +178,9 @@ export class ContainerMonitor {
       } catch (removeError) {
         this.logger.debug({ containerId: task.dockerId }, 'Container may have been auto-removed')
       }
-      
     } catch (error) {
       this.logger.error({ taskId: task._id, error }, 'Error handling exited container')
-      
+
       task.executed = true
       task.error = `Container exited but failed to retrieve logs: ${error.message}`
       await task.save()
@@ -194,7 +192,7 @@ export class ContainerMonitor {
    */
   private async handleContainerDead(task: any): Promise<void> {
     this.logger.warn({ taskId: task._id }, 'Container is dead, marking task as failed')
-    
+
     task.executed = true
     task.error = 'Container died unexpectedly'
     task.messages.push({
@@ -202,7 +200,7 @@ export class ContainerMonitor {
       content: '❌ Le conteneur s\'est arrêté de manière inattendue.',
       timestamp: new Date()
     })
-    
+
     await task.save()
   }
 
@@ -230,9 +228,9 @@ export class ContainerMonitor {
   /**
    * Retourne le statut du monitoring
    */
-  getStatus(): { isRunning: boolean; nextRun?: string } {
+  getStatus(): { isRunning: boolean, nextRun?: string } {
     let nextRun: string | undefined = undefined
-    
+
     if (this.cronJob && this.isRunning) {
       try {
         const nextDate = this.cronJob.nextDate()
@@ -243,7 +241,7 @@ export class ContainerMonitor {
         this.logger.debug({ error }, 'Error getting next run date')
       }
     }
-    
+
     return {
       isRunning: this.isRunning,
       nextRun

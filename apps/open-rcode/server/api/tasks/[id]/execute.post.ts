@@ -8,7 +8,7 @@ import { logger } from '../../../utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const taskId = getRouterParam(event, 'id')
     if (!taskId) {
       throw createError({
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event)
-    
+
     if (!body.prompt) {
       throw createError({
         statusCode: 400,
@@ -69,11 +69,11 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     logger.error({ error, taskId }, 'Error executing command in task container')
-    
+
     if (error.statusCode) {
       throw error
     }
-    
+
     throw createError({
       statusCode: 500,
       statusMessage: `Failed to execute command: ${error instanceof Error ? error.message : String(error)}`

@@ -1,8 +1,8 @@
 <template>
   <div class="relative">
-    <UChatPrompt 
+    <UChatPrompt
       ref="chatPromptRef"
-      v-model="localInput" 
+      v-model="localInput"
       :status="loading ? 'streaming' : 'ready'"
       placeholder="Ask your question... (use @ to reference files)"
       @submit="handleSubmit"
@@ -10,74 +10,52 @@
       @input="handleInput"
     >
       <UChatPromptSubmit />
-      
+
       <template #footer>
-      <div class="flex flex-wrap items-center gap-3">
-        <USelect
-          v-model="localSelectedEnvironment"
-          :items="environmentOptions"
-          icon="i-heroicons-cube"
-          placeholder="Select an environment"
-          variant="ghost"
-          :disabled="environments.length === 0"
-          class="w-full sm:w-auto"
-        />
-        
-        <div class="flex items-center gap-3 w-full sm:w-auto">
-          <UDropdownMenu :items="workflowOptions">
-            <UButton
-              variant="ghost"
-              icon="i-heroicons-cog-6-tooth"
-              size="sm"
-            >
-              Workflow
-            </UButton>
-          </UDropdownMenu>
-          
-          <div v-if="selectedWorkflow" class="flex items-center">
-            <UBadge
-              color="primary"
-              variant="solid"
-              size="sm"
-              class="flex items-center gap-1 pr-1"
-            >
-              {{ selectedWorkflow }}
-              <UButton
-                variant="ghost"
-                size="2xs"
-                icon="i-heroicons-x-mark"
-                class="ml-2 h-4 w-4 p-0 text-white dark:text-black"
-                @click="removeWorkflow"
-              />
-            </UBadge>
-          </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <USelect
+            v-model="localSelectedEnvironment"
+            :items="environmentOptions"
+            icon="i-heroicons-cube"
+            placeholder="Select an environment"
+            variant="ghost"
+            :disabled="environments.length === 0"
+            class="w-full sm:w-auto"
+          />
         </div>
-        
-      </div>
-    </template>
-  </UChatPrompt>
-  
-  <!-- File Path Autocomplete -->
-  <div v-if="showFileMenu && filteredFilePaths.length > 0" class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto min-w-80" :style="menuPosition">
-    <div class="p-2">
-      <div class="text-xs text-gray-500 mb-2">Select a file path:</div>
-      <div class="space-y-1">
-        <button
-          v-for="item in filteredFilePaths"
-          :key="item.value"
-          @click="insertFilePath(item.value)"
-          class="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
-        >
-          <div class="font-medium">{{ item.label }}</div>
-        </button>
+      </template>
+    </UChatPrompt>
+
+    <!-- File Path Autocomplete -->
+    <div
+      v-if="showFileMenu && filteredFilePaths.length > 0"
+      class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto min-w-80"
+      :style="menuPosition"
+    >
+      <div class="p-2">
+        <div class="text-xs text-gray-500 mb-2">
+          Select a file path:
+        </div>
+        <div class="space-y-1">
+          <button
+            v-for="item in filteredFilePaths"
+            :key="item.value"
+            class="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
+            @click="insertFilePath(item.value)"
+          >
+            <div class="font-medium">
+              {{ item.label }}
+            </div>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
+
 interface Props {
   input: string
   selectedEnvironment: string
@@ -88,16 +66,13 @@ interface Props {
 interface Emits {
   (e: 'update:input', value: string): void
   (e: 'update:selectedEnvironment', value: string): void
-  (e: 'submit', data: { message: string; environmentId: string; task?: any; planMode?: boolean }): void
+  (e: 'submit', data: { message: string, environmentId: string, task?: any, planMode?: boolean, autoMerge?: boolean }): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const toast = useToast()
-
-// Workflow state
-const selectedWorkflow = ref('')
 
 // File path autocomplete state
 const showFileMenu = ref(false)
@@ -111,12 +86,12 @@ const chatPromptRef = ref()
 // Computed properties for two-way binding
 const localInput = computed({
   get: () => props.input,
-  set: (value) => emit('update:input', value)
+  set: value => emit('update:input', value)
 })
 
 const localSelectedEnvironment = computed({
   get: () => props.selectedEnvironment,
-  set: (value) => emit('update:selectedEnvironment', value)
+  set: value => emit('update:selectedEnvironment', value)
 })
 
 // Options for environment selector
@@ -140,23 +115,9 @@ const filteredFilePaths = computed(() => {
     .slice(0, 10) // Limit to 10 results
 })
 
-// Options for workflow dropdown
-const workflowOptions = computed(() => [{
-  label: 'Plan Mode Workflow',
-  icon: 'i-heroicons-cpu-chip',
-  onSelect() {
-    selectedWorkflow.value = 'Plan Mode Workflow'
-  }
-}])
-
-// Workflow methods
-const removeWorkflow = () => {
-  selectedWorkflow.value = ''
-}
-
 const handleSubmit = async () => {
   if (!localInput.value.trim()) return
-  
+
   if (!localSelectedEnvironment.value) {
     toast.add({
       title: 'Error',
@@ -173,7 +134,8 @@ const handleSubmit = async () => {
       body: {
         environmentId: localSelectedEnvironment.value,
         message: localInput.value,
-        planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+        planMode: false,
+        autoMerge: false
       }
     })
 
@@ -188,7 +150,8 @@ const handleSubmit = async () => {
       message: localInput.value,
       environmentId: localSelectedEnvironment.value,
       task: task.task,
-      planMode: selectedWorkflow.value === 'Plan Mode Workflow'
+      planMode: false,
+      autoMerge: false
     })
 
     // Clear input after emitting event
@@ -226,11 +189,11 @@ const fetchFilePaths = async (environmentId: string) => {
 const handleInput = (event: Event) => {
   const input = event.target as HTMLInputElement
   cursorPosition.value = input.selectionStart || 0
-  
+
   // Check for @ character
   const value = input.value
   const lastAtIndex = value.lastIndexOf('@', cursorPosition.value - 1)
-  
+
   if (lastAtIndex !== -1) {
     // Check if there's no space between @ and cursor
     const textBetween = value.slice(lastAtIndex + 1, cursorPosition.value)
@@ -238,7 +201,7 @@ const handleInput = (event: Event) => {
       atPosition.value = lastAtIndex
       showFileMenu.value = true
       updateMenuPosition(input)
-      
+
       // Fetch file paths if not already loaded
       if (filePaths.value.length === 0 && localSelectedEnvironment.value) {
         fetchFilePaths(localSelectedEnvironment.value)
@@ -269,10 +232,10 @@ const updateMenuPosition = (input: HTMLInputElement) => {
   temp.style.font = window.getComputedStyle(input).font
   temp.textContent = localInput.value.slice(0, atPosition.value + 1)
   document.body.appendChild(temp)
-  
+
   const textWidth = temp.offsetWidth
   document.body.removeChild(temp)
-  
+
   menuPosition.value = {
     top: '100%',
     left: `${Math.min(textWidth, input.offsetWidth - 200)}px`
@@ -281,15 +244,15 @@ const updateMenuPosition = (input: HTMLInputElement) => {
 
 const insertFilePath = (filePath: string) => {
   if (!filePath) return
-  
+
   const currentValue = localInput.value
   const beforeAt = currentValue.slice(0, atPosition.value)
   const afterCursor = currentValue.slice(cursorPosition.value)
-  
+
   localInput.value = `${beforeAt}@${filePath} ${afterCursor}`
   showFileMenu.value = false
   selectedFilePath.value = ''
-  
+
   // Focus back to input
   nextTick(() => {
     const inputElement = chatPromptRef.value?.$el?.querySelector('input') || chatPromptRef.value?.$el?.querySelector('textarea')

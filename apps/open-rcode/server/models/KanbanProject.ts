@@ -1,13 +1,14 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface KanbanProject {
-  userId: string;
-  environmentId: string;
-  name: string;
-  description?: string;
-  kanbanTaskIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  userId: string
+  environmentId: string
+  name: string
+  description?: string
+  kanbanTaskIds: string[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface KanbanProjectDocument extends KanbanProject, Document {}
@@ -20,9 +21,9 @@ const kanbanProjectSchema = new Schema<KanbanProjectDocument>({
   kanbanTaskIds: [{ type: String, ref: 'KanbanTask' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+})
 
-kanbanProjectSchema.pre('save', function() {
+kanbanProjectSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

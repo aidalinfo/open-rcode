@@ -1,14 +1,15 @@
-import mongoose, { Schema, Document } from 'mongoose'
+import type { Document } from 'mongoose'
+import mongoose, { Schema } from 'mongoose'
 
 export interface TaskMessage {
-  id: string;
-  userId: string;
-  taskId: string;
-  role: 'user' | 'assistant';
-  content: string;
-  type?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  userId: string
+  taskId: string
+  role: 'user' | 'assistant'
+  content: string
+  type?: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface TaskMessageDocument extends TaskMessage, Document {}
@@ -24,7 +25,7 @@ const taskMessageSchema = new Schema<TaskMessageDocument>({
   updatedAt: { type: Date, default: Date.now }
 })
 
-taskMessageSchema.pre('save', function() {
+taskMessageSchema.pre('save', function () {
   this.updatedAt = new Date()
 })
 

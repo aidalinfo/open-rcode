@@ -9,7 +9,7 @@ import { logger } from '../../../utils/logger'
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
-    
+
     const taskId = getRouterParam(event, 'id')
     if (!taskId) {
       throw createError({
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Environment not found for this task'
       })
     }
-    
+
     // Lance la création du container en arrière-plan
     setImmediate(async () => {
       try {
@@ -79,11 +79,11 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     logger.error({ error, taskId }, 'Error creating task container')
-    
+
     if (error.statusCode) {
       throw error
     }
-    
+
     throw createError({
       statusCode: 500,
       statusMessage: `Failed to create container: ${error instanceof Error ? error.message : String(error)}`

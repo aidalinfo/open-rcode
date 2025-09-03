@@ -3,16 +3,25 @@
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
-          <UBadge 
+          <UBadge
             :color="statusColor"
             :variant="statusVariant"
             size="sm"
           >
-            <UIcon :name="statusIcon" class="w-3 h-3 mr-1" />
+            <UIcon
+              :name="statusIcon"
+              class="w-3 h-3 mr-1"
+            />
             {{ statusText }}
           </UBadge>
-          <span v-if="task.planMode" class="text-xs text-blue-600 dark:text-blue-400">
-            <UIcon name="i-heroicons-light-bulb" class="w-3 h-3 mr-1" />
+          <span
+            v-if="task.planMode"
+            class="text-xs text-blue-600 dark:text-blue-400"
+          >
+            <UIcon
+              name="i-heroicons-light-bulb"
+              class="w-3 h-3 mr-1"
+            />
             Plan Mode
           </span>
         </div>
@@ -28,25 +37,45 @@
     </h3>
 
     <!-- PR Link si disponible -->
-    <div v-if="task.pr" class="flex items-center space-x-2 mb-3">
-      <UIcon name="i-simple-icons-github" class="w-4 h-4 text-gray-500" />
-      <ULink 
-        :to="task.pr.url" 
+    <div
+      v-if="task.pr"
+      class="flex items-center space-x-2 mb-3"
+    >
+      <UIcon
+        name="i-simple-icons-github"
+        class="w-4 h-4 text-gray-500"
+      />
+      <ULink
+        :to="task.pr.url"
         target="_blank"
         class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate"
         @click.stop
       >
         Pull Request #{{ task.pr.number }}
-        <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 ml-1" />
+        <UIcon
+          name="i-heroicons-arrow-top-right-on-square"
+          class="w-3 h-3 ml-1"
+        />
       </ULink>
-      <UBadge v-if="task.merged" color="success" variant="soft" size="sm">
+      <UBadge
+        v-if="task.merged"
+        color="success"
+        variant="soft"
+        size="sm"
+      >
         Merged
       </UBadge>
     </div>
 
     <!-- Erreur si présente -->
-    <div v-if="task.error" class="flex items-start space-x-2 mb-3">
-      <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+    <div
+      v-if="task.error"
+      class="flex items-start space-x-2 mb-3"
+    >
+      <UIcon
+        name="i-heroicons-exclamation-triangle"
+        class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+      />
       <p class="text-xs text-red-600 dark:text-red-400 line-clamp-2">
         {{ task.error }}
       </p>
@@ -54,12 +83,21 @@
 
     <template #footer>
       <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <div v-if="task.environment" class="flex items-center space-x-1">
-          <UIcon name="i-heroicons-cube" class="w-3 h-3" />
+        <div
+          v-if="task.environment"
+          class="flex items-center space-x-1"
+        >
+          <UIcon
+            name="i-heroicons-cube"
+            class="w-3 h-3"
+          />
           <span>{{ task.environment.name }}</span>
         </div>
         <div class="flex items-center space-x-1">
-          <UIcon name="i-heroicons-clock" class="w-3 h-3" />
+          <UIcon
+            name="i-heroicons-clock"
+            class="w-3 h-3"
+          />
           <span>Last update {{ formatDate(task.updatedAt) }}</span>
         </div>
       </div>
@@ -120,10 +158,10 @@ const formatDate = (date: string | Date) => {
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffDays > 7) {
-    return d.toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
+    return d.toLocaleDateString('fr-FR', {
+      day: 'numeric',
       month: 'short',
-      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
+      year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     })
   } else if (diffDays > 0) {
     return `${diffDays}j`

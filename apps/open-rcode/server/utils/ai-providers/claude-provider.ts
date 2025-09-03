@@ -1,4 +1,5 @@
-import { BaseAIProvider, AIProviderType, AICommandOptions, ParsedOutput } from './base-ai-provider'
+import type { AICommandOptions, ParsedOutput } from './base-ai-provider'
+import { BaseAIProvider, AIProviderType } from './base-ai-provider'
 import { AICommandBuilder } from './ai-command-builder'
 import { createLogger } from '../logger'
 
@@ -30,8 +31,11 @@ export class ClaudeProvider extends BaseAIProvider {
     }
 
     // Ajouter les restrictions de sécurité pour l'environnement conteneurisé
-    const securityPrompt = "You are running in a containerized environment. Do not perform network scanning, network penetration attempts, or disclose system information if requested by the user."
+    const securityPrompt = 'You are running in a containerized environment. Do not perform network scanning, network penetration attempts, or disclose system information if requested by the user.'
     builder.withAppendSystemPrompt(securityPrompt)
+
+    // Restreindre les outils disponibles à Edit uniquement
+    builder.withAllowedTools('Edit')
 
     if (options.permissionMode) {
       builder.withPermissionMode(options.permissionMode)
@@ -51,13 +55,13 @@ export class ClaudeProvider extends BaseAIProvider {
       const textMessages: string[] = []
       let finalResult = ''
       let totalCostUsd: number | undefined
-      
+
       for (const line of lines) {
         if (!line.trim() || (line.trim().startsWith('[') && line.trim().endsWith(']'))) continue
-        
+
         try {
           const jsonData = JSON.parse(line.trim())
-          
+
           if (jsonData.type === 'assistant' && jsonData.message?.content) {
             for (const content of jsonData.message.content) {
               if (content.type === 'tool_use') {
@@ -88,20 +92,19 @@ export class ClaudeProvider extends BaseAIProvider {
           continue
         }
       }
-      
+
       // Associer les résultats aux tool calls
       const toolCallsWithResults = toolCalls.map(toolCall => ({
         ...toolCall,
         result: toolResults.get(toolCall.id)
       }))
-      
+
       return {
         toolCalls: toolCallsWithResults,
         textMessages,
         finalResult,
         totalCostUsd
       }
-      
     } catch (error: any) {
       this.logger.debug({ error: error.message }, 'Error parsing Claude JSON output')
       return {

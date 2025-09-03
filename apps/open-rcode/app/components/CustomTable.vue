@@ -6,7 +6,7 @@
       <div class="flex items-center gap-2 flex-1">
         <!-- Slot pour la recherche principale -->
         <slot name="search" />
-        
+
         <!-- Slot pour les filtres -->
         <slot name="filters" />
       </div>
@@ -50,23 +50,32 @@
     </div>
 
     <!-- Vue Table -->
-    <UTable 
+    <UTable
       v-if="viewMode === 'table'"
-      ref="table" 
-      :data="paginatedData" 
-      :columns="visibleColumns" 
-      :sticky="sticky" 
+      ref="table"
+      :data="paginatedData"
+      :columns="visibleColumns"
+      :sticky="sticky"
       :class="tableClass"
       @row-click="handleRowClick"
     >
       <!-- Slot pour les rows expandables -->
-      <template v-if="$slots.expanded" #expanded="{ row }">
-        <slot name="expanded" :row="row" />
+      <template
+        v-if="$slots.expanded"
+        #expanded="{ row }"
+      >
+        <slot
+          name="expanded"
+          :row="row"
+        />
       </template>
     </UTable>
 
     <!-- Vue Cartes -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div
+      v-else
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+    >
       <UCard
         v-for="(item, index) in paginatedData"
         :key="index"
@@ -74,17 +83,28 @@
         @click="handleRowClick(item)"
       >
         <!-- Slot personnalisé pour le contenu de la carte -->
-        <slot v-if="$slots['card-template']" name="card-template" :item="item" :columns="visibleColumns" />
-        
+        <slot
+          v-if="$slots['card-template']"
+          name="card-template"
+          :item="item"
+          :columns="visibleColumns"
+        />
+
         <!-- Header par défaut -->
-        <template v-if="!$slots['card-template'] && visibleColumns.length > 0" #header>
+        <template
+          v-if="!$slots['card-template'] && visibleColumns.length > 0"
+          #header
+        >
           <h3 class="text-lg font-semibold truncate">
             {{ visibleColumns[0] ? getItemValue(item, visibleColumns[0]) : '' }}
           </h3>
         </template>
 
         <!-- Contenu par défaut -->
-        <div v-if="!$slots['card-template']" class="space-y-2">
+        <div
+          v-if="!$slots['card-template']"
+          class="space-y-2"
+        >
           <div
             v-for="(column, colIndex) in visibleColumns.slice(1)"
             :key="colIndex"
@@ -94,7 +114,7 @@
               {{ column.header || column.id || column.accessorKey }}:
             </span>
             <span class="text-sm flex-1">
-              <slot 
+              <slot
                 v-if="$slots[(column.id || column.accessorKey) as string]"
                 :name="(column.id || column.accessorKey) as string"
                 :row="item"
@@ -107,8 +127,14 @@
         </div>
 
         <!-- Footer par défaut -->
-        <template v-if="!$slots['card-template'] && $slots['card-actions']" #footer>
-          <slot name="card-actions" :item="item" />
+        <template
+          v-if="!$slots['card-template'] && $slots['card-actions']"
+          #footer
+        >
+          <slot
+            name="card-actions"
+            :item="item"
+          />
         </template>
       </UCard>
     </div>
@@ -129,7 +155,10 @@
         @update:page="handlePageUpdate"
       />
 
-      <slot name="footer-end" class="order-3" />
+      <slot
+        name="footer-end"
+        class="order-3"
+      />
     </div>
   </div>
 </template>
@@ -187,7 +216,7 @@ const isMobile = import.meta.client && window.innerWidth < 640
 const viewMode = ref<'table' | 'card'>(isMobile ? 'card' : props.defaultViewMode)
 
 const visibleColumns = computed(() => {
-  return props.columns.filter(column => {
+  return props.columns.filter((column) => {
     const key = column.id || column.accessorKey
     return key && !hiddenColumns.value.has(key)
   })
@@ -199,28 +228,28 @@ const paginatedData = computed(() => {
   if (props.total) {
     return props.data
   }
-  
+
   // Sinon, faire la pagination côté client (comportement original)
   if (!props.pagination || !props.showPagination) {
     return props.data
   }
-  
+
   const start = (props.pagination.page - 1) * props.pagination.limit
   const end = start + props.pagination.limit
-  
+
   return props.data.slice(start, end)
 })
 
 const columnToggleItems = computed(() => {
-  return props.columns.map((column) => ({
+  return props.columns.map(column => ({
     label: capitalize(column.header || column.id || column.accessorKey || ''),
     type: 'checkbox' as const,
     checked: isColumnVisible(column.id || column.accessorKey || ''),
     onUpdateChecked() {
       toggleColumnVisibility(column.id || column.accessorKey || '')
     },
-    onSelect(e?: Event) { 
-      e?.preventDefault() 
+    onSelect(e?: Event) {
+      e?.preventDefault()
     }
   }))
 })
@@ -257,10 +286,10 @@ function getItemValue(item: any, column: Column): any {
   if (column.accessorFn) {
     return column.accessorFn(item, 0)
   }
-  
+
   const key = column.accessorKey || column.id
   if (!key) return ''
-  
+
   // Support des chemins imbriqués (ex: 'user.name')
   return getNestedValue(item, key) || ''
 }

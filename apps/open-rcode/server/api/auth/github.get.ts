@@ -5,21 +5,21 @@ import { logger } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   const { code } = getQuery(event)
-  
+
   if (!code) {
     const clientId = process.env.GITHUB_CLIENT_ID
     const redirectUri = process.env.GITHUB_REDIRECT_URI || 'http://localhost:3000/api/auth/github'
     const scope = 'user:email'
-    
+
     const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`
-    
+
     return sendRedirect(event, githubAuthUrl)
   }
-  
+
   try {
     await connectToDatabase()
-    
-    const tokenResponse = await $fetch<{access_token: string}>('https://github.com/login/oauth/access_token', {
+
+    const tokenResponse = await $fetch<{ access_token: string }>('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -31,14 +31,14 @@ export default defineEventHandler(async (event) => {
         code
       }
     })
-    
+
     const userResponse = await $fetch<{
-      id: number,
-      login: string,
-      name: string,
-      email: string,
-      avatar_url: string,
-      bio: string,
+      id: number
+      login: string
+      name: string
+      email: string
+      avatar_url: string
+      bio: string
       location: string
     }>('https://api.github.com/user', {
       headers: {
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
         'User-Agent': 'open-rcode-app'
       }
     })
-    
+
     const userData = {
       githubId: userResponse.id.toString(),
       username: userResponse.login,
@@ -56,9 +56,9 @@ export default defineEventHandler(async (event) => {
       bio: userResponse.bio,
       location: userResponse.location
     }
-    
+
     let user = await UserModel.findOne({ githubId: userData.githubId })
-    
+
     if (!user) {
       user = new UserModel(userData)
       await user.save()
@@ -66,23 +66,23 @@ export default defineEventHandler(async (event) => {
       Object.assign(user, userData)
       await user.save()
     }
-    
+
     const sessionToken = await generateSessionToken()
     const session = new SessionModel({
       userId: user.githubId,
       sessionToken,
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     })
-    
+
     await session.save()
-    
+
     setCookie(event, 'session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60
     })
-    
+
     return sendRedirect(event, '/app')
   } catch (error) {
     logger.error({ error }, 'GitHub auth error')

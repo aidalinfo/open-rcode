@@ -1,5 +1,6 @@
 import { KubernetesManager } from './kubernetes/kubernetes-manager'
-import { BaseContainerManager, BaseContainerOptions, BaseExecuteOptions, BaseContainerInfo, ExecuteResult, BaseConnectionOptions } from './base-container-manager'
+import type { BaseContainerOptions, BaseExecuteOptions, BaseContainerInfo, ExecuteResult, BaseConnectionOptions } from './base-container-manager'
+import { BaseContainerManager } from './base-container-manager'
 
 export class KubernetesAdapter extends BaseContainerManager {
   private kubernetesManager: KubernetesManager
@@ -28,7 +29,7 @@ export class KubernetesAdapter extends BaseContainerManager {
       restartPolicy: this.mapRestartPolicy(options.restartPolicy),
       namespace: this.kubernetesManager.getConnectionInfo().namespace
     }
-    
+
     return this.kubernetesManager.createPod(kubernetesOptions)
   }
 
@@ -53,7 +54,7 @@ export class KubernetesAdapter extends BaseContainerManager {
       environment: options.environment,
       namespace: this.kubernetesManager.getConnectionInfo().namespace
     }
-    
+
     return this.kubernetesManager.executeInPod(kubernetesOptions)
   }
 
@@ -89,7 +90,7 @@ export class KubernetesAdapter extends BaseContainerManager {
 
   async listContainers(all: boolean = false): Promise<BaseContainerInfo[]> {
     const pods = await this.kubernetesManager.listPods()
-    
+
     return pods
       .filter(pod => all || pod.phase === 'Running')
       .map(pod => ({
@@ -132,7 +133,7 @@ export class KubernetesAdapter extends BaseContainerManager {
       environment: options.environment,
       namespace: this.kubernetesManager.getConnectionInfo().namespace
     }
-    
+
     return this.kubernetesManager.executeInPodWithStreaming(kubernetesOptions, onOutput)
   }
 

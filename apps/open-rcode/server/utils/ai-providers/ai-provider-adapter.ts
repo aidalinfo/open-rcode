@@ -1,4 +1,4 @@
-import { BaseAIProvider, AIProviderType, ExecuteOptions, ParsedOutput } from './base-ai-provider'
+import type { BaseAIProvider, AIProviderType, ExecuteOptions, ParsedOutput } from './base-ai-provider'
 import { AIProviderFactory } from './ai-provider-factory'
 import { ContainerScripts } from '../container-scripts'
 import { createLogger } from '../logger'
@@ -31,7 +31,7 @@ export class AIProviderAdapter {
 
   buildExecutionScript(options: ExecuteOptions): string {
     const cliName = AIProviderFactory.isGeminiProvider(this.provider['providerType']) ? 'gemini' : 'claude'
-    
+
     const command = this.provider.buildCommand({
       model: options.model,
       verbose: true,
@@ -51,28 +51,28 @@ export class AIProviderAdapter {
     // Remove unwanted path from the beginning
     const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/(claude|gemini)\s*\n?/
     const filteredOutput = rawOutput.replace(unwantedPathPattern, '')
-    
+
     return this.provider.parseOutput(filteredOutput)
   }
 
   formatToolCall(toolCall: any): string {
     const parts: string[] = []
-    
+
     // Détection des outils MCP
     const isMcpTool = toolCall.name.startsWith('mcp__') || toolCall.name.startsWith('mcp_') || toolCall.name.startsWith('mcp')
-    
+
     if (isMcpTool) {
       parts.push(`🔌 **${toolCall.name}** (MCP)`)
     } else {
       parts.push(`🔧 **${toolCall.name}**`)
     }
-    
+
     if (toolCall.input) {
       const inputEntries = Object.entries(toolCall.input)
-      
+
       if (inputEntries.length === 1) {
         const [key, value] = inputEntries[0]
-        
+
         if (key === 'file_path') {
           const emoji = toolCall.name === 'Read' ? '📁' : toolCall.name === 'Write' ? '📝' : toolCall.name === 'Edit' ? '✏️' : '📄'
           const action = toolCall.name === 'Read' ? 'Lecture' : toolCall.name === 'Write' ? 'Écriture' : toolCall.name === 'Edit' ? 'Édition' : 'Fichier'
@@ -112,7 +112,7 @@ export class AIProviderAdapter {
         }).join(', ')}`)
       }
     }
-    
+
     if (toolCall.result) {
       if (toolCall.result.is_error) {
         parts.push(`   ❌ Erreur: ${toolCall.result.content}`)
@@ -122,7 +122,7 @@ export class AIProviderAdapter {
         parts.push(`   ✅ Succès`)
       }
     }
-    
+
     return parts.join('\n')
   }
 }

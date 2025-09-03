@@ -12,8 +12,8 @@
         </div>
       </div>
 
-      <SubAgentsTable 
-        :subagents="subagents" 
+      <SubAgentsTable
+        :subagents="subagents"
         :loading="loading"
         :total="total"
         :page="page"
