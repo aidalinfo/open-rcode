@@ -31,19 +31,22 @@ export class AIProviderAdapter {
 
   buildExecutionScript(options: ExecuteOptions): string {
     const cliName = AIProviderFactory.isGeminiProvider(this.provider['providerType']) ? 'gemini' : 'claude'
+    const isClaudeProvider = cliName === 'claude'
 
+    // Build the command with MCP config path if available
     const command = this.provider.buildCommand({
       model: options.model,
       verbose: true,
       outputFormat: this.provider.supportsStreaming() ? 'stream-json' : 'text',
       permissionMode: options.planMode ? 'plan' : 'normal'
-    }, options.prompt)
+    }, options.prompt, options.mcpConfigPath)
 
     return ContainerScripts.buildExecutionScript(
       options.workdir,
       this.provider.getEnvironmentSetup(),
       cliName,
-      command
+      command,
+      false // We'll handle MCP detection in the higher level
     )
   }
 
