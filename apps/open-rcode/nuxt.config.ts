@@ -30,5 +30,30 @@ export default defineNuxtConfig({
     families: [
       { name: 'Roboto', provider: 'google' }
     ]
+  },
+
+  vite: {
+    optimizeDeps: {
+      include: ['reka-ui']
+    },
+    build: {
+      rollupOptions: {
+        onwarn(warning, warn) {
+          // Suppress specific warnings
+          if (warning.code === 'EVAL' || warning.message.includes('Cannot split a chunk')) {
+            return
+          }
+          warn(warning)
+        }
+      }
+    }
+  },
+
+  nitro: {
+    esbuild: {
+      options: {
+        target: 'es2022'
+      }
+    }
   }
 })
