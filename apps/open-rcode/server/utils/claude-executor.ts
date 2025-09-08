@@ -30,15 +30,19 @@ export class ClaudeExecutor {
   async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
     const providerType = (aiProvider || 'anthropic-api') as AIProviderType
     const adapter = new AIProviderAdapter(providerType)
+    const actualWorkdir = workdir || '/tmp/workspace'
+
+    // Détecter la présence d'un fichier MCP config
+    const mcpConfigPath = await this.detectMcpConfig(containerId, actualWorkdir)
 
     // Si nous sommes en mode plan avec Claude, utiliser executePlanCommand
     if (planMode && adapter.supportsPlanMode()) {
-      return this.executePlanCommand(containerId, prompt, workdir, providerType, model, task)
+      return this.executePlanCommand(containerId, prompt, actualWorkdir, providerType, model, task, mcpConfigPath)
     }
 
     // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
     if (task) {
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, actualWorkdir, providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
     }
 
     const onOutput = (data: string) => {
@@ -54,9 +58,10 @@ export class ClaudeExecutor {
 
     const script = adapter.buildExecutionScript({
       prompt,
-      workdir: workdir || '/tmp/workspace',
+      workdir: actualWorkdir,
       model,
-      planMode
+      planMode,
+      mcpConfigPath
     })
 
     const result = await this.executeWithStreamingBash(containerId, script, onOutput)
@@ -164,6 +169,35 @@ export class ClaudeExecutor {
     })
   }
 
+  private async detectMcpConfig(containerId: string, workdir: string): Promise<string | undefined> {
+    try {
+      // Check for .mcp.json first, then servers.json
+      const checkScript = `
+        if [ -f "${workdir}/.mcp.json" ]; then
+          echo "${workdir}/.mcp.json"
+        elif [ -f "${workdir}/servers.json" ]; then
+          echo "${workdir}/servers.json"
+        fi
+      `
+      
+      const result = await this.containerManager.executeInContainer({
+        containerId,
+        command: ['sh', '-c', checkScript],
+        user: 'root'
+      })
+
+      if (result.stdout && result.stdout.trim()) {
+        const configPath = result.stdout.trim()
+        this.logger.info({ configPath }, '🔌 MCP config file detected')
+        return configPath
+      }
+    } catch (error) {
+      this.logger.debug({ error }, 'Error detecting MCP config')
+    }
+    
+    return undefined
+  }
+
   async executeWorkflow(containerId: string, task: any): Promise<void> {
     const updateTaskStatus = async (status: string, error?: string) => {
       await TaskModel.findByIdAndUpdate(task._id, {
@@ -186,6 +220,9 @@ export class ClaudeExecutor {
       const aiProvider = (environment.aiProvider || 'anthropic-api') as AIProviderType
       const model = environment.model || 'sonnet'
       this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration')
+
+      // Détecter la présence d'un fichier MCP config
+      const mcpConfigPath = await this.detectMcpConfig(containerId, workspaceDir)
 
       // Créer les fichiers de SubAgents si l'environnement en a
       if (environment.subAgents && environment.subAgents.length > 0) {
@@ -250,9 +287,9 @@ export class ClaudeExecutor {
 
         // Si planMode est activé et que le provider le supporte
         if (task.planMode && adapter.supportsPlanMode()) {
-          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task)
+          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task, mcpConfigPath)
         } else {
-          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche')
+          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche', mcpConfigPath)
         }
       }
 
@@ -325,7 +362,7 @@ export class ClaudeExecutor {
     return adapter.parseOutput(rawOutput)
   }
 
-  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: AIProviderType, model?: string, task?: any): Promise<string> {
+  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: AIProviderType, model?: string, task?: any, mcpConfigPath?: string): Promise<string> {
     this.logger.info('🎯 Exécution en mode plan...')
 
     const providerType = aiProvider || 'anthropic-api'
@@ -405,7 +442,8 @@ export class ClaudeExecutor {
       prompt,
       workdir: workdir || '/tmp/workspace',
       model,
-      planMode: true
+      planMode: true,
+      mcpConfigPath
     })
 
     this.logger.info('🚀 Exécution de la commande en mode plan...')
@@ -415,7 +453,7 @@ export class ClaudeExecutor {
       this.logger.error({ stderr: planResult.stderr }, '❌ Échec du mode plan')
       // En cas d'échec, fallback sur le mode normal
       this.logger.info('↩️ Fallback sur le mode normal...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
     }
 
     // Si pas de plan capturé, essayer de le parser depuis la sortie
@@ -445,7 +483,7 @@ export class ClaudeExecutor {
 
     if (!planContent) {
       this.logger.warn('⚠️ Aucun plan trouvé, exécution directe du prompt...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande')
+      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
     }
 
     // Si on a un task, sauvegarder le plan et le coût
@@ -480,7 +518,7 @@ export class ClaudeExecutor {
     this.logger.info('🏃 Exécution du plan...')
     const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
 
-    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution du plan')
+    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution du plan', mcpConfigPath)
   }
 
   private formatToolCall(toolCall: any): string {
@@ -495,7 +533,8 @@ export class ClaudeExecutor {
     aiProvider: AIProviderType,
     model: string,
     task: any,
-    actionLabel: string
+    actionLabel: string,
+    mcpConfigPath?: string
   ): Promise<string> {
     const adapter = new AIProviderAdapter(aiProvider)
     const aiProviderLabel = adapter.getName()
@@ -561,7 +600,8 @@ export class ClaudeExecutor {
       prompt,
       workdir,
       model,
-      planMode: false
+      planMode: false,
+      mcpConfigPath
     })
 
     const result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)

@@ -6,6 +6,7 @@ export interface ExecuteOptions {
   workdir: string
   model?: string
   planMode?: boolean
+  mcpConfigPath?: string
   onOutput?: (data: string) => void
 }
 
@@ -28,7 +29,7 @@ export abstract class BaseAIProvider {
 
   abstract getName(): string
   abstract getEnvironmentSetup(): string
-  abstract buildCommand(options: AICommandOptions, prompt: string): string
+  abstract buildCommand(options: AICommandOptions, prompt: string, mcpConfigPath?: string): string
   abstract parseOutput(rawOutput: string): ParsedOutput
   abstract supportsStreaming(): boolean
   abstract supportsPlanMode(): boolean

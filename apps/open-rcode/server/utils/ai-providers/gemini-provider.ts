@@ -14,11 +14,13 @@ export class GeminiProvider extends BaseAIProvider {
     return 'export GEMINI_API_KEY="$GEMINI_API_KEY"'
   }
 
-  buildCommand(options: AICommandOptions, prompt: string): string {
+  buildCommand(options: AICommandOptions, prompt: string, mcpConfigPath?: string): string {
     const builder = AICommandBuilder.create('gemini')
 
     builder.withModel(options.model)
     builder.withPrompt(prompt)
+
+    // Note: Gemini doesn't support MCP config, parameter ignored
 
     return builder.build()
   }
