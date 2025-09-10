@@ -20,10 +20,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Validation du provider AI si fourni
-    if (body.aiProvider && !['anthropic-api', 'claude-oauth', 'gemini-cli'].includes(body.aiProvider)) {
+    if (body.aiProvider && !['anthropic-api', 'claude-oauth', 'gemini-cli', 'codex-api', 'codex-oauth'].includes(body.aiProvider)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'aiProvider must be one of: anthropic-api, claude-oauth, gemini-cli'
+        statusMessage: 'aiProvider must be one of: anthropic-api, claude-oauth, gemini-cli, codex-api, codex-oauth'
       })
     }
 

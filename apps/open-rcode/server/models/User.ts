@@ -20,6 +20,9 @@ export interface User {
   anthropicKey?: string
   claudeOAuthToken?: string
   geminiApiKey?: string
+  // Codex / OpenAI credentials
+  openaiApiKey?: string
+  codexOAuthJson?: string
   role: UserRole
   createdAt: Date
   updatedAt: Date
@@ -40,6 +43,9 @@ const userSchema = new Schema<UserDocument>({
   anthropicKey: { type: String },
   claudeOAuthToken: { type: String },
   geminiApiKey: { type: String },
+  // Encrypted values, same scheme as others
+  openaiApiKey: { type: String },
+  codexOAuthJson: { type: String },
   role: {
     type: String,
     enum: Object.values(UserRole),

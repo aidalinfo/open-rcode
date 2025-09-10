@@ -236,7 +236,9 @@ const runtimeOptions: SelectOption[] = [
 const aiProviderOptions: SelectOption[] = [
   { label: 'API Anthropic (Claude)', value: 'anthropic-api' },
   { label: 'OAuth Claude Code CLI', value: 'claude-oauth' },
-  { label: 'Google Gemini CLI', value: 'gemini-cli' }
+  { label: 'Google Gemini CLI', value: 'gemini-cli' },
+  { label: 'OpenAI Codex API', value: 'codex-api' },
+  { label: 'OpenAI Codex OAuth', value: 'codex-oauth' }
 ]
 
 // Model options
@@ -459,7 +461,9 @@ const getAiProviderDescription = (provider: string) => {
   const descriptions: Record<string, string> = {
     'anthropic-api': 'Uses your Anthropic API key to call Claude directly via API.',
     'claude-oauth': 'Uses your OAuth token for Claude Code CLI (recommended for advanced features).',
-    'gemini-cli': 'Uses your Google API key to call Gemini via CLI.'
+    'gemini-cli': 'Uses your Google API key to call Gemini via CLI.',
+    'codex-api': 'Uses your OpenAI API key to access Codex (via API).',
+    'codex-oauth': 'Uses your Codex OAuth JSON to authenticate (file-based OAuth).'
   }
   return descriptions[provider] || ''
 }

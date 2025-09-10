@@ -358,6 +358,8 @@ const getAiProviderIcon = (provider: string) => {
     case 'anthropic-api': return 'i-heroicons-cpu-chip'
     case 'claude-oauth': return 'i-heroicons-identification'
     case 'gemini-cli': return 'i-heroicons-sparkles'
+    case 'codex-api': return 'i-heroicons-command-line'
+    case 'codex-oauth': return 'i-heroicons-document-text'
     default: return 'i-heroicons-cog-6-tooth'
   }
 }
@@ -367,6 +369,8 @@ const getAiProviderColor = (provider: string) => {
     case 'anthropic-api': return 'text-purple-500'
     case 'claude-oauth': return 'text-blue-500'
     case 'gemini-cli': return 'text-amber-500'
+    case 'codex-api': return 'text-sky-500'
+    case 'codex-oauth': return 'text-sky-600'
     default: return 'text-gray-500'
   }
 }
@@ -376,6 +380,8 @@ const getAiProviderLabel = (provider: string) => {
     case 'anthropic-api': return 'Anthropic API'
     case 'claude-oauth': return 'Claude OAuth'
     case 'gemini-cli': return 'Gemini CLI'
+    case 'codex-api': return 'Codex API'
+    case 'codex-oauth': return 'Codex OAuth'
     default: return provider
   }
 }

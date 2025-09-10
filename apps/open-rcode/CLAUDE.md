@@ -35,7 +35,7 @@ kubectl delete pod <pod_name>                                    # Delete a pod
 The platform orchestrates AI-assisted development through this flow:
 1. User submits task via web interface
 2. `TaskContainerManager` creates isolated container (Docker or Kubernetes pod)
-3. `ClaudeExecutor` runs AI commands inside container
+3. `AIExecutor` runs AI commands inside container
 4. `PullRequestCreator` commits changes and creates GitHub PR
 
 ### Container Orchestration

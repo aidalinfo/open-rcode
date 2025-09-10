@@ -85,6 +85,15 @@ export class ContainerSetup {
         requiredToken = decrypt(user.geminiApiKey!)
         logger.info({ userId: task.userId }, '✓ Using Gemini API key')
         break
+      case 'codex-api':
+        requiredToken = decrypt(user.openaiApiKey!)
+        logger.info({ userId: task.userId }, '✓ Using OpenAI API key (Codex API)')
+        break
+      case 'codex-oauth':
+        // Store full JSON OAuth payload encrypted; decrypt here
+        requiredToken = decrypt(user.codexOAuthJson!)
+        logger.info({ userId: task.userId }, '✓ Using Codex OAuth JSON')
+        break
       case 'admin-gemini':
         // Admin Gemini utilise la clé admin du système
         requiredToken = process.env.ADMIN_GOOGLE_API_KEY || ''
@@ -153,6 +162,23 @@ export class ContainerSetup {
         break
       case 'gemini-cli':
         envVars.GEMINI_API_KEY = aiToken
+        break
+      case 'codex-api':
+        // Standard OpenAI key variable name
+        envVars.OPENAI_API_KEY = aiToken
+        break
+      case 'codex-oauth':
+        // Pass the full JSON payload as env for downstream usage
+        envVars.CODEX_OAUTH_JSON = aiToken
+        try {
+          const parsed = JSON.parse(aiToken)
+          if (parsed?.tokens?.access_token) envVars.OPENAI_ACCESS_TOKEN = parsed.tokens.access_token
+          if (parsed?.tokens?.id_token) envVars.OPENAI_ID_TOKEN = parsed.tokens.id_token
+          if (parsed?.tokens?.refresh_token) envVars.OPENAI_REFRESH_TOKEN = parsed.tokens.refresh_token
+          if (parsed?.tokens?.account_id) envVars.OPENAI_ACCOUNT_ID = parsed.tokens.account_id
+          if (parsed?.OPENAI_API_KEY) envVars.OPENAI_API_KEY = parsed.OPENAI_API_KEY
+          if (parsed?.last_refresh) envVars.CODEX_LAST_REFRESH = parsed.last_refresh
+        } catch {}
         break
     }
 
@@ -260,6 +286,10 @@ export class ContainerSetup {
         return !!user.claudeOAuthToken
       case 'gemini-cli':
         return !!user.geminiApiKey
+      case 'codex-api':
+        return !!user.openaiApiKey
+      case 'codex-oauth':
+        return !!user.codexOAuthJson
       case 'admin-gemini':
         return !!process.env.ADMIN_GOOGLE_API_KEY
       default:
@@ -275,6 +305,10 @@ export class ContainerSetup {
         return 'Claude OAuth'
       case 'gemini-cli':
         return 'Gemini'
+      case 'codex-api':
+        return 'Codex API'
+      case 'codex-oauth':
+        return 'Codex OAuth'
       case 'admin-gemini':
         return 'Admin Gemini'
       default:
@@ -290,6 +324,10 @@ export class ContainerSetup {
         return 'no Claude OAuth token is configured'
       case 'gemini-cli':
         return 'no Gemini API key is configured'
+      case 'codex-api':
+        return 'no OpenAI API key is configured'
+      case 'codex-oauth':
+        return 'no Codex OAuth JSON is configured'
       case 'admin-gemini':
         return 'no admin Gemini API key is configured in the system'
       default:

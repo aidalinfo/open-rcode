@@ -15,7 +15,7 @@ export interface Environment {
   name: string
   description?: string
   runtime: 'node' | 'python' | 'bun' | 'java' | 'swift' | 'ruby' | 'rust' | 'go' | 'php'
-  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli'
+  aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli' | 'codex-api' | 'codex-oauth'
   model: 'opus' | 'sonnet' | 'opus-4-1'
   defaultBranch: string // branche par défaut pour le clonage et les PRs
   environmentVariables: EnvironmentVariable[]
@@ -47,7 +47,7 @@ const environmentSchema = new Schema<EnvironmentDocument>({
   },
   aiProvider: {
     type: String,
-    enum: ['anthropic-api', 'claude-oauth', 'gemini-cli'],
+    enum: ['anthropic-api', 'claude-oauth', 'gemini-cli', 'codex-api', 'codex-oauth'],
     default: 'anthropic-api',
     required: true
   },

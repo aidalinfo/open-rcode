@@ -30,7 +30,10 @@ export class AIProviderAdapter {
   }
 
   buildExecutionScript(options: ExecuteOptions): string {
-    const cliName = AIProviderFactory.isGeminiProvider(this.provider['providerType']) ? 'gemini' : 'claude'
+    const providerType = this.provider['providerType'] as any
+    const cliName = AIProviderFactory.isGeminiProvider(providerType)
+      ? 'gemini'
+      : (AIProviderFactory.isClaudeProvider(providerType) ? 'claude' : 'codex')
     const isClaudeProvider = cliName === 'claude'
 
     // Build the command with MCP config path if available
@@ -52,7 +55,7 @@ export class AIProviderAdapter {
 
   parseOutput(rawOutput: string): ParsedOutput {
     // Remove unwanted path from the beginning
-    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/(claude|gemini)\s*\n?/
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/(claude|gemini|codex)\s*\n?/
     const filteredOutput = rawOutput.replace(unwantedPathPattern, '')
 
     return this.provider.parseOutput(filteredOutput)

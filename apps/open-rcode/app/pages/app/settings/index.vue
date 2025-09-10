@@ -122,6 +122,82 @@
           v-else
           class="space-y-6"
         >
+          <!-- OpenAI API Key (Codex API) -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-heroicons-cpu-chip"
+                class="text-sky-500"
+              />
+              <h3 class="text-lg font-medium">
+                OpenAI API Key (Codex)
+              </h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              {{ hasOpenAIKey ? 'Your OpenAI API key is configured and securely encrypted.' : 'Configure your OpenAI API key to use Codex via API.' }}
+            </p>
+
+            <div
+              v-if="!hasOpenAIKey"
+              class="space-y-4"
+            >
+              <UFormField
+                label="OpenAI API Key"
+                name="openaiApiKey"
+              >
+                <div class="flex gap-2">
+                  <UInput
+                    v-model="openaiApiKeyInput"
+                    type="password"
+                    placeholder="sk-..."
+                    size="lg"
+                    class="flex-1"
+                    :disabled="savingOpenaiKey"
+                  />
+                  <UButton
+                    :loading="savingOpenaiKey"
+                    :disabled="!openaiApiKeyInput"
+                    size="lg"
+                    @click="saveOpenaiApiKey"
+                  >
+                    <template #leading>
+                      <UIcon name="i-heroicons-key" />
+                    </template>
+                    Save
+                  </UButton>
+                </div>
+              </UFormField>
+            </div>
+
+            <div
+              v-else
+              class="flex items-center justify-between"
+            >
+              <div class="flex items-center gap-2">
+                <UIcon
+                  name="i-heroicons-shield-check"
+                  class="text-green-500"
+                />
+                <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                  API Key configured
+                </span>
+              </div>
+              <UButton
+                variant="ghost"
+                size="sm"
+                color="error"
+                @click="resetOpenaiApiKey"
+              >
+                <template #leading>
+                  <UIcon name="i-heroicons-trash" />
+                </template>
+                Delete
+              </UButton>
+            </div>
+          </div>
+
+          <USeparator />
+
           <!-- API Key Anthropic -->
           <div class="space-y-4">
             <div class="flex items-center gap-2">
@@ -187,6 +263,84 @@
                 size="sm"
                 color="error"
                 @click="resetAnthropicKey"
+              >
+                <template #leading>
+                  <UIcon name="i-heroicons-trash" />
+                </template>
+                Delete
+              </UButton>
+            </div>
+          </div>
+
+          <USeparator />
+
+          <!-- Codex OAuth JSON -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2">
+              <UIcon
+                name="i-heroicons-identification"
+                class="text-sky-600"
+              />
+              <h3 class="text-lg font-medium">
+                Codex OAuth (JSON)
+              </h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 text-sm">
+              {{ hasCodexOAuth ? 'Your Codex OAuth data is configured and securely encrypted.' : 'Upload/paste your Codex OAuth JSON file to use Codex via OAuth.' }}
+            </p>
+
+            <div
+              v-if="!hasCodexOAuth"
+              class="space-y-4"
+            >
+              <UFormField
+                label="Codex OAuth JSON"
+                name="codexOAuthJson"
+              >
+                <div class="space-y-2">
+                  <UTextarea
+                    v-model="codexOAuthJsonInput"
+                    placeholder='{"OPENAI_API_KEY": null, "tokens": { ... }}'
+                    :rows="6"
+                    size="lg"
+                    class="w-full"
+                    :disabled="savingCodexOAuth"
+                  />
+                  <div class="flex gap-2">
+                    <UButton
+                      :loading="savingCodexOAuth"
+                      :disabled="!codexOAuthJsonInput"
+                      size="lg"
+                      @click="saveCodexOAuth"
+                    >
+                      <template #leading>
+                        <UIcon name="i-heroicons-key" />
+                      </template>
+                      Save
+                    </UButton>
+                  </div>
+                </div>
+              </UFormField>
+            </div>
+
+            <div
+              v-else
+              class="flex items-center justify-between"
+            >
+              <div class="flex items-center gap-2">
+                <UIcon
+                  name="i-heroicons-shield-check"
+                  class="text-green-500"
+                />
+                <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                  OAuth JSON configured
+                </span>
+              </div>
+              <UButton
+                variant="ghost"
+                size="sm"
+                color="error"
+                @click="resetCodexOAuth"
               >
                 <template #leading>
                   <UIcon name="i-heroicons-trash" />
@@ -437,6 +591,32 @@ const checkAnthropicKey = async () => {
   }
 }
 
+const hasOpenAIKey = ref(false)
+const openaiApiKeyInput = ref('')
+const savingOpenaiKey = ref(false)
+
+const hasCodexOAuth = ref(false)
+const codexOAuthJsonInput = ref('')
+const savingCodexOAuth = ref(false)
+
+const checkOpenaiApiKey = async () => {
+  try {
+    const data = await $fetch('/api/user/openai-api-key')
+    hasOpenAIKey.value = data.hasApiKey
+  } catch (error) {
+    if (import.meta.dev) console.error('Error checking OpenAI API key:', error)
+  }
+}
+
+const checkCodexOAuth = async () => {
+  try {
+    const data = await $fetch('/api/user/codex-oauth')
+    hasCodexOAuth.value = data.hasOAuth
+  } catch (error) {
+    if (import.meta.dev) console.error('Error checking Codex OAuth:', error)
+  }
+}
+
 const checkClaudeOAuthToken = async () => {
   try {
     const data = await $fetch('/api/user/claude-oauth-token')
@@ -458,7 +638,9 @@ const checkGeminiApiKey = async () => {
 const checkAllAITokens = async () => {
   try {
     await Promise.all([
+      checkOpenaiApiKey(),
       checkAnthropicKey(),
+      checkCodexOAuth(),
       checkClaudeOAuthToken(),
       checkGeminiApiKey()
     ])
@@ -524,6 +706,73 @@ const resetAnthropicKey = async () => {
         description: 'Unable to delete API key',
         color: 'error'
       })
+    }
+  }
+}
+
+const saveOpenaiApiKey = async () => {
+  if (!openaiApiKeyInput.value) {
+    toast.add({ title: 'Error', description: 'Please enter a valid OpenAI API key', color: 'error' })
+    return
+  }
+  savingOpenaiKey.value = true
+  try {
+    await $fetch('/api/user/openai-api-key', { method: 'PUT', body: { openaiApiKey: openaiApiKeyInput.value } })
+    toast.add({ title: 'Success', description: 'OpenAI API key saved successfully', color: 'success' })
+    hasOpenAIKey.value = true
+    openaiApiKeyInput.value = ''
+  } catch (error) {
+    toast.add({ title: 'Error', description: 'Unable to save OpenAI API key', color: 'error' })
+  } finally {
+    savingOpenaiKey.value = false
+  }
+}
+
+const resetOpenaiApiKey = async () => {
+  if (confirm('Are you sure you want to delete your OpenAI API key?')) {
+    try {
+      await $fetch('/api/user/openai-api-key', { method: 'PUT', body: { openaiApiKey: '' } })
+      toast.add({ title: 'Success', description: 'OpenAI API key deleted successfully', color: 'success' })
+      hasOpenAIKey.value = false
+    } catch (error) {
+      toast.add({ title: 'Error', description: 'Unable to delete OpenAI API key', color: 'error' })
+    }
+  }
+}
+
+const saveCodexOAuth = async () => {
+  if (!codexOAuthJsonInput.value) {
+    toast.add({ title: 'Error', description: 'Please paste a valid Codex OAuth JSON', color: 'error' })
+    return
+  }
+  // Optional local validation
+  try {
+    JSON.parse(codexOAuthJsonInput.value)
+  } catch (e) {
+    toast.add({ title: 'Error', description: 'Invalid JSON format', color: 'error' })
+    return
+  }
+  savingCodexOAuth.value = true
+  try {
+    await $fetch('/api/user/codex-oauth', { method: 'PUT', body: { codexOAuthJson: codexOAuthJsonInput.value } })
+    toast.add({ title: 'Success', description: 'Codex OAuth JSON saved successfully', color: 'success' })
+    hasCodexOAuth.value = true
+    codexOAuthJsonInput.value = ''
+  } catch (error) {
+    toast.add({ title: 'Error', description: 'Unable to save Codex OAuth JSON', color: 'error' })
+  } finally {
+    savingCodexOAuth.value = false
+  }
+}
+
+const resetCodexOAuth = async () => {
+  if (confirm('Are you sure you want to delete your Codex OAuth JSON?')) {
+    try {
+      await $fetch('/api/user/codex-oauth', { method: 'PUT', body: { codexOAuthJson: '' } })
+      toast.add({ title: 'Success', description: 'Codex OAuth JSON deleted successfully', color: 'success' })
+      hasCodexOAuth.value = false
+    } catch (error) {
+      toast.add({ title: 'Error', description: 'Unable to delete Codex OAuth JSON', color: 'error' })
     }
   }
 }

@@ -19,9 +19,9 @@ interface ExecuteResult {
   exitCode: number
 }
 
-export class ClaudeExecutor {
+export class AIExecutor {
   private containerManager: BaseContainerManager
-  private logger = createLogger('ClaudeExecutor')
+  private logger = createLogger('AIExecutor')
 
   constructor(containerManager: BaseContainerManager) {
     this.containerManager = containerManager
@@ -73,7 +73,7 @@ export class ClaudeExecutor {
     const parsedOutput = adapter.parseOutput(result.stdout)
 
     // Si c'est Gemini, retourner le résultat final directement
-    if (AIProviderFactory.isGeminiProvider(providerType)) {
+    if (AIProviderFactory.isGeminiProvider(providerType) || AIProviderFactory.isCodexProvider(providerType)) {
       return parsedOutput.finalResult
     }
 
@@ -547,13 +547,13 @@ export class ClaudeExecutor {
 
       for (const line of lines) {
         if (line.trim() && !line.includes('===')) {
-          this.logger.debug({ provider: AIProviderFactory.isGeminiProvider(aiProvider) ? 'Gemini' : 'Claude', output: line.trim() }, '🤖 AI output')
+          this.logger.debug({ provider: AIProviderFactory.isGeminiProvider(aiProvider) ? 'Gemini' : (AIProviderFactory.isCodexProvider(aiProvider) ? 'Codex' : 'Claude'), output: line.trim() }, '🤖 AI output')
 
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
 
-          // Pour Gemini, sauvegarder la sortie brute au fur et à mesure
-          if (AIProviderFactory.isGeminiProvider(aiProvider)) {
+          // Pour Gemini/Codex, sauvegarder la sortie brute au fur et à mesure
+          if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
             // Ne pas essayer de parser JSON pour Gemini
             continue
           }
@@ -612,8 +612,8 @@ export class ClaudeExecutor {
 
     const parsedOutput = adapter.parseOutput(result.stdout)
 
-    // Si c'est Gemini, gérer différemment
-    if (AIProviderFactory.isGeminiProvider(aiProvider)) {
+    // Si c'est Gemini ou Codex, gérer différemment
+    if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
       // Créer un message avec la sortie brute de Gemini
       if (parsedOutput.finalResult.trim()) {
         await TaskMessageModel.create({

@@ -5,7 +5,7 @@ import { TaskModel } from '../models/Task'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { generateInstallationToken, getInstallationRepositories } from './github-app'
 import { v4 as uuidv4 } from 'uuid'
-import { ClaudeExecutor } from './claude-executor'
+import { AIExecutor } from './ai-executor'
 import { logger } from './logger'
 
 export class PullRequestCreator {
@@ -54,7 +54,7 @@ export class PullRequestCreator {
       let prTitle = task.title || 'Automated Task Completion'
 
       // Toujours utiliser Gemini pour suggérer un titre basé sur le diff
-      const claudeExecutor = new ClaudeExecutor(this.containerManager)
+      const claudeExecutor = new AIExecutor(this.containerManager)
       const geminiPrompt = `Basé sur les modifications suivantes (git diff), suggère un titre concis et descriptif pour une pull request (maximum 72 caractères). Réponds uniquement avec le titre, sans explication ni formatage supplémentaire.
 
 Git diff:

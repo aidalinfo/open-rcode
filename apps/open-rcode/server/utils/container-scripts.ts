@@ -25,10 +25,11 @@ export class ContainerScripts {
     `.trim()
   }
 
-  static installCLI(cliName: 'claude' | 'gemini'): string {
+  static installCLI(cliName: 'claude' | 'gemini' | 'codex'): string {
     const packages = {
       claude: '@anthropic-ai/claude-code',
-      gemini: '@google/gemini-cli'
+      gemini: '@google/gemini-cli',
+      codex: '@openai/codex'
     }
 
     return `

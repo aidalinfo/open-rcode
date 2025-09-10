@@ -140,6 +140,18 @@ const links = computed(() => [[
       onSelect: () => {
         open.value = false
       }
+    }, {
+      label: 'MCP',
+      to: '/app/settings/mcp',
+      onSelect: () => {
+        open.value = false
+      }
+    }, {
+      label: 'Create MCP',
+      to: '/app/settings/mcp/create',
+      onSelect: () => {
+        open.value = false
+      }
     }
       // , {
       //   label: 'SubAgents',
