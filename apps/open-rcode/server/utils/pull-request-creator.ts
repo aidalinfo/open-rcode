@@ -210,20 +210,28 @@ Les modifications ont été poussées et une Pull Request a été créée automa
     task: any,
     summary: string
   ): Promise<void> {
+    // Limiter la taille du corps du commit pour éviter E2BIG sur Kubernetes (argument trop long)
+    const MAX_COMMIT_BODY = 15000
+    const truncatedSummary = (summary || '').length > MAX_COMMIT_BODY
+      ? (summary || '').substring(0, MAX_COMMIT_BODY) + '\n... (truncated)'
+      : (summary || '')
+
     const script = `
       cd "${workspaceDir}"
       
       git checkout -b "${branchName}"
       git add .
       
-      git commit -m "$(cat <<'EOF'
+      # Écrire le message de commit dans un fichier pour éviter un argument trop long
+      cat > /tmp/commit-msg.txt << 'EOF'
 feat: ${task.title || 'Automated task completion'}
 
-${summary.replace(/'/g, '\'')}
+${truncatedSummary}
 
 🤖 Generated with open-rcode automation
 EOF
-)"
+
+      git commit -F /tmp/commit-msg.txt
     `
 
     const result = await this.containerManager.executeInContainer({

@@ -45,10 +45,29 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.args !== undefined) {
-    if (!Array.isArray(body.args)) {
-      throw createError({ statusCode: 400, statusMessage: 'Args must be an array of strings' })
+    const parseArgs = (input: unknown): string[] => {
+      const tokens: string[] = []
+      const re = /"([^"]*)"|'([^']*)'|[^\s]+/g
+      const pushTokens = (s: string) => {
+        let m: RegExpExecArray | null
+        while ((m = re.exec(s)) !== null) {
+          const val = (m[1] ?? m[2] ?? m[0]).trim()
+          if (val) tokens.push(val)
+        }
+      }
+      if (typeof input === 'string') {
+        pushTokens(input)
+      } else if (Array.isArray(input)) {
+        for (const part of input) {
+          if (typeof part === 'string') pushTokens(part)
+          else if (part != null) pushTokens(String(part))
+        }
+      } else if (input != null) {
+        pushTokens(String(input))
+      }
+      return tokens
     }
-    mcp.args = body.args.map((a: any) => String(a))
+    mcp.args = parseArgs(body.args)
   }
 
   if (body.description !== undefined) {
@@ -78,4 +97,3 @@ export default defineEventHandler(async (event) => {
     updatedAt: mcp.updatedAt
   }
 })
-

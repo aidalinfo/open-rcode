@@ -604,7 +604,19 @@ export class AIExecutor {
       mcpConfigPath
     })
 
-    const result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)
+    // Utiliser le streaming uniquement pour les providers qui le supportent (Claude)
+    let result: ExecuteResult
+    if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
+      // Exécution sans streaming pour éviter les erreurs de capture
+      result = await this.containerManager.executeInContainer({
+        containerId,
+        command: ['/bin/bash', '-c', script],
+        user: 'root',
+        environment: { HOME: '/root' }
+      })
+    } else {
+      result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)
+    }
 
     if (result.exitCode !== 0) {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
