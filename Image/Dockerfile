@@ -226,6 +226,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ### SETUP SCRIPTS ###
 RUN . $NVM_DIR/nvm.sh && npm install -g @anthropic-ai/claude-code
 RUN . $NVM_DIR/nvm.sh && npm install -g @google/gemini-cli
+RUN . $NVM_DIR/nvm.sh && npm install -g @openai/codex
+
 
 COPY entrypoint.sh /opt/entrypoint.sh
 RUN chmod +x /opt/entrypoint.sh
