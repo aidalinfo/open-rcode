@@ -9,14 +9,14 @@ open-rcode est une plateforme web containerisée qui permet aux développeurs d'
 - **Backend** : API Nitro (Nuxt server)
 - **Base de données** : MongoDB
 - **Orchestration** : Docker et Kubernetes
-- **IA** : Claude API, Claude Code OAuth, Gemini CLI
+- **IA** : Claude API, Claude Code OAuth, Gemini CLI, Gemini Admin (via AI Executor)
 
 ## Architecture et workflow principal
 
 ### Flux de travail complet
 1. **User** → Soumet une tâche via l'interface web
 2. **TaskContainerManager** → Crée un conteneur/pod isolé
-3. **ClaudeExecutor** → Exécute les commandes IA dans le conteneur
+3. **ClaudeExecutor (AI Executor)** → Exécute les commandes IA Codex dans le conteneur (providers Anthropic/Gemini)
 4. **PullRequestCreator** → Commit les changements et crée une PR GitHub
 5. **Cleanup** → Nettoie automatiquement le conteneur après exécution
 
@@ -102,7 +102,7 @@ Environment {
   repositoryFullName: string   // Format owner/repo
   runtime: 'node' | 'python' | 'php'
   aiProvider: 'anthropic-api' | 'claude-oauth' | 'gemini-cli' | 'admin-gemini'
-  model: 'opus' | 'sonnet'
+  model: 'opus' | 'sonnet' | 'claude-sonnet-4' | 'gemini-2.0-flash'
   defaultBranch: string        // Branche de base pour les PR
   environmentVariables: []     // Variables d'environnement custom
   configurationScript?: string // Script de setup pré-exécution
@@ -119,17 +119,41 @@ User {
 }
 ```
 
-## Configuration des providers IA
+## Nouveaux providers Codex (AI Executor)
 
-La plateforme supporte plusieurs providers IA configurables par environnement :
+Le moteur d'exécution IA (ClaudeExecutor) supporte désormais 4 providers Codex sélectionnables par environnement. Choisissez le provider dans `Environment.aiProvider` et un modèle compatible dans `Environment.model`.
 
-1. **anthropic-api** : Utilise la clé API Anthropic de l'utilisateur
-2. **claude-oauth** : Utilise le token OAuth Claude Code de l'utilisateur
-3. **gemini-cli** : Utilise la clé API Gemini de l'utilisateur
-4. **admin-gemini** : Utilise la clé Gemini admin du système (ADMIN_GOOGLE_API_KEY)
+1. anthropic-api
+   - Description: Claude API avec clé API Anthropic utilisateur
+   - Variables: `ANTHROPIC_API_KEY`
+   - Modèles: `opus`, `sonnet`, `claude-sonnet-4`
+   - Streaming JSON: oui • Mode plan: oui • MCP: oui
+
+2. claude-oauth
+   - Description: Claude Code via OAuth (token utilisateur)
+   - Variables: `CLAUDE_CODE_OAUTH_TOKEN`
+   - Modèles: `opus`, `sonnet`, `claude-sonnet-4`
+   - Streaming JSON: oui • Mode plan: oui • MCP: oui
+
+3. gemini-cli
+   - Description: Gemini CLI avec clé API utilisateur
+   - Variables: `GEMINI_API_KEY`
+   - Modèles: `gemini-2.0-flash`
+   - Streaming JSON: non • Mode plan: non • MCP: non
+
+4. admin-gemini
+   - Description: Gemini CLI avec clé admin système (pour automatisations internes)
+   - Variables: `ADMIN_GOOGLE_API_KEY`
+   - Modèles: `gemini-2.0-flash`
+   - Streaming JSON: non • Mode plan: non • MCP: non
 
 ### Détection automatique des titres de PR
 Le système utilise automatiquement Gemini Admin pour suggérer des titres de PR basés sur le git diff des modifications.
+
+### Remarques d'intégration
+- Le support MCP (fichier `.mcp.json` ou `servers.json`) est détecté automatiquement et passé aux providers Claude.
+- Le mode plan est disponible uniquement pour les providers Claude (`anthropic-api`, `claude-oauth`). En cas d'échec, un fallback automatique exécute le prompt en mode normal.
+- `admin-gemini` est destiné aux opérations système (ex: titres de PR). Évitez de l'utiliser pour des tâches utilisateur.
 
 ## Détails d'implémentation critiques
 
@@ -284,10 +308,25 @@ throw createError({
 claude --verbose --output-format stream-json --model sonnet -p "prompt"
 
 # Claude en mode plan
-claude --verbose --output-format stream-json --permission-mode plan --model sonnet -p "prompt"
+claude --verbose --output-format stream-json --permission-mode plan --model claude-sonnet-4 -p "prompt"
 
 # Gemini CLI (pas de streaming JSON)
 gemini --model gemini-2.0-flash -p "prompt"
+```
+
+### Variables d'environnement par provider
+```bash
+# Anthropic API (utilisateur)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Claude Code OAuth (utilisateur)
+CLAUDE_CODE_OAUTH_TOKEN=ccOa_...
+
+# Gemini (utilisateur)
+GEMINI_API_KEY=AIza...
+
+# Gemini Admin (système)
+ADMIN_GOOGLE_API_KEY=AIza...
 ```
 
 ## Debugging et logs
