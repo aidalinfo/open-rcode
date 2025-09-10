@@ -195,9 +195,7 @@ const groups = computed(() => [{
   }]
 }])
 
-definePageMeta({
-  middleware: 'auth'
-})
+
 
 // Load recent tasks on mount
 onMounted(() => {

@@ -33,6 +33,7 @@
 </template>
 
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '#ui/types'
 import type { Row } from '@tanstack/vue-table'
 
@@ -50,6 +51,9 @@ interface Mcp {
 }
 
 const toast = useToast()
+
+// Resolve UI components for render functions
+const UButton = resolveComponent('UButton')
 
 const props = defineProps<{ mcps: Mcp[]; loading?: boolean; total?: number; page?: number; limit?: number }>()
 const emit = defineEmits<{ 'refresh': []; 'update:page': [page: number] }>()
