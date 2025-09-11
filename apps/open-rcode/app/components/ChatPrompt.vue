@@ -13,16 +13,36 @@
 
       <template #footer>
         <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <USelectMenu
-              v-model="localSelectedEnvironment"
-              :items="envOptions"
-              option-attribute="label"
-              value-attribute="value"
-              placeholder="Select an environment"
-              class="min-w-[16rem]"
-            />
-          </div>
+          <USelectMenu
+            v-model="localSelectedEnvironment"
+            v-model:search-term="envSearchTerm"
+            :items="environmentItems"
+            :loading="loadingEnvironments"
+            option-attribute="label"
+            value-attribute="value"
+            icon="i-heroicons-cube"
+            placeholder="Select an environment"
+            variant="ghost"
+            class="w-full sm:w-auto"
+            ignore-filter
+            @update:open="onEnvMenuOpen"
+            @update:model-value="onEnvironmentSelected"
+          >
+            <template #content-bottom>
+              <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+                <div class="text-xs text-gray-500">
+                  Page {{ envPage }} • {{ environmentItems.length }} / {{ envTotal }}
+                </div>
+                <UButton
+                  size="xs"
+                  :disabled="loadingEnvironments || !hasMoreEnvs"
+                  @click="loadMoreEnvironments"
+                >
+                  Load more
+                </UButton>
+              </div>
+            </template>
+          </USelectMenu>
 
           <!-- Reasoning select shown only for Codex providers -->
           <USelect
@@ -66,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import { refDebounced } from '@vueuse/core'
 
 interface Props {
   input: string
@@ -105,17 +126,97 @@ const localSelectedEnvironment = computed({
   set: value => emit('update:selectedEnvironment', value)
 })
 
-const mapEnvToOption = (env: any) => ({
-  label: `${env.name} (${env.repositoryFullName})`,
-  value: env.id,
-  icon: getRuntimeIcon(env.runtime)
+// Remote environments for USelectMenu (search + pagination)
+const environmentItems = ref<Array<{ label: string, value: string }>>([])
+const loadingEnvironments = ref(false)
+const envSearchTerm = ref('')
+const envSearchTermDebounced = refDebounced(envSearchTerm, 250)
+const envPage = ref(1)
+const envLimit = ref(10)
+const envTotal = ref(0)
+const hasMoreEnvs = computed(() => environmentItems.value.length < envTotal.value)
+
+const fetchEnvironments = async (opts?: { reset?: boolean }) => {
+  const reset = !!opts?.reset
+  if (reset) {
+    envPage.value = 1
+    environmentItems.value = []
+  }
+  loadingEnvironments.value = true
+  try {
+    const data = await $fetch('/api/environments', {
+      params: {
+        q: envSearchTermDebounced.value || undefined,
+        page: envPage.value,
+        limit: envLimit.value
+      }
+    })
+    envTotal.value = data.total || 0
+    const mapped = (data.environments || []).map((env: any) => ({
+      label: `${env.name} (${env.repositoryFullName})`,
+      value: env.id
+    }))
+    if (reset) {
+      environmentItems.value = mapped
+    } else {
+      environmentItems.value = [...environmentItems.value, ...mapped]
+    }
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching environments:', error)
+    toast.add({
+      title: 'Error',
+      description: 'Unable to load environments',
+      color: 'error'
+    })
+  } finally {
+    loadingEnvironments.value = false
+  }
+}
+
+const onEnvMenuOpen = (open: boolean) => {
+  if (open && environmentItems.value.length === 0) {
+    fetchEnvironments({ reset: true })
+  }
+}
+
+const loadMoreEnvironments = () => {
+  if (loadingEnvironments.value || !hasMoreEnvs.value) return
+  envPage.value += 1
+  fetchEnvironments()
+}
+
+watch(envSearchTermDebounced, () => {
+  // When search changes, reset and fetch
+  fetchEnvironments({ reset: true })
 })
 
-// Environment options derived from provided props
-const envOptions = computed(() => (props.environments || []).map(mapEnvToOption))
+// Keep selected environment details up to date for provider-specific UI
+const selectedEnvironmentDetails = ref<any>(null)
+const onEnvironmentSelected = async (id: string) => {
+  if (!id) {
+    selectedEnvironmentDetails.value = null
+    return
+  }
+  try {
+    const res = await $fetch(`/api/environments/${id}`)
+    selectedEnvironmentDetails.value = res.environment
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching environment details:', error)
+    selectedEnvironmentDetails.value = null
+  }
+}
+
+// If a preselected environment exists, fetch its details once
+onMounted(() => {
+  if (localSelectedEnvironment.value) {
+    onEnvironmentSelected(localSelectedEnvironment.value)
+  }
+})
 
 // Selected environment object and Codex detection
-const selectedEnv = computed(() => props.environments.find((e: any) => e.id === localSelectedEnvironment.value))
+const selectedEnv = computed(() => {
+  return selectedEnvironmentDetails.value || props.environments.find((e: any) => e.id === localSelectedEnvironment.value)
+})
 const isCodexSelectedEnv = computed(() => {
   const p = selectedEnv.value?.aiProvider
   return p === 'codex-api' || p === 'codex-oauth'
@@ -300,7 +401,4 @@ watch(localSelectedEnvironment, (newEnvironmentId) => {
     fetchFilePaths(newEnvironmentId)
   }
 })
-
-// Initialize environment options on mount and keep in sync with search
-// No extra fetching here; parent provides environments
 </script>
