@@ -64,7 +64,18 @@ export class AIExecutor {
       mcpConfigPath
     })
 
-    const result = await this.executeWithStreamingBash(containerId, script, onOutput)
+    // Streaming pour Claude/Codex; pas de streaming pour Gemini
+    let result: ExecuteResult
+    if (AIProviderFactory.isClaudeProvider(providerType) || AIProviderFactory.isCodexProvider(providerType)) {
+      result = await this.executeWithStreamingBash(containerId, script, onOutput)
+    } else {
+      result = await this.containerManager.executeInContainer({
+        containerId,
+        command: ['/bin/bash', '-c', script],
+        user: 'root',
+        environment: { HOME: '/root' }
+      })
+    }
 
     if (result.exitCode !== 0) {
       throw new Error(`AI command failed with exit code ${result.exitCode}: ${result.stderr || 'No stderr output'}`)
@@ -280,7 +291,7 @@ export class AIExecutor {
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🚀 **Démarrage de l'exécution avec ${this.getAiProviderLabel(aiProvider)} (${model})${task.planMode ? ' en mode plan' : ''}...**`
+          content: `🚀 **Démarrage de l'exécution avec ${this.getExecutionLabel(aiProvider, model)}${task.planMode ? ' en mode plan' : ''}...**`
         })
 
         const adapter = new AIProviderAdapter(aiProvider)
@@ -355,6 +366,19 @@ export class AIExecutor {
   private getAiProviderLabel(provider: AIProviderType): string {
     const adapter = new AIProviderAdapter(provider)
     return adapter.getName()
+  }
+
+  private getExecutionLabel(aiProvider: AIProviderType, model?: string): string {
+    const adapter = new AIProviderAdapter(aiProvider)
+    const providerName = adapter.getName()
+    
+    // Pour Codex, afficher "Codex (GPT-5)" au lieu du model fourni
+    if (AIProviderFactory.isCodexProvider(aiProvider)) {
+      return `${providerName} (GPT-5)`
+    }
+    
+    // Pour les autres providers, garder le comportement habituel
+    return `${providerName} (${model || 'default'})`
   }
 
   private parseClaudeJsonOutput(rawOutput: string): ParsedOutput {
@@ -447,7 +471,17 @@ export class AIExecutor {
     })
 
     this.logger.info('🚀 Exécution de la commande en mode plan...')
-    const planResult = await this.executeWithStreamingBash(containerId, planScript, onPlanOutput)
+    let planResult: ExecuteResult
+    if (AIProviderFactory.isClaudeProvider(providerType) || AIProviderFactory.isCodexProvider(providerType)) {
+      planResult = await this.executeWithStreamingBash(containerId, planScript, onPlanOutput)
+    } else {
+      planResult = await this.containerManager.executeInContainer({
+        containerId,
+        command: ['/bin/bash', '-c', planScript],
+        user: 'root',
+        environment: { HOME: '/root' }
+      })
+    }
 
     if (planResult.exitCode !== 0) {
       this.logger.error({ stderr: planResult.stderr }, '❌ Échec du mode plan')
@@ -541,6 +575,29 @@ export class AIExecutor {
     let streamBuffer = ''
     const processedToolCallIds = new Set<string>()
 
+    // For Codex OAuth, show a one-time credentials hint if not configured
+    if (aiProvider === 'codex-oauth') {
+      try {
+        const check = await this.containerManager.executeInContainer({
+          containerId,
+          command: ['sh', '-c', 'test -s "$HOME/.codex/auth.json" || echo MISSING'],
+          user: 'root',
+          environment: { HOME: '/root' }
+        })
+        if ((check.stdout || '').includes('MISSING')) {
+          await TaskMessageModel.create({
+            id: uuidv4(),
+            userId: task.userId,
+            taskId: task._id,
+            role: 'assistant',
+            content: '⚠️ Codex OAuth not configured.\n\nPlace your OAuth JSON at `~/.codex/auth.json` inside the execution environment, or set the `CODEX_OAUTH_JSON` environment variable so it can be written automatically.'
+          })
+        }
+      } catch (e) {
+        // Non-fatal: ignore check errors
+      }
+    }
+
     // Fonction pour traiter les messages en temps réel
     const processStreamingOutput = async (data: string) => {
       const lines = data.split('\n').filter(line => line.trim())
@@ -604,18 +661,17 @@ export class AIExecutor {
       mcpConfigPath
     })
 
-    // Utiliser le streaming uniquement pour les providers qui le supportent (Claude)
+    // Streaming pour Claude/Codex; exécution standard pour Gemini
     let result: ExecuteResult
-    if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
-      // Exécution sans streaming pour éviter les erreurs de capture
+    if (AIProviderFactory.isClaudeProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
+      result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)
+    } else {
       result = await this.containerManager.executeInContainer({
         containerId,
         command: ['/bin/bash', '-c', script],
         user: 'root',
         environment: { HOME: '/root' }
       })
-    } else {
-      result = await this.executeWithStreamingBash(containerId, script, processStreamingOutput)
     }
 
     if (result.exitCode !== 0) {
@@ -626,19 +682,25 @@ export class AIExecutor {
 
     // Si c'est Gemini ou Codex, gérer différemment
     if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
-      // Créer un message avec la sortie brute de Gemini
-      if (parsedOutput.finalResult.trim()) {
-        await TaskMessageModel.create({
-          id: uuidv4(),
-          userId: task.userId,
-          taskId: task._id,
-          role: 'assistant',
-          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${parsedOutput.finalResult}`
-        })
-      }
+      if (AIProviderFactory.isCodexProvider(aiProvider)) {
+        // Parser la sortie Codex et enregistrer des messages structurés
+        const finalText = await this.parseAndSaveCodexMessages(parsedOutput.finalResult || '', task, aiProviderLabel, model || '', actionLabel)
+        return finalText || 'Tâche terminée'
+      } else {
+        // Créer un message avec la sortie brute de Gemini
+        if (parsedOutput.finalResult.trim()) {
+          await TaskMessageModel.create({
+            id: uuidv4(),
+            userId: task.userId,
+            taskId: task._id,
+            role: 'assistant',
+            content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${parsedOutput.finalResult}`
+          })
+        }
 
-      // Retourner la sortie pour la création de PR
-      return parsedOutput.finalResult || 'Tâche terminée'
+        // Retourner la sortie pour la création de PR
+        return parsedOutput.finalResult || 'Tâche terminée'
+      }
     }
 
     // Pour Claude, traiter les résultats complets
@@ -712,6 +774,164 @@ export class AIExecutor {
       default:
         throw new Error(`Unsupported AI provider: ${aiProvider}`)
     }
+  }
+
+  /**
+   * Parse Codex streaming-like output and persist as multiple TaskMessage entries.
+   * Produces assistant notes, tool blocks (apply_patch), diffs, and summaries similar to Claude output.
+   */
+  private async parseAndSaveCodexMessages(raw: string, task: any, aiProviderLabel: string, model: string, actionLabel: string): Promise<string> {
+    const chunks = this.parseCodexStream(raw)
+
+    if (chunks.length === 0) {
+      // Fallback: save single message
+      if (raw.trim()) {
+        await TaskMessageModel.create({
+          id: uuidv4(),
+          userId: task.userId,
+          taskId: task._id,
+          role: 'assistant',
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${raw.trim()}`
+        })
+      }
+      return raw.trim()
+    }
+
+    // Save each chunk as a separate message
+    let lastAssistantText = ''
+    for (const c of chunks) {
+      let content: string
+      switch (c.kind) {
+        case 'system':
+          content = `🟢 **${aiProviderLabel} (${model}) démarré**\n\n\`\`\`\n${c.content}\n\`\`\``
+          break
+        case 'tool':
+          content = `🔧 **apply_patch**\n\n\`\`\`diff\n${c.content}\n\`\`\``
+          break
+        case 'diff':
+          content = `🔧 **turn diff**\n\n\`\`\`diff\n${c.content}\n\`\`\``
+          break
+        case 'note':
+          // Skip tokens usage notes; user doesn't want them stored/shown
+          if (/^tokens used:/i.test(c.content.trim())) {
+            continue
+          }
+          content = `📝 ${c.content}`
+          break
+        case 'assistant':
+        default:
+          content = c.content
+          lastAssistantText = c.content
+          break
+      }
+
+      // Skip echoing user instructions (already saved as user message)
+      if (c.kind === 'note' && /User instructions:/i.test(c.content)) {
+        continue
+      }
+
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content
+      })
+    }
+
+    return lastAssistantText || chunks.map(c => c.content).join('\n\n')
+  }
+
+  /**
+   * Convert Codex CLI logs into structured chunks.
+   */
+  private parseCodexStream(raw: string): Array<{ kind: 'assistant' | 'tool' | 'diff' | 'system' | 'note'; content: string }> {
+    const lines = raw.split(/\r?\n/)
+    const chunks: Array<{ kind: 'assistant' | 'tool' | 'diff' | 'system' | 'note'; content: string }> = []
+
+    const tsLine = /^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T[^\]]+\]\s*(.*)$/
+
+    let currentKind: 'assistant' | 'tool' | 'diff' | 'system' | 'note' | null = null
+    let buffer: string[] = []
+
+    const flush = () => {
+      if (currentKind && buffer.length) {
+        const content = buffer.join('\n').trim()
+        if (content) chunks.push({ kind: currentKind, content })
+      }
+      currentKind = null
+      buffer = []
+    }
+
+    const start = (kind: typeof currentKind) => {
+      flush()
+      currentKind = kind
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+
+      // Ignore stream boundary markers
+      if (/^===\s*STREAM (START|END)/.test(line)) {
+        continue
+      }
+
+      const m = line.match(tsLine)
+      if (m) {
+        const rest = m[1]
+
+        if (/^OpenAI Codex/i.test(rest)) {
+          start('system')
+          buffer.push(rest)
+          continue
+        }
+        if (/^codex\s*$/i.test(rest)) {
+          start('assistant')
+          continue
+        }
+        if (/^apply_patch/i.test(rest)) {
+          start('tool')
+          // keep the header details for context, but main payload will follow in subsequent lines
+          continue
+        }
+        if (/^turn diff:/i.test(rest)) {
+          start('diff')
+          continue
+        }
+        if (/^User instructions:/i.test(rest)) {
+          start('note')
+          buffer.push(rest)
+          continue
+        }
+        if (/^tokens used:/i.test(rest)) {
+          start('note')
+          buffer.push(rest)
+          continue
+        }
+
+        // Other timestamped status lines: treat as notes
+        start('note')
+        buffer.push(rest)
+        continue
+      }
+
+      // Non-timestamp lines belong to current chunk; also capture system header details between '--------' separators
+      if (currentKind) {
+        // Stop capturing system header at next separator end followed by blank line then bracketed line? Keep simple: keep until next ts line.
+        buffer.push(line)
+      } else {
+        // If no current kind and line has content, heuristically start assistant block
+        if (line.trim()) {
+          start('assistant')
+          buffer.push(line)
+        }
+      }
+    }
+
+    flush()
+
+    // Post-process: condense large diffs by trimming trailing empty lines
+    return chunks.map(c => ({ ...c, content: c.content.replace(/\n+$/,'') }))
   }
 
   private getAiCommand(aiProvider: string, model?: string): string {

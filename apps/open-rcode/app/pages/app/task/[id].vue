@@ -200,9 +200,20 @@ const isPRLink = (message: any) => {
 
 // Helper function to detect tool messages
 const isToolMessage = (message: any) => {
-  return message.role === 'assistant'
-    && typeof message.content === 'string'
-    && (message.content.includes('🔧 **') || message.content.includes('🔌 **'))
+  if (!(message.role === 'assistant' && typeof message.content === 'string')) return false
+
+  const content = message.content
+
+  // Claude-style tools or MCP markers
+  if (content.includes('🔧 **') || content.includes('🔌 **')) return true
+
+  // Codex-style: treat bash executions and thinking traces as tools for display
+  // Match both "exec bash -lc ..." and "bash -lc ..." anywhere in the message
+  const hasBash = /\bbash\s+-lc\b/i.test(content)
+  // Thinking markers appear as "thinking" lines and are saved as notes (often prefixed by 📝)
+  const hasThinking = /(?:^|\n)\s*(?:📝\s*)?thinking\b/i.test(content)
+
+  return hasBash || hasThinking
 }
 
 // Function to open GitHub PR
