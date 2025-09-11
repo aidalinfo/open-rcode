@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
 
     const query = getQuery(event)
     const repository = query.repository as string
+    const q = (query.q as string || '').trim()
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 10
     const skip = (page - 1) * limit
@@ -41,6 +42,14 @@ export default defineEventHandler(async (event) => {
     const filter: any = { userId: user.githubId }
     if (repository) {
       filter.repositoryFullName = repository
+    }
+    // Add text search on name and repositoryFullName
+    if (q) {
+      const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      filter.$or = [
+        { name: { $regex: safe, $options: 'i' } },
+        { repositoryFullName: { $regex: safe, $options: 'i' } }
+      ]
     }
 
     // Compter le total d'éléments
