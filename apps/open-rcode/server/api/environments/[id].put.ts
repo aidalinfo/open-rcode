@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
     if (body.environmentVariables) updateData.environmentVariables = body.environmentVariables
     if (body.configurationScript !== undefined) updateData.configurationScript = body.configurationScript
     if (body.subAgents !== undefined) updateData.subAgents = body.subAgents
+    if (typeof body.mcpEnabled === 'boolean') updateData.mcpEnabled = body.mcpEnabled
+    if (Array.isArray(body.mcpIds)) updateData.mcpIds = body.mcpIds
     if (body.organization && body.repository) {
       updateData.organization = body.organization
       updateData.repository = body.repository
@@ -83,6 +85,8 @@ export default defineEventHandler(async (event) => {
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
         subAgents: environment.subAgents,
+        mcpEnabled: environment.mcpEnabled,
+        mcpIds: environment.mcpIds,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }

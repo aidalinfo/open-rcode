@@ -11,6 +11,7 @@ import { createLogger } from './logger'
 import { AIProviderAdapter } from './ai-providers/ai-provider-adapter'
 import type { AIProviderType, ParsedOutput } from './ai-providers/base-ai-provider'
 import { ContainerScripts } from './container-scripts'
+import { McpModel } from '../models/Mcp'
 import { AIProviderFactory } from './ai-providers/ai-provider-factory'
 
 interface ExecuteResult {
@@ -284,6 +285,15 @@ export class AIExecutor {
       const model = environment.model || 'sonnet'
       this.logger.info({ workspaceDir, aiProvider, model }, '🔧 Using workspace configuration')
 
+      // If using Codex, prepare MCP config for Codex CLI before any prompt
+      if (AIProviderFactory.isCodexProvider(aiProvider)) {
+        try {
+          await this.setupCodexMcpConfig(containerId, environment)
+        } catch (mcpError: any) {
+          this.logger.warn({ error: mcpError?.message }, 'MCP config setup for Codex failed; continuing without MCP')
+        }
+      }
+
       // Détecter la présence d'un fichier MCP config
       const mcpConfigPath = await this.detectMcpConfig(containerId, workspaceDir)
 
@@ -423,6 +433,99 @@ export class AIExecutor {
         })
       }
     }
+  }
+
+  /**
+   * Create or append MCP server definitions into ~/.codex/config.toml for Codex CLI.
+   * Only runs if environment.mcpEnabled is true and mcpIds contains entries.
+   */
+  private async setupCodexMcpConfig(containerId: string, environment: any): Promise<void> {
+    try {
+      if (!environment?.mcpEnabled) {
+        this.logger.info('MCP disabled at environment level; skipping Codex MCP setup')
+        return
+      }
+      const ids: string[] = Array.isArray(environment?.mcpIds) ? environment.mcpIds : []
+      if (ids.length === 0) {
+        this.logger.info('No MCP IDs selected; skipping Codex MCP setup')
+        return
+      }
+
+      // Fetch selected MCPs belonging to same user
+      const mcps = await McpModel.find({ _id: { $in: ids }, userId: environment.userId }).lean()
+      if (mcps.length === 0) {
+        this.logger.info('No accessible MCP servers found; skipping Codex MCP setup')
+        return
+      }
+
+      const blocks: string[] = []
+      for (const m of mcps) {
+        const blk = this.generateCodexTomlForMcp(m)
+        if (blk) blocks.push(blk)
+      }
+      if (blocks.length === 0) {
+        this.logger.info('No valid MCP entries to write for Codex')
+        return
+      }
+
+      const now = new Date().toISOString()
+      const content = [`# --- MCP servers appended by open-rcode (${now})`, ...blocks].join('\n\n') + '\n'
+
+      const script = `
+        set -e
+        mkdir -p "$HOME/.codex"
+        CODEx_CONFIG_FILE="$HOME/.codex/config.toml"
+        touch "$CODEx_CONFIG_FILE"
+        chmod 600 "$CODEx_CONFIG_FILE" || true
+        cat >> "$CODEx_CONFIG_FILE" << 'EOF_CODEx_MCP'
+${content}
+EOF_CODEx_MCP
+        echo "Codex MCP config updated at $CODEx_CONFIG_FILE" >&2
+      `
+
+      const result = await this.executeWithStreamingBash(containerId, script)
+      if (result.exitCode !== 0) {
+        throw new Error(result.stderr || 'Failed to update Codex MCP config')
+      }
+    } catch (error: any) {
+      // Non-fatal; Codex can run without MCP
+      throw error
+    }
+  }
+
+  private sanitizeServerName(name: string): string {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
+
+  /**
+   * Generate a TOML block for a single MCP entry in Codex config.
+   * Supports stdio-type MCP (command + args). SSE entries are ignored for now.
+   */
+  private generateCodexTomlForMcp(mcp: any): string | undefined {
+    const server = this.sanitizeServerName(mcp?.name)
+    if (!server) return undefined
+
+    // Only support stdio for now (per provided doc example)
+    if (mcp?.type !== 'stdio' || !mcp?.command) {
+      return undefined
+    }
+
+    const esc = (s: string) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const args: string[] = Array.isArray(mcp.args) ? mcp.args : []
+    const argsToml = args.length ? `[${args.map(a => `"${esc(a)}"`).join(', ')}]` : '[]'
+
+    // Use TOML tables for clarity; codex expects top-level key mcp_servers
+    return [
+      `[mcp_servers.${server}]`,
+      `command = "${esc(mcp.command)}"`,
+      `args = ${argsToml}`,
+      `startup_timeout_ms = 20000`
+    ].join('\n')
   }
 
   private getAiProviderLabel(provider: AIProviderType): string {
