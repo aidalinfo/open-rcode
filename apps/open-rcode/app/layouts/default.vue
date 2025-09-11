@@ -135,20 +135,8 @@ const links = computed(() => [[
         open.value = false
       }
     }, {
-      label: 'Create Environment',
-      to: '/app/settings/environnement/create',
-      onSelect: () => {
-        open.value = false
-      }
-    }, {
       label: 'MCP',
       to: '/app/settings/mcp',
-      onSelect: () => {
-        open.value = false
-      }
-    }, {
-      label: 'Create MCP',
-      to: '/app/settings/mcp/create',
       onSelect: () => {
         open.value = false
       }
