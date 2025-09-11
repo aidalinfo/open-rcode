@@ -668,6 +668,65 @@ export class AIExecutor {
     const aiProviderLabel = adapter.getName()
     let streamBuffer = ''
     const processedToolCallIds = new Set<string>()
+    const isCodex = AIProviderFactory.isCodexProvider(aiProvider)
+
+    // Codex incremental streaming state
+    const codexTsLine = /^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T[^\]]+\]\s*(.*)$/
+    let codexCurrentKind: 'assistant' | 'tool' | 'diff' | 'system' | 'note' | null = null
+    let codexBuffer: string[] = []
+    let codexChunksSaved = 0
+    let codexLastAssistantText = ''
+
+    const codexFlush = async () => {
+      if (!codexCurrentKind || codexBuffer.length === 0) return
+      const content = codexBuffer.join('\n').trim()
+      codexBuffer = []
+      if (!content) { codexCurrentKind = null; return }
+
+      // Skip certain notes
+      if (codexCurrentKind === 'note') {
+        if (/^tokens used:/i.test(content)) { codexCurrentKind = null; return }
+        if (/^User instructions:/i.test(content)) { codexCurrentKind = null; return }
+      }
+
+      let message: string
+      switch (codexCurrentKind) {
+        case 'system':
+          message = `🟢 **${aiProviderLabel} (${model}) démarré**\n\n\`\`\`\n${content}\n\`\`\``
+          break
+        case 'tool':
+          message = `🔧 **apply_patch**\n\n\`\`\`diff\n${content}\n\`\`\``
+          break
+        case 'diff':
+          message = `🔧 **turn diff**\n\n\`\`\`diff\n${content}\n\`\`\``
+          break
+        case 'note':
+          message = `📝 ${content}`
+          break
+        case 'assistant':
+        default:
+          message = content
+          codexLastAssistantText = content
+          break
+      }
+
+      await TaskMessageModel.create({
+        id: uuidv4(),
+        userId: task.userId,
+        taskId: task._id,
+        role: 'assistant',
+        content: message
+      })
+      codexChunksSaved++
+      codexCurrentKind = null
+    }
+
+    const codexStart = async (kind: typeof codexCurrentKind, initial?: string) => {
+      await codexFlush()
+      codexCurrentKind = kind
+      codexBuffer = []
+      if (initial) codexBuffer.push(initial)
+    }
 
     // For Codex OAuth, show a one-time credentials hint if not configured
     if (aiProvider === 'codex-oauth') {
@@ -704,9 +763,52 @@ export class AIExecutor {
           // Ajouter la ligne au buffer
           streamBuffer += line + '\n'
 
-          // Pour Gemini/Codex, sauvegarder la sortie brute au fur et à mesure
-          if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
-            // Ne pas essayer de parser JSON pour Gemini
+          // Gestion du streaming Codex (parsing incrémental des blocs)
+          if (isCodex) {
+            const m = line.match(codexTsLine)
+            if (m) {
+              const rest = m[1]
+              if (/^OpenAI Codex/i.test(rest)) {
+                await codexStart('system', rest)
+                continue
+              }
+              if (/^codex\s*$/i.test(rest)) {
+                await codexStart('assistant')
+                continue
+              }
+              if (/^apply_patch/i.test(rest)) {
+                await codexStart('tool')
+                continue
+              }
+              if (/^turn diff:/i.test(rest)) {
+                await codexStart('diff')
+                continue
+              }
+              if (/^User instructions:/i.test(rest)) {
+                await codexStart('note', rest)
+                continue
+              }
+              if (/^tokens used:/i.test(rest)) {
+                await codexStart('note', rest)
+                continue
+              }
+              // Other timestamped lines => notes
+              await codexStart('note', rest)
+              continue
+            }
+
+            // Non-timestamped line: append to current chunk or start assistant
+            if (codexCurrentKind) {
+              codexBuffer.push(line)
+            } else if (line.trim()) {
+              await codexStart('assistant')
+              codexBuffer.push(line)
+            }
+            continue
+          }
+
+          // Pour Gemini, ne pas parser JSON
+          if (AIProviderFactory.isGeminiProvider(aiProvider)) {
             continue
           }
 
@@ -777,14 +879,21 @@ export class AIExecutor {
     const parsedOutput = adapter.parseOutput(result.stdout)
 
     // Si c'est Gemini ou Codex, gérer différemment
-    if (AIProviderFactory.isGeminiProvider(aiProvider) || AIProviderFactory.isCodexProvider(aiProvider)) {
-      if (AIProviderFactory.isCodexProvider(aiProvider)) {
-        // Parser la sortie Codex et enregistrer des messages structurés
+    if (AIProviderFactory.isGeminiProvider(aiProvider) || isCodex) {
+      if (isCodex) {
+        // Flush any remaining Codex chunk at end
+        await codexFlush()
+
+        if (codexChunksSaved > 0) {
+          // Déjà sauvegardé en temps réel
+          return codexLastAssistantText || 'Tâche terminée'
+        }
+        // Fallback: parser la sortie complète si aucun chunk en temps réel
         const finalText = await this.parseAndSaveCodexMessages(parsedOutput.finalResult || '', task, aiProviderLabel, model || '', actionLabel)
         return finalText || 'Tâche terminée'
       } else {
         // Créer un message avec la sortie brute de Gemini
-        if (parsedOutput.finalResult.trim()) {
+        if ((parsedOutput.finalResult || '').trim()) {
           await TaskMessageModel.create({
             id: uuidv4(),
             userId: task.userId,
