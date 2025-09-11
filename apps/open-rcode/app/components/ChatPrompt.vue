@@ -22,6 +22,17 @@
             :disabled="environments.length === 0"
             class="w-full sm:w-auto"
           />
+
+          <!-- Reasoning select shown only for Codex providers -->
+          <USelect
+            v-if="isCodexSelectedEnv"
+            v-model="localReasoningEffort"
+            :items="reasoningOptions"
+            icon="i-heroicons-sparkles"
+            placeholder="Reasoning"
+            variant="ghost"
+            class="w-full sm:w-auto"
+          />
         </div>
       </template>
     </UChatPrompt>
@@ -103,6 +114,21 @@ const environmentOptions = computed(() => {
   }))
 })
 
+// Selected environment object and Codex detection
+const selectedEnv = computed(() => props.environments.find((e: any) => e.id === localSelectedEnvironment.value))
+const isCodexSelectedEnv = computed(() => {
+  const p = selectedEnv.value?.aiProvider
+  return p === 'codex-api' || p === 'codex-oauth'
+})
+
+// Reasoning options (Codex)
+const reasoningOptions = [
+  { label: 'Low reasoning', value: 'low' },
+  { label: 'Medium reasoning', value: 'medium' },
+  { label: 'High reasoning', value: 'high' }
+]
+const localReasoningEffort = ref<'low' | 'medium' | 'high'>('medium')
+
 // File path autocomplete computed properties
 const filteredFilePaths = computed(() => {
   const query = localInput.value.slice(atPosition.value + 1, cursorPosition.value).toLowerCase()
@@ -135,7 +161,11 @@ const handleSubmit = async () => {
         environmentId: localSelectedEnvironment.value,
         message: localInput.value,
         planMode: false,
-        autoMerge: false
+        autoMerge: false,
+        // Include Codex AI config if applicable
+        aiConfig: isCodexSelectedEnv.value
+          ? { model_reasoning_effort: localReasoningEffort.value }
+          : undefined
       }
     })
 

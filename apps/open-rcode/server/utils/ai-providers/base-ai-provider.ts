@@ -7,6 +7,8 @@ export interface ExecuteOptions {
   model?: string
   planMode?: boolean
   mcpConfigPath?: string
+  // Extra CLI config overrides (e.g., for Codex: model_reasoning_effort)
+  configOverrides?: Record<string, any>
   onOutput?: (data: string) => void
 }
 
@@ -15,6 +17,7 @@ export interface AICommandOptions {
   verbose?: boolean
   outputFormat?: 'stream-json' | 'text'
   permissionMode?: 'plan' | 'normal'
+  configOverrides?: Record<string, any>
 }
 
 export interface ParsedOutput {

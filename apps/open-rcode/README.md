@@ -51,6 +51,13 @@ KUBECONFIG=/path/to/kubeconfig          # Optional, uses default kubectl config
 KUBERNETES_CONTEXT=my-context           # Optional, uses current context
 ```
 
+## Codex Configuration (-c flags)
+
+- You can configure Codex CLI config via `-c` flags sourced from the environment or the request.
+- Environment-level: add an environment variable `CODEX_MODEL_REASONING_EFFORT` with one of `minimal`, `low`, `medium`, `high` in your Environment settings. This maps to `-c model_reasoning_effort="..."`.
+- Request-level: when creating a task (`POST /api/tasks`), include `{ aiConfig: { model_reasoning_effort: 'minimal' } }`. Request-level overrides take precedence.
+- Only Codex providers (`codex-api`, `codex-oauth`) consume these overrides.
+
 ## Setup & Installation
 
 ### 1. Prerequisites

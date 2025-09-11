@@ -21,9 +21,35 @@ export class CodexProvider extends BaseAIProvider {
   }
 
   buildCommand(options: AICommandOptions, prompt: string): string {
-    // codex exec --full-auto "<prompt>"
+    // Build Codex CLI command with optional -c config overrides
     const escaped = `$(cat <<'PROMPT_EOF'\n${prompt}\nPROMPT_EOF\n)`
-    return `codex exec --full-auto "${escaped}"`
+
+    const parts: string[] = [
+      'codex',
+      'exec'
+    ]
+
+    // Append generic config overrides as -c key=value
+    if (options.configOverrides && typeof options.configOverrides === 'object') {
+      for (const [key, rawVal] of Object.entries(options.configOverrides)) {
+        let v = rawVal as any
+        let rendered: string
+        if (typeof v === 'string') {
+          const trimmed = v.trim()
+          const looksLikeTomlLiteral = /^(true|false|[0-9]+(\.[0-9]+)?|\{.*\}|\[.*\])$/i.test(trimmed)
+          rendered = looksLikeTomlLiteral ? trimmed : `\"${trimmed.replace(/\"/g, '\\\"')}\"`
+        } else if (typeof v === 'number' || typeof v === 'boolean') {
+          rendered = String(v)
+        } else {
+          const asJson = JSON.stringify(v)
+          rendered = `\"${asJson.replace(/\"/g, '\\\"')}\"`
+        }
+        parts.push('-c', `${key}=${rendered}`)
+      }
+    }
+
+    parts.push('--full-auto', `"${escaped}"`)
+    return parts.join(' ')
   }
 
   parseOutput(rawOutput: string): ParsedOutput {
@@ -43,4 +69,3 @@ export class CodexProvider extends BaseAIProvider {
     return false
   }
 }
-

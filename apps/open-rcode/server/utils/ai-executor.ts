@@ -27,6 +27,47 @@ export class AIExecutor {
     this.containerManager = containerManager
   }
 
+  private getProviderConfigOverrides(aiProvider: AIProviderType | string, environment?: any, task?: any): Record<string, any> | undefined {
+    try {
+      // Only handle Codex for now
+      if (!AIProviderFactory.isCodexProvider(aiProvider as any)) return undefined
+
+      const overrides: Record<string, any> = {}
+
+      // Environment-level via environmentVariables (DB)
+      if (environment && Array.isArray(environment.environmentVariables)) {
+        const map: Record<string, string> = {}
+        for (const v of environment.environmentVariables) {
+          if (v && v.key) map[v.key] = v.value
+        }
+        // Preferred key for reasoning effort
+        const eff = map['CODEX_MODEL_REASONING_EFFORT'] || map['MODEL_REASONING_EFFORT'] || map['CODEX_REASONING_EFFORT']
+        if (eff) overrides['model_reasoning_effort'] = eff
+      }
+
+      // Request-level via task.aiConfig
+      if (task && task.aiConfig && typeof task.aiConfig === 'object') {
+        if (task.aiConfig.model_reasoning_effort) {
+          overrides['model_reasoning_effort'] = task.aiConfig.model_reasoning_effort
+        }
+      }
+
+      return Object.keys(overrides).length ? overrides : undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  private sanitizeModel(aiProvider: AIProviderType | string, model?: string): string | undefined {
+    if (!model) return undefined
+    if (AIProviderFactory.isCodexProvider(aiProvider as any)) {
+      const m = model.trim().toLowerCase()
+      const looksCodex = /^(o3|o4|gpt-5|codex-)/.test(m)
+      return looksCodex ? model : undefined
+    }
+    return model
+  }
+
   async executeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
     const providerType = (aiProvider || 'anthropic-api') as AIProviderType
     const adapter = new AIProviderAdapter(providerType)
@@ -42,7 +83,17 @@ export class AIExecutor {
 
     // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
     if (task) {
-      return this.executeAndSaveToolMessages(containerId, prompt, actualWorkdir, providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
+      return this.executeAndSaveToolMessages(
+        containerId,
+        prompt,
+        actualWorkdir,
+        providerType,
+        model || 'sonnet',
+        task,
+        'Exécution de commande',
+        mcpConfigPath,
+        this.getProviderConfigOverrides(providerType)
+      )
     }
 
     const onOutput = (data: string) => {
@@ -59,9 +110,10 @@ export class AIExecutor {
     const script = adapter.buildExecutionScript({
       prompt,
       workdir: actualWorkdir,
-      model,
+      model: this.sanitizeModel(providerType, model),
       planMode,
-      mcpConfigPath
+      mcpConfigPath,
+      configOverrides: this.getProviderConfigOverrides(providerType)
     })
 
     // Streaming pour Claude/Codex; pas de streaming pour Gemini
@@ -300,7 +352,17 @@ export class AIExecutor {
         if (task.planMode && adapter.supportsPlanMode()) {
           finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task, mcpConfigPath)
         } else {
-          finalResult = await this.executeAndSaveToolMessages(containerId, userMessage.content, workspaceDir, aiProvider, model, task, 'Exécution de la tâche', mcpConfigPath)
+          finalResult = await this.executeAndSaveToolMessages(
+            containerId,
+            userMessage.content,
+            workspaceDir,
+            aiProvider,
+            model,
+            task,
+            'Exécution de la tâche',
+            mcpConfigPath,
+            this.getProviderConfigOverrides(aiProvider, environment, task)
+          )
         }
       }
 
@@ -465,9 +527,10 @@ export class AIExecutor {
     const planScript = adapter.buildExecutionScript({
       prompt,
       workdir: workdir || '/tmp/workspace',
-      model,
+      model: this.sanitizeModel(providerType, model),
       planMode: true,
-      mcpConfigPath
+      mcpConfigPath,
+      configOverrides: this.getProviderConfigOverrides(providerType, environment, task)
     })
 
     this.logger.info('🚀 Exécution de la commande en mode plan...')
@@ -487,7 +550,17 @@ export class AIExecutor {
       this.logger.error({ stderr: planResult.stderr }, '❌ Échec du mode plan')
       // En cas d'échec, fallback sur le mode normal
       this.logger.info('↩️ Fallback sur le mode normal...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
+      return this.executeAndSaveToolMessages(
+        containerId,
+        prompt,
+        workdir || '/tmp/workspace',
+        providerType,
+        model || 'sonnet',
+        task,
+        'Exécution de commande',
+        mcpConfigPath,
+        this.getProviderConfigOverrides(providerType, environment, task)
+      )
     }
 
     // Si pas de plan capturé, essayer de le parser depuis la sortie
@@ -517,7 +590,17 @@ export class AIExecutor {
 
     if (!planContent) {
       this.logger.warn('⚠️ Aucun plan trouvé, exécution directe du prompt...')
-      return this.executeAndSaveToolMessages(containerId, prompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution de commande', mcpConfigPath)
+      return this.executeAndSaveToolMessages(
+        containerId,
+        prompt,
+        workdir || '/tmp/workspace',
+        providerType,
+        model || 'sonnet',
+        task,
+        'Exécution de commande',
+        mcpConfigPath,
+        this.getProviderConfigOverrides(providerType, environment, task)
+      )
     }
 
     // Si on a un task, sauvegarder le plan et le coût
@@ -552,7 +635,17 @@ export class AIExecutor {
     this.logger.info('🏃 Exécution du plan...')
     const executionPrompt = `Voici le plan à exécuter :\n\n${planContent}\n\n${prompt}`
 
-    return this.executeAndSaveToolMessages(containerId, executionPrompt, workdir || '/tmp/workspace', providerType, model || 'sonnet', task, 'Exécution du plan', mcpConfigPath)
+    return this.executeAndSaveToolMessages(
+      containerId,
+      executionPrompt,
+      workdir || '/tmp/workspace',
+      providerType,
+      this.sanitizeModel(providerType, model || 'sonnet') || (model || 'sonnet'),
+      task,
+      'Exécution du plan',
+      mcpConfigPath,
+      this.getProviderConfigOverrides(providerType, environment, task)
+    )
   }
 
   private formatToolCall(toolCall: any): string {
@@ -568,7 +661,8 @@ export class AIExecutor {
     model: string,
     task: any,
     actionLabel: string,
-    mcpConfigPath?: string
+    mcpConfigPath?: string,
+    configOverrides?: Record<string, any>
   ): Promise<string> {
     const adapter = new AIProviderAdapter(aiProvider)
     const aiProviderLabel = adapter.getName()
@@ -580,7 +674,8 @@ export class AIExecutor {
       try {
         const check = await this.containerManager.executeInContainer({
           containerId,
-          command: ['sh', '-c', 'test -s "$HOME/.codex/auth.json" || echo MISSING'],
+          // Avoid false warnings: consider either existing file OR env var presence
+          command: ['sh', '-c', '([ -s "$HOME/.codex/auth.json" ] || [ -n "$CODEX_OAUTH_JSON" ]) || echo MISSING'],
           user: 'root',
           environment: { HOME: '/root' }
         })
@@ -658,7 +753,8 @@ export class AIExecutor {
       workdir,
       model,
       planMode: false,
-      mcpConfigPath
+      mcpConfigPath,
+      configOverrides: configOverrides || this.getProviderConfigOverrides(aiProvider, undefined, task)
     })
 
     // Streaming pour Claude/Codex; exécution standard pour Gemini

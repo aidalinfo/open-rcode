@@ -41,7 +41,8 @@ export class AIProviderAdapter {
       model: options.model,
       verbose: true,
       outputFormat: this.provider.supportsStreaming() ? 'stream-json' : 'text',
-      permissionMode: options.planMode ? 'plan' : 'normal'
+      permissionMode: options.planMode ? 'plan' : 'normal',
+      configOverrides: options.configOverrides
     }, options.prompt, options.mcpConfigPath)
 
     return ContainerScripts.buildExecutionScript(

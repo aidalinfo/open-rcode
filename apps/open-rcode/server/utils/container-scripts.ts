@@ -82,7 +82,7 @@ export class ContainerScripts {
   static buildExecutionScript(
     workdir: string,
     envSetup: string,
-    cliName: 'claude' | 'gemini',
+    cliName: 'claude' | 'gemini' | 'codex',
     aiCommand: string,
     checkForMcpConfig: boolean = false
   ): string {
