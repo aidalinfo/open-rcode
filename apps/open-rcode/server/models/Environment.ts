@@ -21,6 +21,9 @@ export interface Environment {
   environmentVariables: EnvironmentVariable[]
   configurationScript?: string
   subAgents: string[]
+  // MCP settings for Codex integration
+  mcpEnabled?: boolean
+  mcpIds?: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -68,6 +71,9 @@ const environmentSchema = new Schema<EnvironmentDocument>({
     type: String,
     ref: 'SubAgent'
   }],
+  // MCP selections for Codex (disabled by default)
+  mcpEnabled: { type: Boolean, default: false },
+  mcpIds: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

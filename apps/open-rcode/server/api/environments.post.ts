@@ -80,7 +80,10 @@ export default defineEventHandler(async (event) => {
       defaultBranch: body.defaultBranch,
       environmentVariables: body.environmentVariables || [],
       configurationScript: body.configurationScript,
-      subAgents: body.subAgents || []
+      subAgents: body.subAgents || [],
+      // MCP: disabled by default; accept optional initial selection
+      mcpEnabled: typeof body.mcpEnabled === 'boolean' ? body.mcpEnabled : false,
+      mcpIds: Array.isArray(body.mcpIds) ? body.mcpIds : []
     })
 
     await environment.save()
@@ -100,6 +103,8 @@ export default defineEventHandler(async (event) => {
         environmentVariables: environment.environmentVariables,
         configurationScript: environment.configurationScript,
         subAgents: environment.subAgents,
+        mcpEnabled: environment.mcpEnabled,
+        mcpIds: environment.mcpIds,
         createdAt: environment.createdAt,
         updatedAt: environment.updatedAt
       }
