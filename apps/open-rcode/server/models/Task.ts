@@ -21,6 +21,8 @@ export interface Task {
   error?: string
   planMode?: boolean
   autoMerge?: boolean
+  // Optional per-task AI config overrides (e.g., for Codex -c flags)
+  aiConfig?: Record<string, any>
   createdAt: Date
   updatedAt: Date
 }
@@ -45,6 +47,7 @@ const taskSchema = new Schema<TaskDocument>({
   error: { type: String },
   planMode: { type: Boolean, default: false },
   autoMerge: { type: Boolean, default: false },
+  aiConfig: { type: Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })

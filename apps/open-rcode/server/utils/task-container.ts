@@ -3,7 +3,7 @@ import { TaskModel } from '../models/Task'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { connectToDatabase } from './database'
 import { ContainerSetup } from './container-setup'
-import { ClaudeExecutor } from './claude-executor'
+import { AIExecutor } from './ai-executor'
 import { ContainerCleanup } from './container-cleanup'
 import type { TaskContainerOptions, ContainerSetupResult } from './container-setup'
 import { createContainerManager, ContainerManagerFactory } from './container/container-manager-factory'
@@ -15,7 +15,7 @@ import { logger } from './logger'
 export class TaskContainerManager {
   private containerManager: BaseContainerManager
   private containerSetup: ContainerSetup
-  private claudeExecutor: ClaudeExecutor
+  private aiExecutor: AIExecutor
   private containerCleanup: ContainerCleanup
 
   constructor(containerOptions?: any) {
@@ -27,7 +27,7 @@ export class TaskContainerManager {
       : new DockerManager(containerOptions) // Fallback pour Kubernetes mode
 
     this.containerSetup = new ContainerSetup(this.containerManager, dockerManager)
-    this.claudeExecutor = new ClaudeExecutor(this.containerManager)
+    this.aiExecutor = new AIExecutor(this.containerManager)
     this.containerCleanup = new ContainerCleanup(this.containerManager)
   }
 
@@ -79,7 +79,7 @@ export class TaskContainerManager {
       // Exécuter automatiquement le workflow Claude après le setup
       // Passer le workspaceDir complet avec /repo dans l'objet task temporairement
       const taskWithWorkspace = { ...task.toObject(), workspaceDir: `${result.workspaceDir}/repo` }
-      await this.claudeExecutor.executeWorkflow(result.containerId, taskWithWorkspace)
+      await this.aiExecutor.executeWorkflow(result.containerId, taskWithWorkspace)
     }
 
     return result
@@ -89,7 +89,7 @@ export class TaskContainerManager {
    * Exécute une commande Claude dans le conteneur
    */
   async executeClaudeCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: string, model?: string, task?: any, planMode?: boolean): Promise<string> {
-    return this.claudeExecutor.executeCommand(containerId, prompt, workdir, aiProvider, model, task, planMode)
+    return this.aiExecutor.executeCommand(containerId, prompt, workdir, aiProvider, model, task, planMode)
   }
 
   /**

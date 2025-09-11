@@ -1,6 +1,7 @@
 import type { BaseAIProvider, AIProviderType } from './base-ai-provider'
 import { ClaudeProvider } from './claude-provider'
 import { GeminiProvider } from './gemini-provider'
+import { CodexProvider } from './codex-provider'
 
 export class AIProviderFactory {
   static create(providerType: AIProviderType): BaseAIProvider {
@@ -13,6 +14,10 @@ export class AIProviderFactory {
       case 'admin-gemini':
         return new GeminiProvider(providerType)
 
+      case 'codex-api':
+      case 'codex-oauth':
+        return new CodexProvider(providerType)
+
       default:
         throw new Error(`Unsupported AI provider: ${providerType}`)
     }
@@ -24,5 +29,9 @@ export class AIProviderFactory {
 
   static isGeminiProvider(providerType: AIProviderType): boolean {
     return providerType === 'gemini-cli' || providerType === 'admin-gemini'
+  }
+
+  static isCodexProvider(providerType: AIProviderType): boolean {
+    return providerType === 'codex-api' || providerType === 'codex-oauth'
   }
 }

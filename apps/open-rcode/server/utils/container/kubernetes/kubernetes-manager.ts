@@ -3,6 +3,8 @@ import { promisify } from 'util'
 import crypto from 'crypto'
 import type { ExecuteResult } from '../base-container-manager'
 import { createLogger } from '../../logger'
+import * as fs from 'fs'
+import * as path from 'path'
 
 const execAsync = promisify(exec)
 
@@ -64,16 +66,52 @@ export class KubernetesManager {
   private context?: string
   private kubeconfig?: string
   private logger = createLogger('KubernetesManager')
+  private streamDebugEnabled: boolean
+  private streamDebugFilePath: string
 
   constructor(options?: KubernetesConnectionOptions) {
     this.defaultNamespace = options?.namespace || 'default'
     this.context = options?.context
     this.kubeconfig = options?.kubeconfig
+    // Streaming debug to file (optional)
+    const envFlag = String(process.env.STREAM_DEBUG_TO_FILE || '').toLowerCase()
+    const streamFlagEnabled = envFlag === 'true' || envFlag === '1'
+
+    const cwd = process.cwd()
+
+    // Walk upwards to find an existing debug file created by the user
+    const findUpExisting = (fileNames: string[]): string | undefined => {
+      let dir = cwd
+      const seen = new Set<string>()
+      while (!seen.has(dir)) {
+        seen.add(dir)
+        for (const name of fileNames) {
+          const p = path.resolve(dir, name)
+          if (fs.existsSync(p)) return p
+        }
+        const parent = path.dirname(dir)
+        if (parent === dir) break
+        dir = parent
+      }
+      return undefined
+    }
+
+    const existingUserFile = findUpExisting(['debug-time-codex-stream', 'debug-time-codex-stream.log'])
+    const defaultLogPath = path.resolve(cwd, 'debug-time-codex-stream.log')
+
+    // Choose target path: prefer explicit env, then discovered user file, then default in cwd
+    this.streamDebugFilePath = (process.env.STREAM_DEBUG_FILE && process.env.STREAM_DEBUG_FILE.trim())
+      ? process.env.STREAM_DEBUG_FILE.trim()
+      : (existingUserFile || defaultLogPath)
+
+    // Enable streaming debug only if env flag is set
+    this.streamDebugEnabled = streamFlagEnabled
 
     this.logger.info({
       namespace: this.defaultNamespace,
       context: this.context,
-      kubeconfig: this.kubeconfig
+      kubeconfig: this.kubeconfig,
+      streamToFile: this.streamDebugEnabled ? this.streamDebugFilePath : undefined
     }, '☸️ Kubernetes Manager initialized')
   }
 
@@ -326,6 +364,19 @@ export class KubernetesManager {
       kubectlArgs.push('exec', options.podName, '-n', namespace, '-c', container, '--')
       kubectlArgs.push(...options.command)
 
+      // Write START header if debug stream enabled
+      if (this.streamDebugEnabled) {
+        try { fs.mkdirSync(path.dirname(this.streamDebugFilePath), { recursive: true }) } catch {}
+        try {
+          const cmdStr = options.command.join(' ')
+          fs.appendFileSync(
+            this.streamDebugFilePath,
+            `\n=== STREAM START ${new Date().toISOString()} pod=${options.podName} ns=${namespace} container=${container} cmd=${JSON.stringify(cmdStr)} ===\n`,
+            { encoding: 'utf8' }
+          )
+        } catch {}
+      }
+
       const process = spawn(kubectlArgs[0], kubectlArgs.slice(1))
 
       let stdout = ''
@@ -334,6 +385,9 @@ export class KubernetesManager {
       process.stdout.on('data', (data) => {
         const output = data.toString()
         stdout += output
+        if (this.streamDebugEnabled) {
+          try { fs.appendFileSync(this.streamDebugFilePath, output, { encoding: 'utf8' }) } catch {}
+        }
         if (onOutput) {
           onOutput(output)
         }
@@ -342,6 +396,9 @@ export class KubernetesManager {
       process.stderr.on('data', (data) => {
         const output = data.toString()
         stderr += output
+        if (this.streamDebugEnabled) {
+          try { fs.appendFileSync(this.streamDebugFilePath, output, { encoding: 'utf8' }) } catch {}
+        }
         if (onOutput) {
           onOutput(output)
         }
@@ -359,6 +416,15 @@ export class KubernetesManager {
       process.on('close', (code) => {
         clearTimeout(timeout)
         this.logger.debug({ code }, '📊 kubectl process closed')
+        if (this.streamDebugEnabled) {
+          try {
+            fs.appendFileSync(
+              this.streamDebugFilePath,
+              `=== STREAM END   ${new Date().toISOString()} status=${code === 0 ? 'ok' : 'error'} code=${code} pod=${options.podName} ===\n`,
+              { encoding: 'utf8' }
+            )
+          } catch {}
+        }
 
         if (code === 0) {
           this.logger.debug('✅ Command executed successfully')

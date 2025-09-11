@@ -25,10 +25,11 @@ export class ContainerScripts {
     `.trim()
   }
 
-  static installCLI(cliName: 'claude' | 'gemini'): string {
+  static installCLI(cliName: 'claude' | 'gemini' | 'codex'): string {
     const packages = {
       claude: '@anthropic-ai/claude-code',
-      gemini: '@google/gemini-cli'
+      gemini: '@google/gemini-cli',
+      codex: '@openai/codex'
     }
 
     return `
@@ -64,11 +65,26 @@ export class ContainerScripts {
     return parts.filter(part => part.trim()).join('\n\n')
   }
 
+  static checkMcpConfig(workdir: string): string {
+    return `
+      # Check for .mcp.json file
+      MCP_CONFIG_PATH=""
+      if [ -f "${workdir}/.mcp.json" ]; then
+        MCP_CONFIG_PATH="${workdir}/.mcp.json"
+        echo "MCP config found at: $MCP_CONFIG_PATH" >&2
+      elif [ -f "${workdir}/servers.json" ]; then
+        MCP_CONFIG_PATH="${workdir}/servers.json"
+        echo "MCP config found at: $MCP_CONFIG_PATH" >&2
+      fi
+    `.trim()
+  }
+
   static buildExecutionScript(
     workdir: string,
     envSetup: string,
-    cliName: 'claude' | 'gemini',
-    aiCommand: string
+    cliName: 'claude' | 'gemini' | 'codex',
+    aiCommand: string,
+    checkForMcpConfig: boolean = false
   ): string {
     const parts = [
       this.createWorkspace(workdir),
@@ -81,6 +97,11 @@ export class ContainerScripts {
     // Add Claude settings cleanup only for Claude CLI
     if (cliName === 'claude') {
       parts.push(this.cleanClaudeSettings())
+    }
+
+    // Check for MCP config if requested
+    if (checkForMcpConfig && cliName === 'claude') {
+      parts.push(this.checkMcpConfig(workdir))
     }
 
     parts.push(aiCommand)

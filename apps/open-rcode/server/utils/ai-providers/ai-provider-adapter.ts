@@ -30,26 +30,33 @@ export class AIProviderAdapter {
   }
 
   buildExecutionScript(options: ExecuteOptions): string {
-    const cliName = AIProviderFactory.isGeminiProvider(this.provider['providerType']) ? 'gemini' : 'claude'
+    const providerType = this.provider['providerType'] as any
+    const cliName = AIProviderFactory.isGeminiProvider(providerType)
+      ? 'gemini'
+      : (AIProviderFactory.isClaudeProvider(providerType) ? 'claude' : 'codex')
+    const isClaudeProvider = cliName === 'claude'
 
+    // Build the command with MCP config path if available
     const command = this.provider.buildCommand({
       model: options.model,
       verbose: true,
       outputFormat: this.provider.supportsStreaming() ? 'stream-json' : 'text',
-      permissionMode: options.planMode ? 'plan' : 'normal'
-    }, options.prompt)
+      permissionMode: options.planMode ? 'plan' : 'normal',
+      configOverrides: options.configOverrides
+    }, options.prompt, options.mcpConfigPath)
 
     return ContainerScripts.buildExecutionScript(
       options.workdir,
       this.provider.getEnvironmentSetup(),
       cliName,
-      command
+      command,
+      false // We'll handle MCP detection in the higher level
     )
   }
 
   parseOutput(rawOutput: string): ParsedOutput {
     // Remove unwanted path from the beginning
-    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/(claude|gemini)\s*\n?/
+    const unwantedPathPattern = /^\/root\/\.nvm\/versions\/node\/v[\d.]+\/bin\/(claude|gemini|codex)\s*\n?/
     const filteredOutput = rawOutput.replace(unwantedPathPattern, '')
 
     return this.provider.parseOutput(filteredOutput)

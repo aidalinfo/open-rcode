@@ -73,7 +73,8 @@ export default defineEventHandler(async (event) => {
       merged: false,
       executed: false,
       planMode: body.planMode || false,
-      autoMerge: body.autoMerge || false
+      autoMerge: body.autoMerge || false,
+      aiConfig: body.aiConfig || undefined
     })
 
     await task.save()

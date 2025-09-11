@@ -17,7 +17,7 @@ export class ClaudeProvider extends BaseAIProvider {
     return 'export CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN"'
   }
 
-  buildCommand(options: AICommandOptions, prompt: string): string {
+  buildCommand(options: AICommandOptions, prompt: string, mcpConfigPath?: string): string {
     const builder = AICommandBuilder.create('claude')
 
     if (options.verbose !== false) {
@@ -39,6 +39,11 @@ export class ClaudeProvider extends BaseAIProvider {
 
     if (options.permissionMode) {
       builder.withPermissionMode(options.permissionMode)
+    }
+
+    // Ajouter le support MCP si un fichier de config est fourni
+    if (mcpConfigPath) {
+      builder.withMcpConfig(mcpConfigPath)
     }
 
     builder.withModel(options.model)

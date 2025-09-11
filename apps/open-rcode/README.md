@@ -8,7 +8,7 @@ CCWeb is a container-based web platform that enables developers to execute AI-as
 The platform orchestrates AI-assisted development through this flow:
 1. User submits task via web interface
 2. `TaskContainerManager` creates isolated container (Docker or Kubernetes pod)
-3. `ClaudeExecutor` runs AI commands inside container
+3. `AIExecutor` runs AI commands inside container
 4. `PullRequestCreator` commits changes and creates GitHub PR
 
 ### Container Orchestration
@@ -50,6 +50,13 @@ KUBERNETES_NAMESPACE=default            # Optional, defaults to "default"
 KUBECONFIG=/path/to/kubeconfig          # Optional, uses default kubectl config
 KUBERNETES_CONTEXT=my-context           # Optional, uses current context
 ```
+
+## Codex Configuration (-c flags)
+
+- You can configure Codex CLI config via `-c` flags sourced from the environment or the request.
+- Environment-level: add an environment variable `CODEX_MODEL_REASONING_EFFORT` with one of `minimal`, `low`, `medium`, `high` in your Environment settings. This maps to `-c model_reasoning_effort="..."`.
+- Request-level: when creating a task (`POST /api/tasks`), include `{ aiConfig: { model_reasoning_effort: 'minimal' } }`. Request-level overrides take precedence.
+- Only Codex providers (`codex-api`, `codex-oauth`) consume these overrides.
 
 ## Setup & Installation
 

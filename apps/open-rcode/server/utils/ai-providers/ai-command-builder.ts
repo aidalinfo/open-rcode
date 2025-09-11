@@ -50,6 +50,11 @@ export class AICommandBuilder {
     return this
   }
 
+  withMcpConfig(configPath: string): AICommandBuilder {
+    this.args.push('--mcp-config', configPath)
+    return this
+  }
+
   build(): string {
     const fullCommand = [this.command, ...this.args].join(' ')
 

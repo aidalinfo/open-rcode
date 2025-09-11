@@ -13,13 +13,29 @@ const props = defineProps<Props>()
 
 const parseToolNames = (content: string): string[] => {
   const tools: string[] = []
+
+  // Claude/MCP style tool markers
   const toolRegex = /(?:🔧|🔌)\s\*\*([^*]+)\*\*/g
   let match
-
   while ((match = toolRegex.exec(content)) !== null) {
-    if (match[1]) {
-      tools.push(match[1].trim())
-    }
+    if (match[1]) tools.push(match[1].trim())
+  }
+
+  // Codex-style inferred tools: bash executions and thinking traces
+  // Count occurrences to reflect multiple uses in the tree
+  // Match bash executions like "exec bash -lc ..." or "bash -lc ..." anywhere
+  const bashRegex = /\bbash\s+-lc\b/gi
+  // Match Codex thinking markers (with or without the 📝 prefix)
+  const thinkingRegex = /(?:^|\n)\s*(?:📝\s*)?thinking\b/gi
+
+  const bashMatches = content.match(bashRegex)
+  if (bashMatches && bashMatches.length) {
+    for (let i = 0; i < bashMatches.length; i++) tools.push('Bash')
+  }
+
+  const thinkingMatches = content.match(thinkingRegex)
+  if (thinkingMatches && thinkingMatches.length) {
+    for (let i = 0; i < thinkingMatches.length; i++) tools.push('Thinking')
   }
 
   return tools
@@ -32,6 +48,7 @@ const getToolIcon = (toolName: string): string => {
     MultiEdit: 'i-lucide-edit',
     Write: 'i-lucide-file-plus',
     Bash: 'i-lucide-terminal',
+    Thinking: 'i-lucide-brain',
     Grep: 'i-lucide-search',
     Glob: 'i-lucide-folder-open',
     LS: 'i-lucide-folder',
@@ -64,14 +81,28 @@ const toolCount = computed(() => toolNames.value.length)
 const treeItems = computed(() => {
   if (toolCount.value === 0) return []
 
+  const names = toolNames.value
+  const counts = new Map<string, number>()
+  const order: string[] = []
+  for (const n of names) {
+    if (!counts.has(n)) order.push(n)
+    counts.set(n, (counts.get(n) || 0) + 1)
+  }
+
+  const totalCalls = names.length
+
   return [{
-    label: `${toolCount.value} tool${toolCount.value > 1 ? 's' : ''} used`,
+    label: `${totalCalls} tool call${totalCalls > 1 ? 's' : ''}`,
     icon: 'i-lucide-wrench',
     defaultExpanded: true,
-    children: toolNames.value.map(toolName => ({
-      label: `${toolName} ${getToolStatus(props.message, toolName)}`,
-      icon: getToolIcon(toolName)
-    }))
+    children: order.map(toolName => {
+      const count = counts.get(toolName) || 1
+      const suffix = count > 1 ? ` (x${count})` : ''
+      return {
+        label: `${toolName}${suffix} ${getToolStatus(props.message, toolName)}`.trim(),
+        icon: getToolIcon(toolName)
+      }
+    })
   }]
 })
 </script>

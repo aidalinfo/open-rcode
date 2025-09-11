@@ -135,8 +135,8 @@ const links = computed(() => [[
         open.value = false
       }
     }, {
-      label: 'Create Environment',
-      to: '/app/settings/environnement/create',
+      label: 'MCP',
+      to: '/app/settings/mcp',
       onSelect: () => {
         open.value = false
       }
@@ -183,9 +183,7 @@ const groups = computed(() => [{
   }]
 }])
 
-definePageMeta({
-  middleware: 'auth'
-})
+
 
 // Load recent tasks on mount
 onMounted(() => {
