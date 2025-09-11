@@ -19,34 +19,9 @@
               :items="envOptions"
               option-attribute="label"
               value-attribute="value"
-              icon="i-heroicons-cube"
               placeholder="Select an environment"
-              variant="ghost"
-              :loading="loadingEnvOptions"
-              :disabled="envDisabled"
-              searchable
-              v-model:query="envQuery"
               class="min-w-[16rem]"
-            >
-              <template #empty>
-                <div class="px-3 py-2 text-sm text-gray-500">
-                  {{ envQuery ? 'No environments match your search' : 'No environments found' }}
-                </div>
-              </template>
-              <template #footer>
-                <div v-if="hasMoreEnvs" class="px-2 py-2">
-                  <UButton
-                    :loading="loadingMore"
-                    variant="ghost"
-                    size="xs"
-                    block
-                    @click.stop="loadMoreEnvs"
-                  >
-                    Load more
-                  </UButton>
-                </div>
-              </template>
-            </USelectMenu>
+            />
           </div>
 
           <!-- Reasoning select shown only for Codex providers -->
@@ -91,7 +66,6 @@
 </template>
 
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
 
 interface Props {
   input: string
@@ -131,58 +105,14 @@ const localSelectedEnvironment = computed({
   set: value => emit('update:selectedEnvironment', value)
 })
 
-// Remote environment options with server-side search + pagination
-const envOptions = ref<Array<{ label: string; value: string; icon?: string }>>([])
-const envQuery = ref('')
-const loadingEnvOptions = ref(false)
-const loadingMore = ref(false)
-const envPage = ref(1)
-const envLimit = ref(10)
-const envTotalPages = ref(1)
-const envDisabled = computed(() => loadingEnvOptions.value && envOptions.value.length === 0)
-const hasMoreEnvs = computed(() => envPage.value < envTotalPages.value)
-
 const mapEnvToOption = (env: any) => ({
   label: `${env.name} (${env.repositoryFullName})`,
   value: env.id,
   icon: getRuntimeIcon(env.runtime)
 })
 
-const fetchEnvOptions = async (opts?: { reset?: boolean }) => {
-  const reset = !!opts?.reset
-  try {
-    if (reset) {
-      envPage.value = 1
-      envTotalPages.value = 1
-    }
-    const pageToLoad = reset ? 1 : envPage.value
-    if (reset) loadingEnvOptions.value = true
-    else loadingMore.value = true
-
-    const data = await $fetch('/api/environments', {
-      query: {
-        page: pageToLoad,
-        limit: envLimit.value,
-        q: envQuery.value || undefined
-      }
-    })
-    envTotalPages.value = data.totalPages || 1
-    const newItems = (data.environments || []).map(mapEnvToOption)
-    envOptions.value = reset ? newItems : [...envOptions.value, ...newItems]
-    envPage.value = pageToLoad
-  } catch (error) {
-    if (import.meta.dev) console.error('Error fetching environments (select):', error)
-  } finally {
-    loadingEnvOptions.value = false
-    loadingMore.value = false
-  }
-}
-
-const loadMoreEnvs = async () => {
-  if (!hasMoreEnvs.value || loadingMore.value) return
-  envPage.value += 1
-  await fetchEnvOptions({ reset: false })
-}
+// Environment options derived from provided props
+const envOptions = computed(() => (props.environments || []).map(mapEnvToOption))
 
 // Selected environment object and Codex detection
 const selectedEnv = computed(() => props.environments.find((e: any) => e.id === localSelectedEnvironment.value))
@@ -372,18 +302,5 @@ watch(localSelectedEnvironment, (newEnvironmentId) => {
 })
 
 // Initialize environment options on mount and keep in sync with search
-onMounted(() => {
-  // Seed options with provided props on first render for instant UX
-  if (props.environments?.length) {
-    envOptions.value = props.environments.map(mapEnvToOption)
-  }
-  fetchEnvOptions({ reset: true })
-})
-
-watch(
-  () => envQuery.value,
-  useDebounceFn(() => {
-    fetchEnvOptions({ reset: true })
-  }, 300)
-)
+// No extra fetching here; parent provides environments
 </script>
