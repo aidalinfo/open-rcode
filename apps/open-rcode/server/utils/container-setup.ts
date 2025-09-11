@@ -327,7 +327,7 @@ export class ContainerSetup {
       case 'codex-api':
         return 'no OpenAI API key is configured'
       case 'codex-oauth':
-        return 'no Codex OAuth JSON is configured'
+        return 'no Codex OAuth JSON is configured (put your OAuth JSON in ~/.codex/auth.json or add it in Settings)'
       case 'admin-gemini':
         return 'no admin Gemini API key is configured in the system'
       default:
