@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       environment: {
-        id: environment._id,
+        id: environment._id?.toString?.() ?? String(environment._id),
         organization: environment.organization,
         repository: environment.repository,
         repositoryFullName: environment.repositoryFullName,

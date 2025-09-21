@@ -6,10 +6,11 @@ import { PullRequestCreator } from './pull-request-creator'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { CountRequestModel } from '../models/CountRequest'
 import { UserCostModel } from '../models/UserCost'
+import { McpModel } from '../models/Mcp'
 import { v4 as uuidv4 } from 'uuid'
 import { createLogger } from './logger'
 import { AIProviderAdapter } from './ai-providers/ai-provider-adapter'
-import type { AIProviderType, ParsedOutput } from './ai-providers/base-ai-provider'
+import type { AIProviderType, McpServerConfig, ParsedOutput } from './ai-providers/base-ai-provider'
 import { ContainerScripts } from './container-scripts'
 import { AIProviderFactory } from './ai-providers/ai-provider-factory'
 
@@ -25,6 +26,133 @@ export class AIExecutor {
 
   constructor(containerManager: BaseContainerManager) {
     this.containerManager = containerManager
+  }
+
+  private normalizeIdList(value: unknown): string[] | undefined {
+    if (!Array.isArray(value)) return undefined
+
+    const seen = new Set<string>()
+    const ids: string[] = []
+
+    for (const entry of value) {
+      if (entry === undefined || entry === null) continue
+      if (typeof entry !== 'string' && typeof entry !== 'number' && typeof entry !== 'bigint') {
+        continue
+      }
+      const str = typeof entry === 'string' ? entry.trim() : String(entry).trim()
+      if (!str) continue
+      if (seen.has(str)) continue
+      seen.add(str)
+      ids.push(str)
+    }
+
+    return ids.length ? ids : undefined
+  }
+
+  private extractSelectedMcpIds(task: any): string[] | undefined {
+    if (!task || typeof task !== 'object') return undefined
+
+    const candidates: unknown[] = [
+      (task as any).selectedMcpIds,
+      (task as any).mcpServerIds
+    ]
+
+    if (task.aiConfig && typeof task.aiConfig === 'object') {
+      const cfg = task.aiConfig as Record<string, unknown>
+      candidates.push(cfg.selectedMcpIds)
+      candidates.push(cfg.mcpServerIds)
+    }
+
+    for (const candidate of candidates) {
+      const normalized = this.normalizeIdList(candidate)
+      if (normalized && normalized.length > 0) {
+        return normalized
+      }
+    }
+
+    return undefined
+  }
+
+  private async resolveSelectedMcpServers(providerType: AIProviderType, task?: any): Promise<McpServerConfig[] | undefined> {
+    if (!task || !AIProviderFactory.isCodexProvider(providerType)) return undefined
+    const userId = task.userId
+    if (!userId) return undefined
+
+    const ids = this.extractSelectedMcpIds(task)
+    if (!ids || ids.length === 0) return undefined
+
+    try {
+      const documents = await McpModel.find({
+        userId,
+        _id: { $in: ids }
+      }).lean()
+
+      if (!documents || documents.length === 0) {
+        return undefined
+      }
+
+      const byId = new Map<string, any>()
+      for (const doc of documents) {
+        const docId = doc?._id ? String(doc._id) : undefined
+        if (!docId) continue
+        byId.set(docId, doc)
+      }
+
+      const servers: McpServerConfig[] = []
+      for (const id of ids) {
+        const doc = byId.get(id)
+        if (!doc) continue
+
+        const command = typeof doc.command === 'string' && doc.command.trim() ? doc.command.trim() : undefined
+        const args = Array.isArray(doc.args)
+          ? doc.args
+              .map((arg: unknown) => (typeof arg === 'string' ? arg : (arg === undefined || arg === null ? '' : String(arg))))
+              .map((arg: string) => arg.trim())
+              .filter((arg: string) => arg.length > 0)
+          : undefined
+
+        const server: McpServerConfig = {
+          id,
+          name: typeof doc.name === 'string' ? doc.name : id,
+          type: doc.type === 'sse' ? 'sse' : 'stdio',
+          command,
+          args: args && args.length > 0 ? args : undefined,
+          url: typeof doc.url === 'string' && doc.url.trim() ? doc.url.trim() : undefined
+        }
+
+        servers.push(server)
+      }
+
+      return servers.length ? servers : undefined
+    } catch (error) {
+      this.logger.debug({ error }, 'Failed to resolve MCP servers for Codex provider')
+      return undefined
+    }
+  }
+
+  private applyMcpPromptHint(prompt: string, servers?: McpServerConfig[]): string {
+    if (!prompt || !servers || servers.length === 0) {
+      return prompt
+    }
+
+    const uniqueNames = Array.from(
+      new Set(
+        servers
+          .map(server => (server.name && server.name.trim()) || server.id)
+          .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+          .map(name => name.trim())
+      )
+    )
+
+    if (uniqueNames.length === 0) {
+      return prompt
+    }
+
+    const label = uniqueNames.length > 1 ? 'servers' : 'server'
+    const list = uniqueNames.join(', ')
+    const hint = `For this task, please leverage the following MCP ${label} whenever helpful: ${list}.`
+
+    return `${hint}\n\n${prompt}`
   }
 
   private getProviderConfigOverrides(aiProvider: AIProviderType | string, environment?: any, task?: any): Record<string, any> | undefined {
@@ -75,24 +203,27 @@ export class AIExecutor {
 
     // Détecter la présence d'un fichier MCP config
     const mcpConfigPath = await this.detectMcpConfig(containerId, actualWorkdir)
+    const selectedMcpServers = await this.resolveSelectedMcpServers(providerType, task)
+    const promptWithMcpHint = this.applyMcpPromptHint(prompt, selectedMcpServers)
 
     // Si nous sommes en mode plan avec Claude, utiliser executePlanCommand
     if (planMode && adapter.supportsPlanMode()) {
-      return this.executePlanCommand(containerId, prompt, actualWorkdir, providerType, model, task, mcpConfigPath)
+      return this.executePlanCommand(containerId, promptWithMcpHint, actualWorkdir, providerType, model, task, mcpConfigPath, selectedMcpServers)
     }
 
     // Si nous avons un task, utiliser executeAndSaveToolMessages pour la sauvegarde en temps réel
     if (task) {
       return this.executeAndSaveToolMessages(
         containerId,
-        prompt,
+        promptWithMcpHint,
         actualWorkdir,
         providerType,
         model || 'sonnet',
         task,
         'Exécution de commande',
         mcpConfigPath,
-        this.getProviderConfigOverrides(providerType)
+        this.getProviderConfigOverrides(providerType),
+        selectedMcpServers
       )
     }
 
@@ -108,12 +239,13 @@ export class AIExecutor {
     this.logger.debug({ aiProvider: providerType, model, hasAdminKey: !!process.env.ADMIN_GOOGLE_API_KEY }, 'AI Provider configuration')
 
     const script = adapter.buildExecutionScript({
-      prompt,
+      prompt: promptWithMcpHint,
       workdir: actualWorkdir,
       model: this.sanitizeModel(providerType, model),
       planMode,
       mcpConfigPath,
-      configOverrides: this.getProviderConfigOverrides(providerType)
+      configOverrides: this.getProviderConfigOverrides(providerType),
+      selectedMcpServers
     })
 
     // Streaming pour Claude/Codex; pas de streaming pour Gemini
@@ -286,6 +418,7 @@ export class AIExecutor {
 
       // Détecter la présence d'un fichier MCP config
       const mcpConfigPath = await this.detectMcpConfig(containerId, workspaceDir)
+      const selectedMcpServers = await this.resolveSelectedMcpServers(aiProvider, task)
 
       // Créer les fichiers de SubAgents si l'environnement en a
       if (environment.subAgents && environment.subAgents.length > 0) {
@@ -347,21 +480,23 @@ export class AIExecutor {
         })
 
         const adapter = new AIProviderAdapter(aiProvider)
+        const promptWithMcpHint = this.applyMcpPromptHint(userMessage.content, selectedMcpServers)
 
         // Si planMode est activé et que le provider le supporte
         if (task.planMode && adapter.supportsPlanMode()) {
-          finalResult = await this.executePlanCommand(containerId, userMessage.content, workspaceDir, aiProvider, model, task, mcpConfigPath)
+          finalResult = await this.executePlanCommand(containerId, promptWithMcpHint, workspaceDir, aiProvider, model, task, mcpConfigPath, selectedMcpServers)
         } else {
           finalResult = await this.executeAndSaveToolMessages(
             containerId,
-            userMessage.content,
+            promptWithMcpHint,
             workspaceDir,
             aiProvider,
             model,
             task,
             'Exécution de la tâche',
             mcpConfigPath,
-            this.getProviderConfigOverrides(aiProvider, environment, task)
+            this.getProviderConfigOverrides(aiProvider, environment, task),
+            selectedMcpServers
           )
         }
       }
@@ -448,7 +583,16 @@ export class AIExecutor {
     return adapter.parseOutput(rawOutput)
   }
 
-  private async executePlanCommand(containerId: string, prompt: string, workdir?: string, aiProvider?: AIProviderType, model?: string, task?: any, mcpConfigPath?: string): Promise<string> {
+  private async executePlanCommand(
+    containerId: string,
+    prompt: string,
+    workdir?: string,
+    aiProvider?: AIProviderType,
+    model?: string,
+    task?: any,
+    mcpConfigPath?: string,
+    selectedMcpServers?: McpServerConfig[]
+  ): Promise<string> {
     this.logger.info('🎯 Exécution en mode plan...')
 
     const providerType = aiProvider || 'anthropic-api'
@@ -530,7 +674,8 @@ export class AIExecutor {
       model: this.sanitizeModel(providerType, model),
       planMode: true,
       mcpConfigPath,
-      configOverrides: this.getProviderConfigOverrides(providerType, environment, task)
+      configOverrides: this.getProviderConfigOverrides(providerType, environment, task),
+      selectedMcpServers
     })
 
     this.logger.info('🚀 Exécution de la commande en mode plan...')
@@ -559,7 +704,8 @@ export class AIExecutor {
         task,
         'Exécution de commande',
         mcpConfigPath,
-        this.getProviderConfigOverrides(providerType, environment, task)
+        this.getProviderConfigOverrides(providerType, environment, task),
+        selectedMcpServers
       )
     }
 
@@ -599,7 +745,8 @@ export class AIExecutor {
         task,
         'Exécution de commande',
         mcpConfigPath,
-        this.getProviderConfigOverrides(providerType, environment, task)
+        this.getProviderConfigOverrides(providerType, environment, task),
+        selectedMcpServers
       )
     }
 
@@ -644,7 +791,8 @@ export class AIExecutor {
       task,
       'Exécution du plan',
       mcpConfigPath,
-      this.getProviderConfigOverrides(providerType, environment, task)
+      this.getProviderConfigOverrides(providerType, environment, task),
+      selectedMcpServers
     )
   }
 
@@ -662,7 +810,8 @@ export class AIExecutor {
     task: any,
     actionLabel: string,
     mcpConfigPath?: string,
-    configOverrides?: Record<string, any>
+    configOverrides?: Record<string, any>,
+    selectedMcpServers?: McpServerConfig[]
   ): Promise<string> {
     const adapter = new AIProviderAdapter(aiProvider)
     const aiProviderLabel = adapter.getName()
@@ -679,18 +828,22 @@ export class AIExecutor {
 
     const codexFlush = async () => {
       if (!codexCurrentKind || codexBuffer.length === 0) return
-      const content = codexBuffer.join('\n').trim()
+      const kind = codexCurrentKind
+      const rawContent = codexBuffer.join('\n').trim()
       codexBuffer = []
-      if (!content) { codexCurrentKind = null; return }
+      if (!rawContent) { codexCurrentKind = null; return }
+
+      const isRawBlock = kind === 'tool' || kind === 'diff'
+      const content = isRawBlock ? rawContent : this.normalizeCodexText(rawContent)
 
       // Skip certain notes
-      if (codexCurrentKind === 'note') {
+      if (kind === 'note') {
         if (/^tokens used:/i.test(content)) { codexCurrentKind = null; return }
         if (/^User instructions:/i.test(content)) { codexCurrentKind = null; return }
       }
 
       let message: string
-      switch (codexCurrentKind) {
+      switch (kind) {
         case 'system':
           message = `🟢 **${aiProviderLabel} (${model}) démarré**\n\n\`\`\`\n${content}\n\`\`\``
           break
@@ -856,7 +1009,8 @@ export class AIExecutor {
       model,
       planMode: false,
       mcpConfigPath,
-      configOverrides: configOverrides || this.getProviderConfigOverrides(aiProvider, undefined, task)
+      configOverrides: configOverrides || this.getProviderConfigOverrides(aiProvider, undefined, task),
+      selectedMcpServers
     })
 
     // Streaming pour Claude/Codex; exécution standard pour Gemini
@@ -990,16 +1144,17 @@ export class AIExecutor {
 
     if (chunks.length === 0) {
       // Fallback: save single message
-      if (raw.trim()) {
+      const trimmed = raw.trim()
+      if (trimmed) {
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${raw.trim()}`
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${this.normalizeCodexText(trimmed)}`
         })
       }
-      return raw.trim()
+      return this.normalizeCodexText(trimmed)
     }
 
     // Save each chunk as a separate message
@@ -1021,12 +1176,12 @@ export class AIExecutor {
           if (/^tokens used:/i.test(c.content.trim())) {
             continue
           }
-          content = `📝 ${c.content}`
+          content = `📝 ${this.normalizeCodexText(c.content)}`
           break
         case 'assistant':
         default:
-          content = c.content
-          lastAssistantText = c.content
+          content = this.normalizeCodexText(c.content)
+          lastAssistantText = content
           break
       }
 
@@ -1044,7 +1199,7 @@ export class AIExecutor {
       })
     }
 
-    return lastAssistantText || chunks.map(c => c.content).join('\n\n')
+    return lastAssistantText || this.normalizeCodexText(chunks.map(c => c.content).join('\n\n'))
   }
 
   /**
@@ -1137,6 +1292,33 @@ export class AIExecutor {
 
     // Post-process: condense large diffs by trimming trailing empty lines
     return chunks.map(c => ({ ...c, content: c.content.replace(/\n+$/,'') }))
+  }
+
+  private normalizeCodexText(text: string): string {
+    if (!text) return text
+
+    const codeBlocks: string[] = []
+    const placeholder = (index: number) => `__CODE_BLOCK_${index}__`
+
+    let normalized = text.replace(/```[\s\S]*?```/g, (match) => {
+      const idx = codeBlocks.length
+      codeBlocks.push(match)
+      return placeholder(idx)
+    })
+
+    normalized = normalized.replace(/\r/g, '')
+    normalized = normalized.replace(/\n\s*([-*•+])\s*\n\s*/g, '\n$1 ')
+    normalized = normalized.replace(/\n(?!\n)(?!\s*(?:[-*•+]|#{1,6}|\d+\.|>))/g, ' ')
+    normalized = normalized.replace(/[ \t]+/g, ' ')
+    normalized = normalized.replace(/\n{3,}/g, '\n\n')
+    normalized = normalized.replace(/ +\n/g, '\n')
+    normalized = normalized.replace(/\n +/g, '\n')
+    normalized = normalized.replace(/\s+([,:;.!?])/g, '$1')
+    normalized = normalized.trim()
+
+    normalized = normalized.replace(/__CODE_BLOCK_(\d+)__/g, (_, idx) => codeBlocks[Number(idx)] || '')
+
+    return normalized
   }
 
   private getAiCommand(aiProvider: string, model?: string): string {

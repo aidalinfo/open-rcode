@@ -1,12 +1,24 @@
 export type AIProviderType = 'anthropic-api' | 'claude-oauth' | 'gemini-cli' | 'admin-gemini' | 'codex-api' | 'codex-oauth'
 export type AIModel = 'opus' | 'sonnet' | 'claude-sonnet-4' | 'gemini-2.0-flash'
 
+export interface McpServerConfig {
+  id: string
+  name: string
+  type: 'sse' | 'stdio'
+  command?: string
+  args?: string[]
+  url?: string
+  env?: Record<string, string>
+  startupTimeoutMs?: number
+}
+
 export interface ExecuteOptions {
   prompt: string
   workdir: string
   model?: string
   planMode?: boolean
   mcpConfigPath?: string
+  selectedMcpServers?: McpServerConfig[]
   // Extra CLI config overrides (e.g., for Codex: model_reasoning_effort)
   configOverrides?: Record<string, any>
   onOutput?: (data: string) => void
@@ -18,6 +30,7 @@ export interface AICommandOptions {
   outputFormat?: 'stream-json' | 'text'
   permissionMode?: 'plan' | 'normal'
   configOverrides?: Record<string, any>
+  selectedMcpServers?: McpServerConfig[]
 }
 
 export interface ParsedOutput {

@@ -12,48 +12,95 @@
       <UChatPromptSubmit />
 
       <template #footer>
-        <div class="flex flex-wrap items-center gap-3">
-          <USelectMenu
-            v-model="localSelectedEnvironment"
-            v-model:search-term="envSearchTerm"
-            :items="environmentItems"
-            :loading="loadingEnvironments"
-            option-attribute="label"
-            value-attribute="value"
-            icon="i-heroicons-cube"
-            placeholder="Select an environment"
-            variant="ghost"
-            class="w-full sm:w-auto"
-            ignore-filter
-            @update:open="onEnvMenuOpen"
-            @update:model-value="onEnvironmentSelected"
-          >
-            <template #content-bottom>
-              <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-                <div class="text-xs text-gray-500">
-                  Page {{ envPage }} • {{ environmentItems.length }} / {{ envTotal }}
+        <div class="w-full flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div class="w-full sm:w-auto sm:max-w-md min-w-0">
+            <USelectMenu
+              v-model="localSelectedEnvironment"
+              v-model:search-term="envSearchTerm"
+              :items="environmentItems"
+              :loading="loadingEnvironments && environmentItems.length === 0"
+              label-key="label"
+              value-key="value"
+              icon="i-heroicons-cube"
+              placeholder="Select an environment"
+              variant="ghost"
+              class="w-full min-w-0"
+              :ui="{ base: 'w-full min-w-0', value: 'truncate', placeholder: 'truncate text-gray-500 dark:text-gray-400' }"
+              ignore-filter
+              @update:open="onEnvMenuOpen"
+              @update:model-value="onEnvironmentSelected"
+            >
+              <template #content-bottom>
+                <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+                  <div class="text-xs text-gray-500">
+                    Page {{ envPage }} • {{ environmentItems.length }} / {{ envTotal }}
+                  </div>
+                  <UButton
+                    size="xs"
+                    :disabled="loadingEnvironments || !hasMoreEnvs"
+                    :loading="loadingEnvironments"
+                    @click="loadMoreEnvironments"
+                  >
+                    Load more
+                  </UButton>
                 </div>
-                <UButton
-                  size="xs"
-                  :disabled="loadingEnvironments || !hasMoreEnvs"
-                  @click="loadMoreEnvironments"
-                >
-                  Load more
-                </UButton>
-              </div>
-            </template>
-          </USelectMenu>
+              </template>
+            </USelectMenu>
+          </div>
 
           <!-- Reasoning select shown only for Codex providers -->
-          <USelect
+          <div
             v-if="isCodexSelectedEnv"
-            v-model="localReasoningEffort"
-            :items="reasoningOptions"
-            icon="i-heroicons-sparkles"
-            placeholder="Reasoning"
-            variant="ghost"
-            class="w-full sm:w-auto"
-          />
+            class="w-full sm:w-auto sm:max-w-xs min-w-0"
+          >
+            <USelect
+              v-model="localReasoningEffort"
+              :items="reasoningOptions"
+              icon="i-heroicons-sparkles"
+              placeholder="Reasoning"
+              variant="ghost"
+              class="w-full min-w-0"
+              :ui="{ base: 'w-full min-w-0', value: 'truncate', placeholder: 'truncate text-gray-500 dark:text-gray-400' }"
+            />
+          </div>
+
+          <div
+            v-if="showMcpSelector"
+            class="w-full sm:w-auto sm:max-w-md min-w-0"
+          >
+            <USelectMenu
+              v-model="selectedMcpIds"
+              v-model:search-term="mcpSearchTerm"
+              :items="mcpItems"
+              :loading="loadingMcps && mcpItems.length === 0"
+              label-key="label"
+              value-key="value"
+              icon="i-heroicons-server-stack"
+              placeholder="Select MCP servers"
+              variant="ghost"
+              multiple
+              class="w-full min-w-0"
+              :ui="{ base: 'w-full min-w-0', value: 'truncate', placeholder: 'truncate text-gray-500 dark:text-gray-400' }"
+              ignore-filter
+              @update:open="onMcpMenuOpen"
+            >
+              <template #content-bottom>
+                <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+                  <div class="text-xs text-gray-500">
+                    Page {{ mcpPage }} • {{ mcpLoadedCount }} / {{ mcpTotal }}
+                  </div>
+                  <UButton
+                    size="xs"
+                    :disabled="loadingMcps || !hasMoreMcps"
+                    :loading="loadingMcps"
+                    @click="loadMoreMcps"
+                  >
+                    Load more
+                  </UButton>
+                </div>
+              </template>
+            </USelectMenu>
+          </div>
         </div>
       </template>
     </UChatPrompt>
@@ -98,7 +145,7 @@ interface Props {
 interface Emits {
   (e: 'update:input', value: string): void
   (e: 'update:selectedEnvironment', value: string): void
-  (e: 'submit', data: { message: string, environmentId: string, task?: any, planMode?: boolean, autoMerge?: boolean }): void
+  (e: 'submit', data: { message: string, environmentId: string, task?: any, planMode?: boolean, autoMerge?: boolean, selectedMcpIds?: string[] }): void
 }
 
 const props = defineProps<Props>()
@@ -121,9 +168,19 @@ const localInput = computed({
   set: value => emit('update:input', value)
 })
 
+const normalizeEnvironmentValue = (value: unknown): string => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'object') {
+    const maybeValue = (value as Record<string, unknown>).value
+    if (typeof maybeValue === 'string') return maybeValue
+  }
+  return ''
+}
+
 const localSelectedEnvironment = computed({
   get: () => props.selectedEnvironment,
-  set: value => emit('update:selectedEnvironment', value)
+  set: value => emit('update:selectedEnvironment', normalizeEnvironmentValue(value))
 })
 
 // Remote environments for USelectMenu (search + pagination)
@@ -135,6 +192,24 @@ const envPage = ref(1)
 const envLimit = ref(10)
 const envTotal = ref(0)
 const hasMoreEnvs = computed(() => environmentItems.value.length < envTotal.value)
+
+// Remote MCP servers for OpenAI environments (search + pagination)
+const selectedMcpIds = ref<string[]>([])
+const mcpItems = ref<Array<{ label: string, value: string }>>([])
+const loadingMcps = ref(false)
+const mcpSearchTerm = ref('')
+const mcpSearchTermDebounced = refDebounced(mcpSearchTerm, 250)
+const mcpPage = ref(1)
+const mcpLimit = ref(10)
+const mcpTotal = ref(0)
+const mcpFetchedOnce = ref(false)
+const mcpOptionCache = ref<Record<string, { label: string, value: string }>>({})
+const hasMoreMcps = computed(() => (mcpPage.value * mcpLimit.value) < mcpTotal.value)
+const mcpLoadedCount = computed(() => {
+  if (mcpTotal.value === 0) return mcpItems.value.length
+  return Math.min(mcpItems.value.length, mcpTotal.value)
+})
+const mcpKnownTotal = ref(0)
 
 const fetchEnvironments = async (opts?: { reset?: boolean }) => {
   const reset = !!opts?.reset
@@ -173,6 +248,19 @@ const fetchEnvironments = async (opts?: { reset?: boolean }) => {
   }
 }
 
+// Seed the menu with environments already provided by parent (initial load)
+watch(
+  () => props.environments,
+  (initialEnvs) => {
+    if (!initialEnvs?.length || environmentItems.value.length) return
+    environmentItems.value = initialEnvs.map((env: any) => ({
+      label: `${env.name} (${env.repositoryFullName})`,
+      value: env.id
+    }))
+  },
+  { immediate: true }
+)
+
 const onEnvMenuOpen = (open: boolean) => {
   if (open && environmentItems.value.length === 0) {
     fetchEnvironments({ reset: true })
@@ -190,9 +278,90 @@ watch(envSearchTermDebounced, () => {
   fetchEnvironments({ reset: true })
 })
 
+const upsertMcpOptionCache = (options: Array<{ label: string, value: string }>) => {
+  if (!options?.length) return
+  const next = { ...mcpOptionCache.value }
+  for (const option of options) {
+    if (!option?.value) continue
+    next[option.value] = option
+  }
+  mcpOptionCache.value = next
+}
+
+const fetchMcps = async (opts?: { reset?: boolean }) => {
+  if (!isCodexSelectedEnv.value) return
+
+  const reset = !!opts?.reset
+  if (reset) {
+    mcpPage.value = 1
+    mcpItems.value = []
+  }
+
+  loadingMcps.value = true
+  try {
+    const params: Record<string, any> = {
+      page: mcpPage.value,
+      limit: mcpLimit.value
+    }
+    if (mcpSearchTermDebounced.value) {
+      params.q = mcpSearchTermDebounced.value
+    }
+
+    const data = await $fetch('/api/mcp', { params })
+    const mcps = Array.isArray(data?.mcps) ? data.mcps : []
+    mcpTotal.value = data?.pagination?.total ?? mcps.length
+    if (!mcpSearchTermDebounced.value) {
+      mcpKnownTotal.value = mcpTotal.value
+    }
+
+    const mapped = mcps
+      .map((mcp: any) => ({
+        label: typeof mcp?.name === 'string' && mcp.name.trim() ? mcp.name.trim() : 'Unnamed MCP',
+        value: typeof mcp?._id === 'string' ? mcp._id : (typeof mcp?.id === 'string' ? mcp.id : '')
+      }))
+      .filter(item => !!item.value)
+
+    upsertMcpOptionCache(mapped)
+
+    const combined = reset ? mapped : [...mcpItems.value, ...mapped]
+    const seen = new Set<string>()
+    const deduped: Array<{ label: string, value: string }> = []
+
+    for (const item of combined) {
+      if (!item.value || seen.has(item.value)) continue
+      seen.add(item.value)
+      deduped.push(item)
+    }
+
+    for (const id of selectedMcpIds.value) {
+      if (seen.has(id)) continue
+      const cached = mcpOptionCache.value[id]
+      if (cached) {
+        seen.add(id)
+        deduped.push(cached)
+      }
+    }
+
+    mcpItems.value = deduped
+    mcpFetchedOnce.value = true
+  } catch (error) {
+    if (import.meta.dev) console.error('Error fetching MCP servers:', error)
+    if (!mcpFetchedOnce.value) {
+      toast.add({
+        title: 'Error',
+        description: 'Unable to load MCP servers',
+        color: 'error'
+      })
+    }
+  } finally {
+    loadingMcps.value = false
+  }
+}
+
 // Keep selected environment details up to date for provider-specific UI
 const selectedEnvironmentDetails = ref<any>(null)
-const onEnvironmentSelected = async (id: string) => {
+const onEnvironmentSelected = async (rawId: unknown) => {
+  const id = normalizeEnvironmentValue(rawId)
   if (!id) {
     selectedEnvironmentDetails.value = null
     return
@@ -220,6 +389,12 @@ const selectedEnv = computed(() => {
 const isCodexSelectedEnv = computed(() => {
   const p = selectedEnv.value?.aiProvider
   return p === 'codex-api' || p === 'codex-oauth'
+})
+const showMcpSelector = computed(() => {
+  if (!isCodexSelectedEnv.value) return false
+  if (selectedMcpIds.value.length > 0) return true
+  if (mcpItems.value.length > 0) return true
+  return mcpKnownTotal.value > 0
 })
 
 // Reasoning options (Codex)
@@ -266,6 +441,9 @@ const handleSubmit = async () => {
         // Include Codex AI config if applicable
         aiConfig: isCodexSelectedEnv.value
           ? { model_reasoning_effort: localReasoningEffort.value }
+          : undefined,
+        selectedMcpIds: isCodexSelectedEnv.value && selectedMcpIds.value.length
+          ? selectedMcpIds.value
           : undefined
       }
     })
@@ -282,7 +460,8 @@ const handleSubmit = async () => {
       environmentId: localSelectedEnvironment.value,
       task: task.task,
       planMode: false,
-      autoMerge: false
+      autoMerge: false,
+      selectedMcpIds: isCodexSelectedEnv.value ? [...selectedMcpIds.value] : undefined
     })
 
     // Clear input after emitting event
@@ -307,7 +486,12 @@ const getRuntimeIcon = (runtime: string) => {
 }
 
 // File path autocomplete methods
-const fetchFilePaths = async (environmentId: string) => {
+const fetchFilePaths = async (environmentIdRaw: unknown) => {
+  const environmentId = normalizeEnvironmentValue(environmentIdRaw)
+  if (!environmentId) {
+    filePaths.value = []
+    return
+  }
   try {
     const data = await $fetch(`/api/environments/${environmentId}/file-index`)
     filePaths.value = data.paths || []
@@ -401,4 +585,50 @@ watch(localSelectedEnvironment, (newEnvironmentId) => {
     fetchFilePaths(newEnvironmentId)
   }
 })
+
+watch(isCodexSelectedEnv, (isCodex) => {
+  if (isCodex) {
+    if (!mcpFetchedOnce.value) {
+      fetchMcps({ reset: true })
+    }
+  } else {
+    selectedMcpIds.value = []
+    mcpItems.value = []
+    mcpTotal.value = 0
+    mcpKnownTotal.value = 0
+    mcpSearchTerm.value = ''
+    mcpPage.value = 1
+    loadingMcps.value = false
+    mcpFetchedOnce.value = false
+  }
+})
+
+watch(mcpSearchTermDebounced, () => {
+  if (!isCodexSelectedEnv.value) return
+  fetchMcps({ reset: true })
+})
+
+watch(selectedMcpIds, (ids) => {
+  if (!ids?.length) return
+  const next = { ...mcpOptionCache.value }
+  for (const option of mcpItems.value) {
+    if (!option.value) continue
+    if (!ids.includes(option.value)) continue
+    next[option.value] = option
+  }
+  mcpOptionCache.value = next
+})
+
+const onMcpMenuOpen = (open: boolean) => {
+  if (!open) return
+  if (mcpItems.value.length === 0 && !loadingMcps.value) {
+    fetchMcps({ reset: true })
+  }
+}
+
+const loadMoreMcps = () => {
+  if (loadingMcps.value || !hasMoreMcps.value) return
+  mcpPage.value += 1
+  fetchMcps()
+}
 </script>
