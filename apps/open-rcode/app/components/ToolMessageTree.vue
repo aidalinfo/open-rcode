@@ -74,12 +74,17 @@ const escapeRegExp = (value: string): string => {
 }
 
 const getToolIcon = (toolName: string): string => {
+  const normalized = toolName.trim()
+  const lower = normalized.toLowerCase()
+  const title = normalized.charAt(0).toUpperCase() + normalized.slice(1)
+
   const baseIconMap: Record<string, string> = {
     Read: 'i-lucide-file-text',
     Edit: 'i-lucide-edit',
     MultiEdit: 'i-lucide-edit',
     Write: 'i-lucide-file-plus',
     Bash: 'i-lucide-terminal',
+    bash: 'i-lucide-terminal',
     Thinking: 'i-lucide-brain',
     Grep: 'i-lucide-search',
     Glob: 'i-lucide-folder-open',
@@ -89,7 +94,9 @@ const getToolIcon = (toolName: string): string => {
     WebFetch: 'i-lucide-download',
     TodoWrite: 'i-lucide-clipboard-list',
     NotebookRead: 'i-lucide-book-open',
-    NotebookEdit: 'i-lucide-book'
+    NotebookEdit: 'i-lucide-book',
+    exec: 'i-lucide-code-xml',
+    tool: 'i-lucide-wrench'
   }
 
   const providerIconMap: Record<string, string> = {
@@ -101,11 +108,17 @@ const getToolIcon = (toolName: string): string => {
     default: 'i-lucide-cpu-chip'
   }
 
-  if (baseIconMap[toolName]) {
-    return baseIconMap[toolName]
+  if (baseIconMap[normalized]) {
+    return baseIconMap[normalized]
+  }
+  if (baseIconMap[lower]) {
+    return baseIconMap[lower]
+  }
+  if (baseIconMap[title]) {
+    return baseIconMap[title]
   }
 
-  const provider = toolName.split('.')[0] || ''
+  const provider = lower.split('.')[0] || ''
   if (provider && providerIconMap[provider]) {
     return providerIconMap[provider]
   }

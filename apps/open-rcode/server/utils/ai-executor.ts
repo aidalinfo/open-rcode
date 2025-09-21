@@ -828,18 +828,22 @@ export class AIExecutor {
 
     const codexFlush = async () => {
       if (!codexCurrentKind || codexBuffer.length === 0) return
-      const content = codexBuffer.join('\n').trim()
+      const kind = codexCurrentKind
+      const rawContent = codexBuffer.join('\n').trim()
       codexBuffer = []
-      if (!content) { codexCurrentKind = null; return }
+      if (!rawContent) { codexCurrentKind = null; return }
+
+      const isRawBlock = kind === 'tool' || kind === 'diff'
+      const content = isRawBlock ? rawContent : this.normalizeCodexText(rawContent)
 
       // Skip certain notes
-      if (codexCurrentKind === 'note') {
+      if (kind === 'note') {
         if (/^tokens used:/i.test(content)) { codexCurrentKind = null; return }
         if (/^User instructions:/i.test(content)) { codexCurrentKind = null; return }
       }
 
       let message: string
-      switch (codexCurrentKind) {
+      switch (kind) {
         case 'system':
           message = `🟢 **${aiProviderLabel} (${model}) démarré**\n\n\`\`\`\n${content}\n\`\`\``
           break
@@ -1140,16 +1144,17 @@ export class AIExecutor {
 
     if (chunks.length === 0) {
       // Fallback: save single message
-      if (raw.trim()) {
+      const trimmed = raw.trim()
+      if (trimmed) {
         await TaskMessageModel.create({
           id: uuidv4(),
           userId: task.userId,
           taskId: task._id,
           role: 'assistant',
-          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${raw.trim()}`
+          content: `🤖 **${aiProviderLabel} (${model}) - ${actionLabel}:**\n\n${this.normalizeCodexText(trimmed)}`
         })
       }
-      return raw.trim()
+      return this.normalizeCodexText(trimmed)
     }
 
     // Save each chunk as a separate message
@@ -1171,12 +1176,12 @@ export class AIExecutor {
           if (/^tokens used:/i.test(c.content.trim())) {
             continue
           }
-          content = `📝 ${c.content}`
+          content = `📝 ${this.normalizeCodexText(c.content)}`
           break
         case 'assistant':
         default:
-          content = c.content
-          lastAssistantText = c.content
+          content = this.normalizeCodexText(c.content)
+          lastAssistantText = content
           break
       }
 
@@ -1194,7 +1199,7 @@ export class AIExecutor {
       })
     }
 
-    return lastAssistantText || chunks.map(c => c.content).join('\n\n')
+    return lastAssistantText || this.normalizeCodexText(chunks.map(c => c.content).join('\n\n'))
   }
 
   /**
@@ -1287,6 +1292,33 @@ export class AIExecutor {
 
     // Post-process: condense large diffs by trimming trailing empty lines
     return chunks.map(c => ({ ...c, content: c.content.replace(/\n+$/,'') }))
+  }
+
+  private normalizeCodexText(text: string): string {
+    if (!text) return text
+
+    const codeBlocks: string[] = []
+    const placeholder = (index: number) => `__CODE_BLOCK_${index}__`
+
+    let normalized = text.replace(/```[\s\S]*?```/g, (match) => {
+      const idx = codeBlocks.length
+      codeBlocks.push(match)
+      return placeholder(idx)
+    })
+
+    normalized = normalized.replace(/\r/g, '')
+    normalized = normalized.replace(/\n\s*([-*•+])\s*\n\s*/g, '\n$1 ')
+    normalized = normalized.replace(/\n(?!\n)(?!\s*(?:[-*•+]|#{1,6}|\d+\.|>))/g, ' ')
+    normalized = normalized.replace(/[ \t]+/g, ' ')
+    normalized = normalized.replace(/\n{3,}/g, '\n\n')
+    normalized = normalized.replace(/ +\n/g, '\n')
+    normalized = normalized.replace(/\n +/g, '\n')
+    normalized = normalized.replace(/\s+([,:;.!?])/g, '$1')
+    normalized = normalized.trim()
+
+    normalized = normalized.replace(/__CODE_BLOCK_(\d+)__/g, (_, idx) => codeBlocks[Number(idx)] || '')
+
+    return normalized
   }
 
   private getAiCommand(aiProvider: string, model?: string): string {
