@@ -56,6 +56,10 @@
       :data="paginatedData"
       :columns="visibleColumns"
       :sticky="sticky"
+      :loading="loading"
+      :empty="emptyText"
+      :watch-options="tableWatchOptions"
+      :get-row-id="getRowId"
       :class="tableClass"
       @row-click="handleRowClick"
     >
@@ -78,7 +82,7 @@
     >
       <UCard
         v-for="(item, index) in paginatedData"
-        :key="index"
+        :key="getRowId(item, index)"
         class="cursor-pointer hover:shadow-lg transition-shadow"
         @click="handleRowClick(item)"
       >
@@ -164,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, type WatchOptions } from 'vue'
 
 // Type compatible avec UTable
 type Column = {
@@ -191,6 +195,13 @@ interface Props {
   sticky?: boolean
   tableClass?: string
   defaultViewMode?: 'table' | 'card'
+  // Optimisations & UX
+  loading?: boolean
+  emptyText?: string
+  // Stable row keys for better rendering performance
+  rowKey?: string | ((row: any, index: number) => string)
+  // Forward Nuxt UI Table watch options to reduce deep reactivity when needed
+  tableWatchOptions?: WatchOptions<boolean>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -199,7 +210,10 @@ const props = withDefaults(defineProps<Props>(), {
   showColumnToggle: true,
   sticky: true,
   tableClass: '',
-  defaultViewMode: 'table'
+  defaultViewMode: 'table',
+  loading: false,
+  emptyText: 'No data available',
+  tableWatchOptions: undefined
 })
 
 const emit = defineEmits<{
@@ -211,9 +225,13 @@ const emit = defineEmits<{
 const table = ref()
 const hiddenColumns = ref<Set<string>>(new Set())
 
-// Vue par défaut - card sur mobile, sinon selon props
-const isMobile = import.meta.client && window.innerWidth < 640
-const viewMode = ref<'table' | 'card'>(isMobile ? 'card' : props.defaultViewMode)
+// Vue par défaut - gérée côté client pour éviter les décalages SSR
+const viewMode = ref<'table' | 'card'>(props.defaultViewMode)
+onMounted(() => {
+  if (window.innerWidth < 640) {
+    viewMode.value = 'card'
+  }
+})
 
 const visibleColumns = computed(() => {
   return props.columns.filter((column) => {
@@ -239,6 +257,20 @@ const paginatedData = computed(() => {
 
   return props.data.slice(start, end)
 })
+
+// Utilitaire pour générer un identifiant de ligne stable
+function getRowId(originalRow: any, index: number): string {
+  if (typeof props.rowKey === 'function') {
+    return String(props.rowKey(originalRow, index))
+  }
+  if (typeof props.rowKey === 'string' && props.rowKey.length) {
+    const nested = getNestedValue(originalRow, props.rowKey)
+    if (nested !== undefined && nested !== null) return String(nested)
+  }
+  // Fallback courants: id/_id sinon l'index
+  const fallback = originalRow?.id ?? originalRow?._id ?? index
+  return String(fallback)
+}
 
 const columnToggleItems = computed(() => {
   return props.columns.map(column => ({
@@ -291,7 +323,8 @@ function getItemValue(item: any, column: Column): any {
   if (!key) return ''
 
   // Support des chemins imbriqués (ex: 'user.name')
-  return getNestedValue(item, key) || ''
+  const value = getNestedValue(item, key)
+  return value ?? ''
 }
 
 function getNestedValue(obj: any, path: string): any {
