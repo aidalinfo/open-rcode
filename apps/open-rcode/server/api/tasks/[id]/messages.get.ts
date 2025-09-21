@@ -27,7 +27,25 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const messages = await TaskMessageModel.find({ taskId }).sort({ createdAt: 1 })
+    // Optional incremental fetch: only return messages created after `since` timestamp (ISO string)
+    const query = getQuery(event)
+    let since: Date | undefined
+    if (query.since && typeof query.since === 'string') {
+      const date = new Date(query.since)
+      if (!isNaN(date.getTime())) {
+        since = date
+      }
+    }
+
+    const filter: any = { taskId }
+    if (since) {
+      filter.createdAt = { $gt: since }
+    }
+
+    const messages = await TaskMessageModel.find(filter)
+      .select('id userId taskId role content type createdAt')
+      .sort({ createdAt: 1 })
+      .lean()
 
     return { messages }
   } catch (error) {

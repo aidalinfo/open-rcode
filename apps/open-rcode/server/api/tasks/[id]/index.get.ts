@@ -16,7 +16,10 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const task = await TaskModel.findOne({ _id: taskId, userId: user.githubId })
+    const task = await TaskModel
+      .findOne({ _id: taskId, userId: user.githubId })
+      .select('_id name status executed merged createdAt updatedAt environmentId pr dockerId error planMode aiConfig')
+      .lean()
 
     if (!task) {
       throw createError({

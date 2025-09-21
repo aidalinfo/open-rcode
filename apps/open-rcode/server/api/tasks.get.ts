@@ -43,15 +43,20 @@ export default defineEventHandler(async (event) => {
     const total = await TaskModel.countDocuments({ userId: user.githubId })
 
     // Récupérer les tâches de l'utilisateur avec pagination
+    // Only select fields needed for the task list to avoid transferring large payloads (e.g., messages)
     const tasks = await TaskModel.find({ userId: user.githubId })
+      .select('_id name status executed merged createdAt updatedAt environmentId pr dockerId error planMode')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .lean()
       .exec()
 
     // Récupérer tous les environnements en une seule requête
     const environmentIds = tasks.map(task => task.environmentId).filter(Boolean)
     const environments = await EnvironmentModel.find({ _id: { $in: environmentIds } })
+      .select('_id name')
+      .lean()
     const environmentMap = new Map(environments.map(env => [env._id.toString(), env]))
 
     // Formater les données pour le frontend
