@@ -56,6 +56,7 @@
       :data="paginatedData"
       :columns="visibleColumns"
       :sticky="sticky"
+      :watch-options="watchOptions"
       :class="tableClass"
       @row-click="handleRowClick"
     >
@@ -78,7 +79,7 @@
     >
       <UCard
         v-for="(item, index) in paginatedData"
-        :key="index"
+        :key="getItemKey(item, index)"
         class="cursor-pointer hover:shadow-lg transition-shadow"
         @click="handleRowClick(item)"
       >
@@ -164,7 +165,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 
 // Type compatible avec UTable
 type Column = {
@@ -191,6 +193,8 @@ interface Props {
   sticky?: boolean
   tableClass?: string
   defaultViewMode?: 'table' | 'card'
+  itemKey?: string | ((row: any) => string | number)
+  watchOptions?: any
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -211,9 +215,15 @@ const emit = defineEmits<{
 const table = ref()
 const hiddenColumns = ref<Set<string>>(new Set())
 
-// Vue par défaut - card sur mobile, sinon selon props
-const isMobile = import.meta.client && window.innerWidth < 640
-const viewMode = ref<'table' | 'card'>(isMobile ? 'card' : props.defaultViewMode)
+// SSR-safe: detect mobile with media query; initialize on mount to avoid hydration mismatch
+const isMobile = useMediaQuery('(max-width: 639.5px)')
+const viewMode = ref<'table' | 'card'>(props.defaultViewMode)
+
+onMounted(() => {
+  if (isMobile.value && props.defaultViewMode === 'table') {
+    viewMode.value = 'card'
+  }
+})
 
 const visibleColumns = computed(() => {
   return props.columns.filter((column) => {
@@ -300,5 +310,16 @@ function getNestedValue(obj: any, path: string): any {
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+function getItemKey(item: any, index: number): string | number {
+  if (typeof props.itemKey === 'function') {
+    return props.itemKey(item)
+  }
+  if (typeof props.itemKey === 'string' && props.itemKey) {
+    const v = getNestedValue(item, props.itemKey)
+    if (v !== undefined && v !== null) return v as string | number
+  }
+  return index
 }
 </script>
