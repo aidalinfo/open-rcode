@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     return {
       message: 'Environment deleted successfully',
       deletedEnvironment: {
-        id: environment._id,
+        id: environment._id?.toString?.() ?? String(environment._id),
         name: environment.name,
         repositoryFullName: environment.repositoryFullName
       }

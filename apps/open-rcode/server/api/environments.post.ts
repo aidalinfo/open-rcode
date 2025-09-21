@@ -85,9 +85,12 @@ export default defineEventHandler(async (event) => {
 
     await environment.save()
 
+    const environmentId = environment._id?.toString?.() ?? String(environment._id)
+
     return {
       environment: {
-        _id: environment._id,
+        id: environmentId,
+        _id: environmentId,
         organization: environment.organization,
         repository: environment.repository,
         repositoryFullName: environment.repositoryFullName,

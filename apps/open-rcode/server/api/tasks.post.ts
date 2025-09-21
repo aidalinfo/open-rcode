@@ -4,6 +4,7 @@ import { SessionModel } from '../models/Session'
 import { TaskModel } from '../models/Task'
 import { TaskMessageModel } from '../models/TaskMessage'
 import { EnvironmentModel } from '../models/Environment'
+import { McpModel } from '../models/Mcp'
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger'
 
@@ -37,6 +38,29 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event)
 
+    const normalizeIdList = (value: unknown): string[] | undefined => {
+      if (!Array.isArray(value)) return undefined
+
+      const seen = new Set<string>()
+      const ids: string[] = []
+
+      for (const entry of value) {
+        if (entry === undefined || entry === null) continue
+        if (typeof entry !== 'string' && typeof entry !== 'number' && typeof entry !== 'bigint') {
+          continue
+        }
+        const str = typeof entry === 'string' ? entry.trim() : String(entry).trim()
+        if (!str || seen.has(str)) continue
+        seen.add(str)
+        ids.push(str)
+      }
+
+      return ids.length ? ids : undefined
+    }
+
+    const rawSelectedMcpIds = normalizeIdList(body.selectedMcpIds) || normalizeIdList(body.mcpServerIds)
+    let validatedMcpIds: string[] | undefined
+
     // Validation des données
     if (!body.environmentId || !body.message) {
       throw createError({
@@ -61,6 +85,21 @@ export default defineEventHandler(async (event) => {
     const taskName = body.message.split(' ').slice(0, 5).join(' ').substring(0, 50)
 
     // Créer la task
+    if (rawSelectedMcpIds && rawSelectedMcpIds.length) {
+      const available = await McpModel.find({
+        userId: user.githubId,
+        _id: { $in: rawSelectedMcpIds }
+      }).select('_id')
+
+      if (available?.length) {
+        const validSet = new Set(available.map(doc => doc._id.toString()))
+        const filtered = rawSelectedMcpIds.filter(id => validSet.has(id))
+        if (filtered.length) {
+          validatedMcpIds = filtered
+        }
+      }
+    }
+
     const task = new TaskModel({
       userId: user.githubId,
       environmentId: body.environmentId,
@@ -74,7 +113,8 @@ export default defineEventHandler(async (event) => {
       executed: false,
       planMode: body.planMode || false,
       autoMerge: body.autoMerge || false,
-      aiConfig: body.aiConfig || undefined
+      aiConfig: body.aiConfig || undefined,
+      selectedMcpIds: validatedMcpIds
     })
 
     await task.save()
@@ -102,6 +142,7 @@ export default defineEventHandler(async (event) => {
         error: task.error,
         planMode: task.planMode,
         autoMerge: task.autoMerge,
+        selectedMcpIds: task.selectedMcpIds,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt
       }

@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       environments: environments.map(env => ({
-        id: env._id,
+        id: env._id?.toString?.() ?? String(env._id),
         organization: env.organization,
         repository: env.repository,
         repositoryFullName: env.repositoryFullName,

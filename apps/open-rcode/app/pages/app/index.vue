@@ -107,7 +107,7 @@ const navigateToTask = (taskId: string) => {
   router.push(`/app/task/${taskId}`)
 }
 
-const onSubmit = async (data: { message: string, environmentId: string, task?: any }) => {
+const onSubmit = async (data: { message: string, environmentId: string, task?: any, selectedMcpIds?: string[] }) => {
   if (!data.task || !data.task.id) {
     toast.add({ title: 'Error', description: 'Task creation failed.', color: 'error' })
     return

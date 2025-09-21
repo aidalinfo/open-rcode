@@ -212,8 +212,13 @@ const isToolMessage = (message: any) => {
   const hasBash = /\bbash\s+-lc\b/i.test(content)
   // Thinking markers appear as "thinking" lines and are saved as notes (often prefixed by 📝)
   const hasThinking = /(?:^|\n)\s*(?:📝\s*)?thinking\b/i.test(content)
+  const hasInspectorTool = /(?:^|\n)\s*tool\s+[a-z0-9_.-]+/i.test(content)
+  const inspectorNoteMatch = content.match(/(?:^|\n)\s*📝\s*([a-z0-9_.-]+)/i)
+  const hasInspectorNoteTool = inspectorNoteMatch
+    ? inspectorNoteMatch[1]?.toLowerCase() !== 'thinking'
+    : false
 
-  return hasBash || hasThinking
+  return hasBash || hasThinking || hasInspectorTool || hasInspectorNoteTool
 }
 
 // Function to open GitHub PR

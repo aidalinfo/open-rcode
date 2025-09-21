@@ -23,6 +23,7 @@ export interface Task {
   autoMerge?: boolean
   // Optional per-task AI config overrides (e.g., for Codex -c flags)
   aiConfig?: Record<string, any>
+  selectedMcpIds?: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -48,6 +49,7 @@ const taskSchema = new Schema<TaskDocument>({
   planMode: { type: Boolean, default: false },
   autoMerge: { type: Boolean, default: false },
   aiConfig: { type: Schema.Types.Mixed },
+  selectedMcpIds: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })
